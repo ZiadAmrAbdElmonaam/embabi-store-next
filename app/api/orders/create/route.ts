@@ -53,8 +53,8 @@ export async function POST(request: Request) {
             }
           ).end(buffer);
         });
-        
-        paymentProof = (result as any).secure_url;
+            
+        paymentProof = (result as unknown as { secure_url: string }).secure_url;
       }
     }
 
@@ -93,18 +93,20 @@ export async function POST(request: Request) {
     });
 
     // Send confirmation email
-    await sendOrderConfirmationEmail(session.user.email, {
-      id: order.id,
-      total: Number(order.total),
-      items: order.items.map(item => ({
-        name: item.product.name,
-        quantity: item.quantity,
-        price: Number(item.price),
-      })),
-      shippingName: order.shippingName,
-      shippingAddress: order.shippingAddress,
-      shippingCity: order.shippingCity,
-    });
+    if (session.user.email) {
+      await sendOrderConfirmationEmail(session.user.email, {
+        id: order.id,
+        total: Number(order.total),
+        items: order.items.map(item => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: Number(item.price),
+        })),
+        shippingName: order.shippingName,
+        shippingAddress: order.shippingAddress,
+        shippingCity: order.shippingCity,
+      });
+    }
 
     return NextResponse.json({ id: order.id });
   } catch (error) {

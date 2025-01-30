@@ -52,8 +52,9 @@ export async function GET() {
 
     return NextResponse.json(analytics);
   } catch (error) {
+    console.error('Error in analytics:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch analytics' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     );
   }

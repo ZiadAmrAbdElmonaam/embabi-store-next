@@ -3,13 +3,13 @@ import { saveLocalFile } from "@/lib/upload";
 import { mkdir } from 'fs/promises';
 import path from 'path';
 
-export async function POST(request: Request) {
+export async function POST(req: Request): Promise<Response> {
   try {
     // Ensure uploads directory exists
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
     await mkdir(uploadsDir, { recursive: true });
 
-    const formData = await request.formData();
+    const formData: FormData = await req.formData();
     const files = formData.getAll('file');
 
     const uploadPromises = files.map(async (file: any) => {

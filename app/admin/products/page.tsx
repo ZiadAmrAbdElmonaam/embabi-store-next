@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
+import Image from 'next/image';
 
 export default async function AdminProductsPage() {
   const products = await prisma.product.findMany({
@@ -41,10 +42,12 @@ export default async function AdminProductsPage() {
               <tr key={product.id} className="border-b">
                 <td className="px-6 py-4">
                   {product.images[0] && (
-                    <img
+                    <Image 
                       src={product.images[0]}
                       alt={product.name}
-                      className="w-16 h-16 object-cover rounded"
+                      width={500}
+                      height={300}
+                      layout="responsive"
                     />
                   )}
                 </td>

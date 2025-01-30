@@ -15,10 +15,13 @@ export function WishlistButton({ productId }: WishlistButtonProps) {
   const isInWishlist = items.includes(productId);
 
   useEffect(() => {
-    if (session) {
-      fetch();
-    }
-  }, [session]);
+    const fetchWishlist = async () => {
+      if (session) {
+        await fetch();
+      }
+    };
+    fetchWishlist();
+  }, [productId, fetch]);
 
   if (!session) return null;
 

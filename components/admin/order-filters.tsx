@@ -28,7 +28,7 @@ export function OrderFilters() {
     else params.delete('to');
     
     router.push(`/admin/orders?${params.toString()}`);
-  }, [debouncedSearch, status, dateFrom, dateTo]);
+  }, [debouncedSearch, status, dateFrom, dateTo, router, searchParams]);
 
   return (
     <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">

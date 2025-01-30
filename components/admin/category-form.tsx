@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface CategoryFormProps {
-  initialData?: any;
+  initialData?: {
+    id?: string;
+    name: string;
+    description?: string;
+  };
+  onSubmit: (data: { name: string; description?: string }) => void;
 }
 
 export function CategoryForm({ initialData }: CategoryFormProps) {

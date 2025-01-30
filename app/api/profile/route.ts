@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
 import { hash, compare } from "bcryptjs";
+import { authOptions } from "../auth/auth-options";
 
 export async function PUT(request: Request) {
   try {

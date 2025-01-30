@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { notFound, redirect } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
 import { Package } from "lucide-react";
-
+import { authOptions } from "@/app/api/auth/auth-options";
 const statusSteps = [
   'PENDING',
   'PROCESSING',

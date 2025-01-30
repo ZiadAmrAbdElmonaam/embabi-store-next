@@ -2,11 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { ProductFilters } from "@/components/products/product-filters";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { SearchBar } from "@/components/ui/search-bar";
 import { PriceRange } from "@/components/ui/price-range";
 import { ProductSort } from "@/components/products/product-sort";
 import { ProductGrid, ProductWithDetails } from "@/components/products/product-grid";
+import { authOptions } from "../api/auth/auth-options";
 
 interface SearchParams {
   category?: string;

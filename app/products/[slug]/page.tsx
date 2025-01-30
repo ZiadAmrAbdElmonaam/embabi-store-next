@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { notFound } from "next/navigation";
 import { ProductDetails } from "@/components/products/product-details";
+import { authOptions } from "@/app/api/auth/auth-options";
 
 export default async function ProductPage({
   params,

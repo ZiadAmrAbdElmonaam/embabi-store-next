@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { UpdateOrderStatus } from "@/components/admin/update-order-status";
-
+import { authOptions } from "@/app/api/auth/auth-options";
 export default async function AdminOrdersPage() {
   const session = await getServerSession(authOptions);
   if (session?.user?.role !== 'ADMIN') {

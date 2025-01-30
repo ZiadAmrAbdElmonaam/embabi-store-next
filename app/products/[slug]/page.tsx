@@ -1,12 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { formatPrice } from "@/lib/utils";
-import { ReviewForm } from "@/components/reviews/review-form";
-import { Star, ShoppingCart } from "lucide-react";
-import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { AddToCartButton } from "@/components/products/add-to-cart-button";
-import { WishlistButton } from "@/components/ui/wishlist-button";
 import { notFound } from "next/navigation";
 import { ProductDetails } from "@/components/products/product-details";
 
@@ -67,7 +61,18 @@ export default async function ProductPage({
   return (
     <div className="container mx-auto px-4 py-8">
       <ProductDetails 
-        product={serializedProduct} 
+        product={{
+          ...serializedProduct,
+          reviews: serializedProduct.reviews.map(review => ({
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment || '', // Convert null to empty string
+            createdAt: review.createdAt,
+            user: {
+              name: review.user.name || '' // Convert null to empty string
+            }
+          }))
+        }}
         session={session} 
         hasPurchased={!!hasPurchased}
       />

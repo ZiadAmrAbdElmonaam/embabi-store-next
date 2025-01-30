@@ -33,7 +33,7 @@ interface ProductDetailsProps {
   hasPurchased?: boolean;
 }
 
-export function ProductDetails({ product, session, hasPurchased }: ProductDetailsProps) {
+export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
   const averageRating = product.reviews.length > 0
     ? product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length
     : 0;

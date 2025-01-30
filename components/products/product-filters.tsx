@@ -13,7 +13,6 @@ export function ProductFilters({ categories, maxPrice }: ProductFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [priceRange, setPriceRange] = useState([0, maxPrice]);
-  const [selectedFilters, setSelectedFilters] = useState({});
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);

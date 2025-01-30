@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from 'next/image';
 
 export default async function Home() {
   const featuredProducts = await prisma.product.findMany({
@@ -36,10 +37,12 @@ export default async function Home() {
             >
               {product.images[0] && (
                 <div className="aspect-square relative">
-                  <img
+                  <Image
                     src={product.images[0]}
                     alt={product.name}
-                    className="object-cover w-full h-full"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                   />
                 </div>
               )}

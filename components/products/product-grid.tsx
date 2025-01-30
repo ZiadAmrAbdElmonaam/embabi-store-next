@@ -3,7 +3,8 @@
 import { ProductCard } from "@/components/ui/product-card";
 import { Product } from "@prisma/client";
 
-interface ProductWithDetails extends Product {
+export interface ProductWithDetails extends Omit<Product, 'price'> {
+  price: number;
   category: {
     id: string;
     name: string;

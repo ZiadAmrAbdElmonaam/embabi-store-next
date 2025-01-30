@@ -46,6 +46,7 @@ export function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
       setComment('');
       onSuccess();
     } catch (error) {
+      console.error('Review submission failed:', error);
       toast.error('Failed to submit review');
     } finally {
       setLoading(false);

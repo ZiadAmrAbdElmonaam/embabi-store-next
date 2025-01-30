@@ -19,7 +19,7 @@ export function SearchBar() {
       params.delete('q');
     }
     router.push(`/products?${params.toString()}`);
-  }, [debouncedValue]);
+  }, [debouncedValue, router, searchParams]);
 
   return (
     <div className="relative">

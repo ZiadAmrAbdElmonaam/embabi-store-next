@@ -18,7 +18,7 @@ interface ShippingInfo {
 }
 
 export default function CheckoutPage() {
-  const { data: session } = useSession({
+  useSession({
     required: true,
     onUnauthenticated() {
       redirect('/login');
@@ -75,6 +75,7 @@ export default function CheckoutPage() {
       toast.success('Order placed successfully!');
       router.push(`/orders/${id}`);
     } catch (error) {
+      console.error('Checkout error:', error);
       toast.error('Failed to place order');
     } finally {
       setIsLoading(false);
@@ -225,7 +226,7 @@ export default function CheckoutPage() {
                       name="payment"
                       value="cash"
                       checked={paymentMethod === 'cash'}
-                      onChange={(e) => {
+                      onChange={() => {
                         setPaymentMethod('cash');
                         setPaymentScreenshot(null);
                       }}
@@ -241,7 +242,7 @@ export default function CheckoutPage() {
                       name="payment"
                       value="wallet"
                       checked={paymentMethod === 'wallet'}
-                      onChange={(e) => setPaymentMethod('wallet')}
+                      onChange={() => setPaymentMethod('wallet')}
                       className="h-4 w-4 text-blue-600"
                     />
                     <WalletIcon className="h-5 w-5" />

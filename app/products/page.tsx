@@ -1,13 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { ProductCard } from "@/components/ui/product-card";
 import { ProductFilters } from "@/components/products/product-filters";
-import { ProductGrid } from "@/components/products/product-grid";
-import { ProductSort } from "@/components/products/product-sort";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { SearchBar } from "@/components/ui/search-bar";
 import { PriceRange } from "@/components/ui/price-range";
+import { ProductSort } from "@/components/products/product-sort";
+import { ProductGrid, ProductWithDetails } from "@/components/products/product-grid";
 
 interface SearchParams {
   category?: string;
@@ -67,11 +66,11 @@ export default async function ProductsPage({
   });
 
   // Convert Decimal to number before passing to client components
-  const serializedProducts = products.map(product => ({
+  const serializedProducts: ProductWithDetails[] = products.map(product => ({
     ...product,
     price: Number(product.price),
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
+    createdAt: new Date(product.createdAt),
+    updatedAt: new Date(product.updatedAt)
   }));
 
   const categories = await prisma.category.findMany();

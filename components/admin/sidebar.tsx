@@ -4,7 +4,6 @@ import {
   Package, 
   ListOrdered, 
   Users,
-  Settings 
 } from "lucide-react";
 
 export function AdminSidebar() {

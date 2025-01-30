@@ -20,7 +20,7 @@ export function PriceRange() {
     if (debouncedMax) params.set('max', debouncedMax);
     else params.delete('max');
     router.push(`/products?${params.toString()}`);
-  }, [debouncedMin, debouncedMax]);
+  }, [debouncedMin, debouncedMax, router, searchParams]);
 
   return (
     <div className="space-y-2">

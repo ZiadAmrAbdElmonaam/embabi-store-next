@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Category } from "@prisma/client";
+import { Category, Product } from "@prisma/client";
 import Image from 'next/image';
 
 interface ProductFormProps {
   categories: Category[];
-  initialData?: any;
+  initialData?: Product;
 }
 
 export function ProductForm({ categories, initialData }: ProductFormProps) {
@@ -113,7 +113,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           <input
             type="number"
             name="price"
-            defaultValue={initialData?.price}
+            defaultValue={initialData?.price.toString()}
             required
             min="0"
             step="0.01"

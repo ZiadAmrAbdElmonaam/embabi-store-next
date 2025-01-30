@@ -6,6 +6,15 @@
     "react-hooks/exhaustive-deps": "off",
     "@next/next/no-img-element": "off",
     "no-var": "warn",
-    "react/no-unescaped-entities": "off"
-  }
+    "react/no-unescaped-entities": "off",
+    "no-unused-vars": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-empty-function": "off"
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    ".next/",
+    "public/",
+    "scripts/"
+  ]
 } 

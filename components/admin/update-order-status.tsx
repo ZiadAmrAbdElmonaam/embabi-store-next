@@ -39,6 +39,7 @@ export function UpdateOrderStatus({ orderId, currentStatus }: UpdateOrderStatusP
       setIsOpen(false);
       setComment('');
     } catch (error) {
+      console.error('Status update failed:', error);
       toast.error('Failed to update order status');
     } finally {
       setIsLoading(false);

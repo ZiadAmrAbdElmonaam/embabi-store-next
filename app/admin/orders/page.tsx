@@ -3,13 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import { OrderStatus } from "@prisma/client";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { UpdateOrderStatus } from "@/components/admin/update-order-status";
 
 export default async function AdminOrdersPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.role === 'ADMIN') {
+  if (session?.user?.role !== 'ADMIN') {
     redirect('/');
   }
 

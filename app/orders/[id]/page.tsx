@@ -3,15 +3,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { notFound, redirect } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import { OrderStatus } from "@prisma/client";
 import { Package } from "lucide-react";
 
 const statusSteps = [
-  OrderStatus.PENDING,
-  OrderStatus.PROCESSING,
-  OrderStatus.SHIPPED,
-  OrderStatus.DELIVERED,
-];
+  'PENDING',
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+  'CANCELLED'
+] as const;
 
 export default async function OrderPage({
   params,
@@ -109,13 +109,6 @@ export default async function OrderPage({
                 <span className="font-semibold">{formatPrice(order.total)}</span>
               </div>
             </div>
-
-            {order.trackingNo && (
-              <div className="border-t pt-4">
-                <h2 className="text-lg font-semibold mb-2">Tracking Information</h2>
-                <p>Tracking Number: {order.trackingNo}</p>
-              </div>
-            )}
 
             {/* Status History */}
             <div className="border-t pt-4">

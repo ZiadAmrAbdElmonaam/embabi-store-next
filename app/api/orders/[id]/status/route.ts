@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.role === 'ADMIN') {
+    if (session?.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -33,6 +33,7 @@ export async function POST(
             createdAt: 'desc',
           },
         },
+        user: true,
       },
     });
 
@@ -45,6 +46,7 @@ export async function POST(
 
     return NextResponse.json(order);
   } catch (error) {
+    console.error('Order status update error:', error);
     return NextResponse.json(
       { error: 'Failed to update order status' },
       { status: 500 }

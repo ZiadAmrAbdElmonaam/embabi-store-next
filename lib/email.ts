@@ -118,4 +118,9 @@ export async function sendOrderStatusEmail(
     subject: `Order Status Update #${orderDetails.id}`,
     html,
   });
+}
+
+export async function sendOrderUpdateEmail(email: string, orderId: string, newStatus: OrderStatus) {
+  // Implementation here
+  console.log(`Sending order update email to ${email} for order ${orderId} with status ${newStatus}`);
 } 

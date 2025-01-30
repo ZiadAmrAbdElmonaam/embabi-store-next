@@ -1,15 +1,15 @@
 {
   "extends": "next/core-web-vitals",
   "rules": {
-    "@typescript-eslint/no-unused-vars": "off",
-    "@typescript-eslint/no-explicit-any": "off",
-    "react-hooks/exhaustive-deps": "off",
-    "@next/next/no-img-element": "off",
-    "no-var": "warn",
-    "react/no-unescaped-entities": "off",
-    "no-unused-vars": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
-    "@typescript-eslint/no-empty-function": "off"
+    "@typescript-eslint/no-unused-vars": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "react-hooks/exhaustive-deps": 0,
+    "@next/next/no-img-element": 0,
+    "no-var": 0,
+    "react/no-unescaped-entities": 0,
+    "no-unused-vars": 0,
+    "@typescript-eslint/ban-ts-comment": 0,
+    "@typescript-eslint/no-empty-function": 0
   },
   "ignorePatterns": [
     "node_modules/",

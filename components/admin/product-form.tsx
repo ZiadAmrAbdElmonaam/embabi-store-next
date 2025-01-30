@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Category } from "@prisma/client";
+import Image from 'next/image';
 
 interface ProductFormProps {
   categories: Category[];
@@ -164,9 +165,11 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         <div className="mt-4 grid grid-cols-4 gap-4">
           {images.map((url, index) => (
             <div key={index} className="relative">
-              <img
+              <Image 
                 src={url}
                 alt={`Product image ${index + 1}`}
+                width={100}
+                height={100}
                 className="w-full h-24 object-cover rounded"
               />
               <button

@@ -61,6 +61,7 @@ export async function GET() {
       },
     });
   } catch (error) {
+    console.error('Export error:', error);
     return NextResponse.json(
       { error: 'Failed to export orders' },
       { status: 500 }

@@ -53,11 +53,6 @@ export default async function ProductPage({
     updatedAt: product.updatedAt.toISOString(),
   };
 
-  // Calculate average rating
-  const averageRating = product.reviews.length > 0
-    ? product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length
-    : 0;
-
   // Check if user has purchased this product
   const hasPurchased = session?.user ? await prisma.orderItem.findFirst({
     where: {

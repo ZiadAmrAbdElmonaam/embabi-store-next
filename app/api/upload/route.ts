@@ -12,7 +12,7 @@ export async function POST(req: Request): Promise<Response> {
     const formData: FormData = await req.formData();
     const files = formData.getAll('file');
 
-    const uploadPromises = files.map(async (file: any) => {
+    const uploadPromises = files.map(async (file: File) => {
       return await saveLocalFile(file);
     });
 

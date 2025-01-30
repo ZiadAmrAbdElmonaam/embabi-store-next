@@ -21,7 +21,7 @@ export function WishlistButton({ productId }: WishlistButtonProps) {
       }
     };
     fetchWishlist();
-  }, [productId, fetch]);
+  }, [session, fetch]);
 
   if (!session) return null;
 

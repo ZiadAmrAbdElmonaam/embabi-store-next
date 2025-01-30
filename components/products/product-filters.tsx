@@ -13,13 +13,14 @@ export function ProductFilters({ categories, maxPrice }: ProductFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [priceRange, setPriceRange] = useState([0, maxPrice]);
+  const [selectedFilters, setSelectedFilters] = useState({});
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     params.set('minPrice', priceRange[0].toString());
     params.set('maxPrice', priceRange[1].toString());
     router.push(`/products?${params.toString()}`);
-  }, [priceRange]);
+  }, [priceRange, router, searchParams]);
 
   return (
     <div className="space-y-6">

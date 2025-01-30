@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* RTL Support */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Add any other custom styles */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

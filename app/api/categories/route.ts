@@ -11,11 +11,37 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    
+    // Validate required fields
+    if (!data.name) {
+      return NextResponse.json(
+        { error: 'Name is required' },
+        { status: 400 }
+      );
+    }
+
+    // Create slug from name
+    const slug = data.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    // Check if slug already exists
+    const existing = await prisma.category.findUnique({
+      where: { slug },
+    });
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'A category with this name already exists' },
+        { status: 400 }
+      );
+    }
 
     const category = await prisma.category.create({
       data: {
-        ...data,
+        name: data.name,
+        description: data.description,
         slug,
       },
     });

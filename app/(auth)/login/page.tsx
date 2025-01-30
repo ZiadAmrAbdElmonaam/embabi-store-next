@@ -3,6 +3,7 @@
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function LoginPage() {
       setError('Invalid credentials');
       setLoading(false);
     } else {
-      router.push('/admin');
+      router.push('/');
       router.refresh();
     }
   };
@@ -81,6 +82,13 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+
+        <div className="text-sm text-center">
+          Don't have an account?{' '}
+          <Link href="/signup" className="text-blue-600 hover:text-blue-500">
+            Sign up
+          </Link>
+        </div>
       </div>
     </div>
   );

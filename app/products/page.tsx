@@ -1,52 +1,119 @@
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/ui/product-card";
-import { ProductFilters } from "@/components/ui/product-filters";
+import { ProductFilters } from "@/components/products/product-filters";
+import { ProductGrid } from "@/components/products/product-grid";
+import { ProductSort } from "@/components/products/product-sort";
+import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { SearchBar } from "@/components/ui/search-bar";
+import { PriceRange } from "@/components/ui/price-range";
+
+interface SearchParams {
+  category?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  sort?: string;
+  q?: string;
+}
 
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { category?: string; sort?: string };
+  searchParams: SearchParams;
 }) {
-  // Get all categories for the filter
-  const categories = await prisma.category.findMany();
+  const session = await getServerSession(authOptions);
+  const isAdmin = session?.user?.role === 'ADMIN';
 
-  // Build the query
-  const where = searchParams.category
-    ? {
-        category: {
-          slug: searchParams.category,
-        },
-      }
-    : {};
+  const { category, minPrice, maxPrice, sort, q } = searchParams;
 
-  // Handle sorting
-  const orderBy = searchParams.sort === "price_desc"
-    ? { price: "desc" }
-    : searchParams.sort === "price_asc"
-    ? { price: "asc" }
-    : { createdAt: "desc" };
-
-  // Get products
   const products = await prisma.product.findMany({
-    where,
+    where: {
+      AND: [
+        // Category filter
+        category ? { categoryId: category } : {},
+        // Price range filter
+        {
+          price: {
+            gte: minPrice ? parseFloat(minPrice) : undefined,
+            lte: maxPrice ? parseFloat(maxPrice) : undefined,
+          },
+        },
+        // Search query
+        q
+          ? {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {},
+      ],
+    },
     include: {
       category: true,
+      reviews: {
+        select: {
+          rating: true,
+        },
+      },
     },
-    orderBy,
+    orderBy: {
+      ...(sort === 'price_asc' && { price: 'asc' }),
+      ...(sort === 'price_desc' && { price: 'desc' }),
+      ...(sort === 'newest' && { createdAt: 'desc' }),
+      ...(sort === 'popular' && { reviews: { _count: 'desc' } }),
+    },
+  });
+
+  // Convert Decimal to number before passing to client components
+  const serializedProducts = products.map(product => ({
+    ...product,
+    price: Number(product.price),
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+  }));
+
+  const categories = await prisma.category.findMany();
+  const maxProductPrice = await prisma.product.aggregate({
+    _max: { price: true },
   });
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">All Products</h1>
-        <ProductFilters categories={categories} />
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row gap-8">
+        <div className="w-full md:w-64 space-y-6">
+          <ProductFilters
+            categories={categories}
+            maxPrice={maxProductPrice._max.price ? Number(maxProductPrice._max.price) : 0}
+          />
+        </div>
+
+        <div className="flex-1">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Products</h1>
+            <ProductSort />
+          </div>
+
+          <ProductGrid products={serializedProducts} />
+        </div>
       </div>
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+      <div className="flex flex-col gap-4">
+        <SearchBar />
+        <div className="flex justify-between items-start">
+          <div className="space-y-4">
+            <PriceRange />
+          </div>
+          {isAdmin && (
+            <Link
+              href="/products/new"
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            >
+              Create Product
+            </Link>
+          )}
+        </div>
       </div>
 
       {products.length === 0 && (

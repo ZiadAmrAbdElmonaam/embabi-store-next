@@ -2,21 +2,38 @@ import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/ui/product-card";
 import { notFound } from "next/navigation";
 
+interface CategoryPageProps {
+  params: {
+    slug: string;
+  };
+}
+
 export default async function CategoryPage({
-  params
-}: {
-  params: { slug: string }
-}) {
+  params,
+}: CategoryPageProps) {
+  // Convert Decimal to number for serialization
   const category = await prisma.category.findUnique({
     where: { slug: params.slug },
     include: {
-      products: true,
+      products: {
+        include: {
+          category: true
+        }
+      },
     },
   });
 
   if (!category) {
     notFound();
   }
+
+  // Convert Decimal prices to numbers
+  const products = category.products.map(product => ({
+    ...product,
+    price: Number(product.price),
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+  }));
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -26,18 +43,15 @@ export default async function CategoryPage({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {category.products.map((product) => (
+        {products.map((product) => (
           <ProductCard 
             key={product.id} 
-            product={{
-              ...product,
-              category,
-            }}
+            product={product}
           />
         ))}
       </div>
 
-      {category.products.length === 0 && (
+      {products.length === 0 && (
         <p className="text-center text-gray-500 py-10">
           No products in this category yet.
         </p>

@@ -1,47 +1,51 @@
-import Link from "next/link";
-import { getServerSession } from "next-auth/next";
-import { ShoppingCart, User } from "lucide-react";
+'use client';
 
-export async function Navbar() {
-  const session = await getServerSession();
+import Link from "next/link";
+import { ShoppingCart, User, Package } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useCart } from "@/hooks/use-cart";
+import { LanguageSwitcher } from "./language-switcher";
+import { UserButton } from "./user-button";
+import { useTranslation } from "@/hooks/use-translation";
+
+export function Navbar() {
+  const { data: session } = useSession();
+  const { items } = useCart();
+  const { t } = useTranslation();
 
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold text-gray-800">
-              Tech Store
-            </Link>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <Link
-                href="/products"
-                className="text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
-              >
-                Products
-              </Link>
-              <Link
-                href="/categories"
-                className="text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
-              >
-                Categories
-              </Link>
-            </div>
+    <nav className="border-b">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="text-xl font-bold">
+            {t('common.techStore')}
+          </Link>
+
+          <div className="flex items-center gap-6">
+            <Link href="/products">{t('common.products')}</Link>
+            <Link href="/categories">{t('common.categories')}</Link>
           </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/cart" className="text-gray-900 hover:text-gray-500">
+
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Link href="/cart" className="relative">
               <ShoppingCart className="h-6 w-6" />
+              {items.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  {items.length}
+                </span>
+              )}
             </Link>
             {session ? (
-              <Link href="/profile" className="text-gray-900 hover:text-gray-500">
-                <User className="h-6 w-6" />
-              </Link>
+              <>
+                <Link href="/orders" title={t('common.orders')}>
+                  <Package className="h-6 w-6" />
+                </Link>
+                <UserButton />
+              </>
             ) : (
-              <Link
-                href="/login"
-                className="text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
-              >
-                Login
+              <Link href="/api/auth/signin" title={t('common.signIn')}>
+                <User className="h-6 w-6" />
               </Link>
             )}
           </div>

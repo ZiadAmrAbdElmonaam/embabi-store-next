@@ -15,6 +15,8 @@ model User {
   password      String
   role          Role      @default(USER)
   orders        Order[]
+  reviews       Review[]
+  wishlist      Wishlist?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -40,19 +42,28 @@ model Product {
   categoryId  String
   category    Category  @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]
+  reviews     Review[]
+  wishlists   Wishlist[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id])
-  items       OrderItem[]
-  status      OrderStatus @default(PENDING)
-  total       Decimal
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  items         OrderItem[]
+  status        OrderStatus @default(PENDING)
+  total         Decimal
+  shippingName  String
+  shippingPhone String
+  shippingAddress String
+  shippingCity String
+  shippingNotes String?
+  paymentProof  String?
+  statusHistory StatusUpdate[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model OrderItem {
@@ -63,6 +74,36 @@ model OrderItem {
   product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
   price     Decimal
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      @default(0)
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+}
+
+model Wishlist {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model StatusUpdate {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id])
+  status    OrderStatus
+  comment   String?
+  createdAt DateTime    @default(now())
 }
 
 enum Role {

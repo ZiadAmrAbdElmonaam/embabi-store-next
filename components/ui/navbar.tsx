@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { ShoppingCart, User, Package } from "lucide-react";
+import { ShoppingCart, User, Package, Settings } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/hooks/use-cart";
 import { LanguageSwitcher } from "./language-switcher";
@@ -12,6 +12,8 @@ export function Navbar() {
   const { data: session } = useSession();
   const { items } = useCart();
   const { t } = useTranslation();
+
+  const isAdmin = session?.user?.role === 'ADMIN';
 
   return (
     <nav className="border-b">
@@ -24,6 +26,15 @@ export function Navbar() {
           <div className="flex items-center gap-6">
             <Link href="/products">{t('common.products')}</Link>
             <Link href="/categories">{t('common.categories')}</Link>
+            {isAdmin && (
+              <Link 
+                href="/admin" 
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
+              >
+                <Settings className="h-5 w-5" />
+                Admin Dashboard
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -36,18 +47,12 @@ export function Navbar() {
                 </span>
               )}
             </Link>
-            {session ? (
-              <>
-                <Link href="/orders" title={t('common.orders')}>
-                  <Package className="h-6 w-6" />
-                </Link>
-                <UserButton />
-              </>
-            ) : (
-              <Link href="/api/auth/signin" title={t('common.signIn')}>
-                <User className="h-6 w-6" />
+            {session && (
+              <Link href="/orders" title={t('common.orders')}>
+                <Package className="h-6 w-6" />
               </Link>
             )}
+            <UserButton />
           </div>
         </div>
       </div>

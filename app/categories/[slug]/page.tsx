@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/ui/product-card";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
 interface CategoryPageProps {
   params: {
@@ -25,7 +26,20 @@ export default async function CategoryPage({
   });
 
   if (!category) {
-    notFound();
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-3xl font-bold mb-4">Category Not Found</h1>
+        <p className="text-gray-600 mb-8">
+          The category you're looking for doesn't exist.
+        </p>
+        <Link 
+          href="/categories" 
+          className="text-blue-600 hover:text-blue-800 underline"
+        >
+          Browse all categories
+        </Link>
+      </div>
+    );
   }
 
   // Convert Decimal prices to numbers
@@ -43,19 +57,27 @@ export default async function CategoryPage({
         <p className="text-gray-600 mb-8">{category.description}</p>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard 
-            key={product.id} 
-            product={product}
-          />
-        ))}
-      </div>
-
-      {products.length === 0 && (
-        <p className="text-center text-gray-500 py-10">
-          No products in this category yet.
-        </p>
+      {products.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {products.map((product) => (
+            <ProductCard 
+              key={product.id} 
+              product={product}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <p className="text-xl text-gray-500 mb-4">
+            No products in {category.name} category yet.
+          </p>
+          <Link 
+            href="/products" 
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            Browse all products
+          </Link>
+        </div>
       )}
     </div>
   );

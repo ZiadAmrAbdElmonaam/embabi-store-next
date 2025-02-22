@@ -88,19 +88,21 @@ export async function sendOrderConfirmationEmail(
   });
 }
 
+interface OrderStatusEmailProps {
+  id: string;
+  status: string;
+  shippingName: string;
+}
+
 export async function sendOrderStatusEmail(
   to: string,
-  orderDetails: {
-    id: string;
-    status: string;
-    shippingName: string;
-  }
+  { id, status, shippingName }: OrderStatusEmailProps
 ) {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h1 style="color: #1a365d;">Order Status Update</h1>
-      <p>Dear ${orderDetails.shippingName},</p>
-      <p>Your order #${orderDetails.id} has been updated to: <strong>${orderDetails.status}</strong></p>
+      <p>Dear ${shippingName},</p>
+      <p>Your order #${id} has been updated to: <strong>${status}</strong></p>
       
       <p style="margin-top: 20px;">
         You can check your order details by logging into your account.
@@ -112,10 +114,15 @@ export async function sendOrderStatusEmail(
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"Tech Store" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: `Order Status Update #${orderDetails.id}`,
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"Tech Store" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: `Order Status Update #${id}`,
+      html,
+    });
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    throw error;
+  }
 } 

@@ -14,6 +14,11 @@ export function OrderActions({ selectedOrders, onStatusUpdate }: OrderActionsPro
   const [isLoading, setIsLoading] = useState(false);
 
   const handleBulkStatusUpdate = async (status: OrderStatus) => {
+    if (selectedOrders.length === 0) {
+      toast.error('Please select orders to update');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('/api/orders/bulk-update', {

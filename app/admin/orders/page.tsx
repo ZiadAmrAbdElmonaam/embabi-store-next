@@ -1,51 +1,84 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { redirect } from "next/navigation";
-import { formatPrice } from "@/lib/utils";
-import { OrderStatus } from "@prisma/client";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
-import { UpdateOrderStatus } from "@/components/admin/update-order-status";
+'use client';
 
-export default async function AdminOrdersPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.role === 'ADMIN') {
-    redirect('/');
+import { useEffect } from "react";
+import { formatPrice } from "@/lib/utils";
+import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderFilters } from "@/components/admin/order-filters";
+import { OrderActions } from "@/components/admin/order-actions";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
+import { UpdateStatusModal } from "@/components/admin/update-status-modal";
+
+export default function AdminOrdersPage() {
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [updateModalOrder, setUpdateModalOrder] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('/api/admin/orders');
+      if (!response.ok) throw new Error('Failed to fetch orders');
+      const data = await response.json();
+      setOrders(data);
+    } catch (error) {
+      toast.error('Failed to fetch orders');
+      console.error('Failed to fetch orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading orders...</div>;
   }
 
-  const orders = await prisma.order.findMany({
-    include: {
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-      items: {
-        include: {
-          product: true,
-        },
-      },
-      statusHistory: {
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: 1,
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+  const handleStatusUpdate = async () => {
+    // Refresh the orders list after status update
+    fetchOrders();
+  };
+
+  const handleUpdateStatus = (orderId: string) => {
+    setUpdateModalOrder(orderId);
+  };
+
+  const handleStatusUpdated = () => {
+    fetchOrders(); // Refresh the orders list
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-8">Order Management</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Orders</h1>
+      </div>
+
+      <OrderFilters />
+      <OrderActions 
+        selectedOrders={selectedOrders}
+        onStatusUpdate={handleStatusUpdate}
+      />
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left">
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedOrders(orders.map(order => order.id));
+                    } else {
+                      setSelectedOrders([]);
+                    }
+                  }}
+                  checked={selectedOrders.length === orders.length}
+                />
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Order ID
               </th>
@@ -72,6 +105,19 @@ export default async function AdminOrdersPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.map((order) => (
               <tr key={order.id}>
+                <td className="px-6 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedOrders.includes(order.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedOrders([...selectedOrders, order.id]);
+                      } else {
+                        setSelectedOrders(selectedOrders.filter(id => id !== order.id));
+                      }
+                    }}
+                  />
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-medium text-gray-900">
                     #{order.id}
@@ -104,16 +150,27 @@ export default async function AdminOrdersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <UpdateOrderStatus
-                    orderId={order.id}
-                    currentStatus={order.status}
-                  />
+                  <button
+                    onClick={() => handleUpdateStatus(order.id)}
+                    className="text-blue-600 hover:text-blue-900"
+                  >
+                    Update Status
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {updateModalOrder && (
+        <UpdateStatusModal
+          orderId={updateModalOrder}
+          currentStatus={orders.find(o => o.id === updateModalOrder)?.status}
+          onClose={() => setUpdateModalOrder(null)}
+          onUpdate={handleStatusUpdated}
+        />
+      )}
     </div>
   );
 } 

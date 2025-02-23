@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { ShoppingCart, User, Package, Settings } from "lucide-react";
+import { ShoppingCart, Package, Settings } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/hooks/use-cart";
 import { LanguageSwitcher } from "./language-switcher";

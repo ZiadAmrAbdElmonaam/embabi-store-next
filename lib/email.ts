@@ -1,4 +1,3 @@
-import { OrderStatus } from "@prisma/client";
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { formatPrice } from '@/lib/utils';
-
+import Image from 'next/image';
 interface Product {
   id: string;
   name: string;
@@ -89,7 +89,7 @@ export default function AdminProductsPage() {
               <tr key={product.id} className="border-b">
                 <td className="px-6 py-4">
                   {product.images[0] && (
-                    <Image 
+                    <Image
                       src={product.images[0]}
                       alt={product.name}
                       width={500}

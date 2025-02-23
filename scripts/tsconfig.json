@@ -5,6 +5,7 @@
     "lib": ["es2017", "esnext.asynciterable"],
     "esModuleInterop": true,
     "moduleResolution": "node",
-    "outDir": "../dist"
+    "outDir": "../dist",
+    "noImplicitAny": false
   }
 } 

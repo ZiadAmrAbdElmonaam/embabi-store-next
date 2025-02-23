@@ -33,6 +33,7 @@ export function UpdateStatusModal({ orderId, currentStatus, onClose, onUpdate }:
       onUpdate();
       onClose();
     } catch (error) {
+      console.error('Error updating status:', error);
       toast.error('Failed to update status');
     } finally {
       setIsLoading(false);

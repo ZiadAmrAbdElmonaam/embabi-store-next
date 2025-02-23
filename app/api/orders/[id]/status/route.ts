@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { sendOrderStatusEmail } from '@/lib/email';
 import { OrderStatus } from "@prisma/client";
+import { authOptions } from "../../../auth/auth-options";
 
 export async function POST(
   request: Request,
@@ -48,7 +48,7 @@ export async function POST(
       await sendOrderStatusEmail(order.user.email, {
         id: order.id,
         status: status.toLowerCase(),
-        shippingName: order.user.name,
+        shippingName: order.user.name ?? 'Customer',
       });
     } catch (emailError) {
       console.error('Failed to send email:', emailError);
@@ -71,7 +71,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.role === 'ADMIN') {
+    if (session?.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -91,6 +91,7 @@ export async function PUT(
 
     return NextResponse.json(order);
   } catch (error) {
+    console.error('Error updating order status:', error);
     return NextResponse.json(
       { error: 'Failed to update order status' },
       { status: 500 }

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { sendOrderUpdateEmail } from "@/lib/email";
 import { authOptions } from "@/app/api/auth/auth-options";
+import { sendOrderStatusEmail } from "@/lib/email";
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,10 +35,13 @@ export async function POST(request: Request) {
 
     // Send email notifications
     for (const order of orders) {
-      await sendOrderUpdateEmail(
+      await sendOrderStatusEmail(
         order.user.email,
-        order.id,
-        status
+        {
+          id: order.id,
+          status,
+          shippingName: order.user.name || 'Customer' // Assuming user has a name field
+        }
       );
     }
 

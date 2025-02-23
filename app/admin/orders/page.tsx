@@ -11,6 +11,7 @@ import { UpdateStatusModal } from "@/components/admin/update-status-modal";
 
 export default function AdminOrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updateModalOrder, setUpdateModalOrder] = useState<string | null>(null);

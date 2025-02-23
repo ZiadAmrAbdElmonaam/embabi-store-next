@@ -7,7 +7,7 @@ import { authOptions } from "../../../auth/auth-options";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,7 @@ export async function POST(
     const { status, comment } = await request.json();
     
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id: context.params.id },
       data: {
         status: status as OrderStatus,
         statusHistory: {

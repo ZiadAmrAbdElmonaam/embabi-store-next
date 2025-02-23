@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
-    "create-admin": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/create-admin.ts"
+    "create-admin": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/create-admin.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",

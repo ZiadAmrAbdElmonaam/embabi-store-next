@@ -1,24 +1,23 @@
-// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  role          Role      @default(USER)
-  orders        Order[]
-  reviews       Review[]
-  wishlist      Wishlist?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  name      String?
+  email     String    @unique
+  password  String
+  role      Role      @default(USER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  orders    Order[]
+  reviews   Review[]
+  wishlist  Wishlist?
 }
 
 model Category {
@@ -26,56 +25,56 @@ model Category {
   name        String
   slug        String    @unique
   description String?
-  products    Product[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  products    Product[]
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique
-  description String
-  price       Decimal
-  stock       Int
-  images      String[]
-  categoryId  String
-  category    Category  @relation(fields: [categoryId], references: [id])
-  orderItems  OrderItem[]
-  reviews     Review[]
-  wishlists   Wishlist[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String      @id @default(cuid())
+  name          String
+  slug          String      @unique
+  description   String
+  price         Decimal
+  stock         Int
+  images        String[]
+  categoryId    String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   discountPrice Decimal?
-  featured Boolean @default(false)
+  featured      Boolean     @default(false)
+  orderItems    OrderItem[]
+  category      Category    @relation(fields: [categoryId], references: [id])
+  reviews       Review[]
+  wishlists     Wishlist[]  @relation("ProductToWishlist")
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  userId        String
-  user          User        @relation(fields: [userId], references: [id])
-  items         OrderItem[]
-  status        OrderStatus @default(PENDING)
-  total         Decimal
-  shippingName  String
-  shippingPhone String
+  id              String         @id @default(cuid())
+  userId          String
+  status          OrderStatus    @default(PENDING)
+  total           Decimal
+  shippingName    String
+  shippingPhone   String
   shippingAddress String
-  shippingCity String
-  shippingNotes String?
-  paymentProof  String?
-  statusHistory StatusUpdate[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  shippingCity    String
+  shippingNotes   String?
+  paymentProof    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+  statusHistory   StatusUpdate[]
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id])
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
   price     Decimal
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 model Review {
@@ -84,28 +83,28 @@ model Review {
   comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Wishlist {
   id        String    @id @default(cuid())
   userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products  Product[] @relation("ProductToWishlist")
 }
 
 model StatusUpdate {
   id        String      @id @default(cuid())
   orderId   String
-  order     Order       @relation(fields: [orderId], references: [id])
   status    OrderStatus
   comment   String?
   createdAt DateTime    @default(now())
+  order     Order       @relation(fields: [orderId], references: [id])
 }
 
 enum Role {
@@ -119,4 +118,4 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
-} 
+}

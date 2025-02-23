@@ -23,7 +23,10 @@ interface ShippingInfo {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    console.log("Session:", session); // Log the session information
+
+    if (!session || !session.user.id) {
+      console.log("Unauthorized access attempt"); // Log unauthorized access
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -33,6 +36,24 @@ export async function POST(request: Request) {
     const shippingInfo = JSON.parse(formData.get('shippingInfo') as string) as ShippingInfo;
     const total = Number(formData.get('total'));
     
+    // Validate product IDs
+    const productIds = items.map(item => item.id);
+    const existingProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true },
+    });
+
+    const existingProductIds = new Set(existingProducts.map(product => product.id));
+    const invalidProductIds = productIds.filter(id => !existingProductIds.has(id));
+
+    if (invalidProductIds.length > 0) {
+      console.error('Invalid product IDs:', invalidProductIds);
+      return NextResponse.json(
+        { error: 'Some products in the order do not exist' },
+        { status: 400 }
+      );
+    }
+
     let paymentProof = null;
     
     // Only handle payment screenshot if it's a wallet payment

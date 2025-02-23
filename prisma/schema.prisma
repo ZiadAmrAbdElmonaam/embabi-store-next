@@ -46,6 +46,8 @@ model Product {
   wishlists   Wishlist[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  discountPrice Decimal?
+  featured Boolean @default(false)
 }
 
 model Order {

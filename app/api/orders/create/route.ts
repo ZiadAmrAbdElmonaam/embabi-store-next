@@ -74,8 +74,7 @@ export async function POST(request: Request) {
             }
           ).end(buffer);
         });
-            
-        paymentProof = (result as unknown as { secure_url: string }).secure_url;
+        paymentProof = (result as unknown as { secure_url: string })?.secure_url || null;
       }
     }
 

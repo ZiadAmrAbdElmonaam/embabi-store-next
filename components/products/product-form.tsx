@@ -7,9 +7,18 @@ import Image from 'next/image';
 
 interface ProductFormProps {
   categories: Category[];
+  initialData?: {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    stock: number;
+    categoryId: string;
+    images: string[];
+  };
 }
 
-export function ProductForm({ categories }: ProductFormProps) {
+export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -71,6 +80,17 @@ export function ProductForm({ categories }: ProductFormProps) {
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
+
+      // Save image URLs to the database
+      await Promise.all(data.urls.map(async (url: string) => {
+        await fetch('/api/images', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url, productId: initialData?.id }),
+        });
+      }));
 
       setImages((prev) => [...prev, ...data.urls]);
     } catch (error) {

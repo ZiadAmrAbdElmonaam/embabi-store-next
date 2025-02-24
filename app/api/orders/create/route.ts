@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       );
     }
 
-    let paymentProof = null;
+    let paymentProof: string | null = null;
     
     // Only handle payment screenshot if it's a wallet payment
     if (paymentMethod === 'wallet') {

@@ -18,7 +18,8 @@ export default async function CategoryPage({
     include: {
       products: {
         include: {
-          category: true
+          category: true,
+          images: true,
         }
       },
     },
@@ -47,6 +48,7 @@ export default async function CategoryPage({
     price: Number(product.price),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
+    images: product.images.map(image => image.url),
   }));
 
   return (

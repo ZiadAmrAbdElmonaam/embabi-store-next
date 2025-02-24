@@ -1,117 +1,144 @@
 'use client';
 
-import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import { Eye, EyeOff } from "lucide-react";
+import { WarningModal } from "@/components/ui/modal";
 
 export function ProfileForm() {
   const { data: session, update } = useSession();
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
   const [formData, setFormData] = useState({
     name: session?.user?.name || '',
     email: session?.user?.email || '',
-    currentPassword: '',
+    password: '',
     newPassword: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setShowWarningModal(true);
+  };
 
+  const handleUpdate = async () => {
+    setShowWarningModal(false);
+    setLoading(true);
     try {
-      const response = await fetch('/api/user/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
-
-      // Update the session with new data
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          name: formData.name,
-          email: formData.email,
-        },
-      });
-
+      await update(formData);
       toast.success('Profile updated successfully');
-      setFormData(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-      }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
+      toast.error('Failed to update profile');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  if (!session) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Name</label>
-        <input
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          required
-        />
-      </div>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="space-y-6">
+          {/* Name Field */}
+          <div className="space-y-2">
+            <label className="text-lg font-medium text-gray-700">
+              Name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
+              placeholder="Enter your name"
+            />
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Email</label>
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          required
-        />
-      </div>
+          {/* Email Field */}
+          <div className="space-y-2">
+            <label className="text-lg font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
+              placeholder="Enter your email"
+            />
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Current Password
-        </label>
-        <input
-          type="password"
-          value={formData.currentPassword}
-          onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </div>
+          {/* Current Password Field */}
+          <div className="space-y-2">
+            <label className="text-lg font-medium text-gray-700">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
+                placeholder="Enter current password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          New Password (leave blank to keep current)
-        </label>
-        <input
-          type="password"
-          value={formData.newPassword}
-          onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        />
-      </div>
+          {/* New Password Field */}
+          <div className="space-y-2">
+            <label className="text-lg font-medium text-gray-700">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={formData.newPassword}
+                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
+                placeholder="Enter new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-      >
-        {isLoading ? 'Updating...' : 'Update Profile'}
-      </button>
-    </form>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Updating...' : 'Update Profile'}
+        </button>
+      </form>
+
+      <WarningModal
+        isOpen={showWarningModal}
+        onClose={() => setShowWarningModal(false)}
+        onConfirm={handleUpdate}
+        title="Update Profile"
+        message="Are you sure you want to update your profile information? This action cannot be undone."
+      />
+    </>
   );
 } 

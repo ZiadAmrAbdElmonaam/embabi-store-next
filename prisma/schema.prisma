@@ -46,7 +46,7 @@ model Product {
   discountPrice Decimal?    @db.Decimal(10, 2)
   featured      Boolean     @default(false)
   orderItems    OrderItem[]
-  category      Category    @relation(fields: [categoryId], references: [id])
+  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   reviews       Review[]
   wishlists     Wishlist[]  @relation("ProductToWishlist")
   sale          Float?

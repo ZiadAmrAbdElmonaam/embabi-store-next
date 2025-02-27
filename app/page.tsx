@@ -1,18 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice } from "@/lib/utils";
 import { Carousel } from "@/components/ui/carousel";
+import { ProductCard } from "@/components/products/product-card";
 
-const navigationLinks = [
-  { name: "Home", href: "/" },
-  { name: "Products", href: "/products" },
-  { name: "Categories", href: "/categories" },
-  { name: "Deals", href: "/deals" },
-  { name: "Most Selling", href: "/most-selling" },
-  { name: "Contact", href: "/contact" },
-  { name: "Branches", href: "/branches" },
-];
 
 export default async function HomePage() {
   // Fetch featured products
@@ -20,15 +11,35 @@ export default async function HomePage() {
     take: 6,
     include: {
       category: true,
+      variants: true,
     },
     orderBy: {
       createdAt: 'desc'
     }
   });
 
+  // Convert Decimal prices to numbers and format the data
+  const formattedProducts = featuredProducts.map(product => ({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: Number(product.price),
+    salePrice: product.salePrice ? Number(product.salePrice) : null,
+    saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+    images: product.images,
+    slug: product.slug,
+    colors: product.variants.map(variant => variant.color)
+  }));
+
   // Fetch categories
   const categories = await prisma.category.findMany({
-    take: 4
+    take: 4,
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      image: true
+    }
   });
 
   return (
@@ -39,17 +50,30 @@ export default async function HomePage() {
       {/* Categories Section */}
       <section className="py-6 bg-gray-50">
         <div className="max-w-7xl mx-auto px-2 sm:px-4">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Shop by Category</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Shop by Category</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {categories.map((category) => (
               <Link
                 key={category.id}
                 href={`/categories/${category.slug}`}
-                className="group relative h-64 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition"
+                className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition"
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-6">
-                  <h3 className="text-xl font-semibold text-white">{category.name}</h3>
+                <div className="aspect-square relative">
+                  {category.image && (
+                    <Image
+                      src={category.image}
+                      alt={category.name}
+                      fill
+                      className="object-cover transition duration-300 group-hover:scale-110"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 group-hover:opacity-0" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <h3 className="text-4xl font-bold text-white text-center px-4 py-2 transition-opacity duration-300 group-hover:opacity-0">
+                      {category.name}
+                    </h3>
+                  </div>
                 </div>
               </Link>
             ))}
@@ -58,38 +82,15 @@ export default async function HomePage() {
       </section>
 
       {/* Featured Products Section */}
-      <section className="py-6">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Featured Products</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredProducts.map((product) => (
-              <Link
-                key={product.id}
-                href={`/products/${product.slug}`}
-                className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition"
-              >
-                <div className="aspect-square relative">
-                  {product.images[0] && (
-                    <Image
-                      src={product.images[0]}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition"
-                    />
-                  )}
-                </div>
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {product.name}
-                  </h3>
-                  <p className="text-orange-600 font-semibold">
-                    {formatPrice(Number(product.price))}
-                  </p>
-                </div>
-              </Link>
+      <section className="py-4">
+        <div className="max-w-[1800px] mx-auto px-2">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Featured Products</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {formattedProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
-          <div className="text-center mt-8">
+          <div className="text-center mt-6">
             <Link
               href="/products"
               className="inline-block bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-3 rounded-full font-semibold hover:from-orange-700 hover:to-red-700 transition"
@@ -135,17 +136,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <nav className="hidden md:flex items-center justify-center space-x-8 py-4">
-        {navigationLinks.map((link) => (
-          <Link
-            key={link.name}
-            href={link.href}
-            className="text-gray-600 hover:text-orange-600 transition-colors"
-          >
-            {link.name}
-          </Link>
-        ))}
-      </nav>
+      
     </div>
   );
 }

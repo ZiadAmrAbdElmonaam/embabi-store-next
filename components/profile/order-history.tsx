@@ -75,7 +75,7 @@ export function OrderHistory() {
               <OrderStatusBadge status={order.status} />
             </div>
 
-            <div className="border-t border-gray-200 mt-4 pt-4">
+            <div>
               <h4 className="text-sm font-medium mb-2">Items</h4>
               <div className="space-y-2">
                 {order.items.map((item, index) => (
@@ -88,7 +88,7 @@ export function OrderHistory() {
               </div>
             </div>
 
-            <div className="border-t border-gray-200 mt-4 pt-4 flex justify-between">
+            <div className="flex justify-between">
               <span className="font-medium">Total</span>
               <span className="font-medium">{formatPrice(order.total)}</span>
             </div>

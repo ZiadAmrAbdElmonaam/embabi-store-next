@@ -6,8 +6,6 @@ import { toast } from "react-hot-toast";
 import { Loader2, X, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 
-const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
-
 interface CategoryFormProps {
   initialData?: {
     id?: string;
@@ -20,38 +18,10 @@ interface CategoryFormProps {
 export function CategoryForm({ initialData }: CategoryFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState(initialData?.image || "");
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     description: initialData?.description || "",
   });
-
-  const handleImageUpload = async (file: File) => {
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast.error('Image size should be less than 5MB');
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-
-      const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const data = await response.json();
-      setImageUrl(data.secure_url);
-      toast.success('Image uploaded successfully');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,12 +32,16 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
         ? `/api/categories/${initialData.id}`
         : '/api/categories';
 
+      // Create image path based on slug
+      const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const imagePath = `/images/categories/${slug}.png`;
+
       const response = await fetch(url, {
         method: initialData?.id ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          image: imageUrl,
+          image: imagePath,
         }),
       });
 
@@ -116,45 +90,12 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
         />
       </div>
 
-      {/* Category Image */}
+      {/* Category Image Info */}
       <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">
-          Category Image
-        </label>
-        
-        <div className="flex items-center gap-4">
-          {imageUrl ? (
-            <div className="relative w-40 h-40">
-              <Image
-                src={imageUrl}
-                alt="Category"
-                fill
-                className="object-cover rounded-lg"
-              />
-              <button
-                type="button"
-                onClick={() => setImageUrl("")}
-                className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <label className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 transition-colors">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload(file);
-                }}
-              />
-              <ImageIcon className="h-8 w-8 text-gray-400" />
-              <span className="mt-2 text-sm text-gray-500">Upload Image</span>
-              <span className="mt-1 text-xs text-gray-400">Max 5MB</span>
-            </label>
-          )}
+        <div className="bg-blue-50 p-4 rounded-md">
+          <p className="text-sm text-blue-700">
+            Category images should be placed in the <code>/public/images/categories/</code> folder with the name matching the category slug (e.g., <code>iphones.png</code> for the "iphones" category).
+          </p>
         </div>
       </div>
 

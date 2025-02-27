@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       data: {
         name: data.name,
         description: data.description,
+        image: data.image,
         slug,
       },
     });

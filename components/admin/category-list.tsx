@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Category {
   id: string;
   name: string;
   slug: string;
+  image?: string;
   _count: {
     products: number;
   };
@@ -16,6 +18,11 @@ interface Category {
 export function CategoryList() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState({
+    isOpen: false,
+    categoryId: '',
+    categoryName: ''
+  });
 
   useEffect(() => {
     fetchCategories();
@@ -35,10 +42,6 @@ export function CategoryList() {
   };
 
   const handleDelete = async (categoryId: string) => {
-    if (!confirm('Are you sure? This will also delete all products in this category!')) {
-      return;
-    }
-
     try {
       const response = await fetch(`/api/categories/${categoryId}`, {
         method: 'DELETE',
@@ -58,40 +61,68 @@ export function CategoryList() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
-      <table className="min-w-full">
-        <thead>
-          <tr className="border-b">
-            <th className="px-6 py-3 text-left">Name</th>
-            <th className="px-6 py-3 text-left">Slug</th>
-            <th className="px-6 py-3 text-left">Products</th>
-            <th className="px-6 py-3 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {categories.map((category) => (
-            <tr key={category.id} className="border-b">
-              <td className="px-6 py-4">{category.name}</td>
-              <td className="px-6 py-4">{category.slug}</td>
-              <td className="px-6 py-4">{category._count.products}</td>
-              <td className="px-6 py-4">
-                <Link
-                  href={`/admin/categories/${category.id}/edit`}
-                  className="text-blue-600 hover:text-blue-800 mr-4"
-                >
-                  Edit
-                </Link>
-                <button
-                  onClick={() => handleDelete(category.id)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Delete
-                </button>
-              </td>
+    <>
+      <div className="bg-white rounded-lg shadow">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="px-6 py-3 text-left">Name</th>
+              <th className="px-6 py-3 text-left">Image</th>
+              <th className="px-6 py-3 text-left">Slug</th>
+              <th className="px-6 py-3 text-left">Products</th>
+              <th className="px-6 py-3 text-left">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {categories.map((category) => (
+              <tr key={category.id} className="border-b">
+                <td className="px-6 py-4">{category.name}</td>
+                <td className="px-6 py-4">
+                  {category.image ? (
+                    <div className="relative w-12 h-12">
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="rounded-lg object-cover w-full h-full"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">No image</span>
+                  )}
+                </td>
+                <td className="px-6 py-4">{category.slug}</td>
+                <td className="px-6 py-4">{category._count.products}</td>
+                <td className="px-6 py-4">
+                  <Link
+                    href={`/admin/categories/${category.id}/edit`}
+                    className="text-blue-600 hover:text-blue-800 mr-4"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => setDeleteDialog({
+                      isOpen: true,
+                      categoryId: category.id,
+                      categoryName: category.name
+                    })}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' })}
+        onConfirm={() => handleDelete(deleteDialog.categoryId)}
+        title="Delete Category"
+        message={`Are you sure you want to delete "${deleteDialog.categoryName}"? This will also delete all products in this category!`}
+      />
+    </>
   );
 } 

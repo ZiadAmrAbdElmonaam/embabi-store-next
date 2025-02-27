@@ -15,6 +15,8 @@ export default async function ProductPage({
     where: { slug: params.slug },
     include: {
       category: true,
+      variants: true,
+      details: true,
       reviews: {
         include: {
           user: {
@@ -42,6 +44,16 @@ export default async function ProductPage({
       ...review,
       createdAt: review.createdAt.toISOString(),
       updatedAt: review.updatedAt.toISOString(),
+    })),
+    variants: product.variants.map(variant => ({
+      id: variant.id,
+      color: variant.color,
+      quantity: variant.quantity,
+    })),
+    details: product.details.map(detail => ({
+      id: detail.id,
+      label: detail.label,
+      description: detail.description,
     })),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),

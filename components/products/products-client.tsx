@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ProductGrid } from "@/components/products/product-grid";
-import { Search, ChevronDown, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Search, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRouter, } from "next/navigation";
 import Link from "next/link";
 
 interface ProductsClientProps {

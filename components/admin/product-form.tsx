@@ -1,19 +1,27 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Category, Product, ProductVariant } from "@prisma/client";
+import { Category, Product, ProductVariant, ProductDetail } from "@prisma/client";
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
-import { X, Image as ImageIcon, Plus } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import { X, Image as ImageIcon, Plus, Loader2 } from 'lucide-react';
+
+interface SerializedProduct extends Omit<Product, 'price' | 'salePrice' | 'discountPrice' | 'sale' | 'createdAt' | 'updatedAt' | 'saleEndDate'> {
+  price: string;
+  salePrice: string | null;
+  discountPrice: string | null;
+  sale: string | null;
+  createdAt: string;
+  updatedAt: string;
+  saleEndDate: string | null;
+  variants: ProductVariant[];
+  details: ProductDetail[];
+}
 
 interface ProductFormProps {
   categories: Category[];
-  initialData?: Product & {
-    variants: ProductVariant[];
-    details: ProductDetail[];
-  };
+  initialData?: SerializedProduct;
 }
 
 interface ColorVariant {
@@ -31,19 +39,48 @@ const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${process.env.NEX
 export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [availableImages, setAvailableImages] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [thumbnails, setThumbnails] = useState<string[]>(initialData?.thumbnails || []);
-  const [colorVariants, setColorVariants] = useState<ColorVariant[]>(initialData?.variants || []);
-  const [details, setDetails] = useState<ProductDetail[]>(initialData?.details || []);
+  const [colorVariants, setColorVariants] = useState<ColorVariant[]>(
+    initialData?.variants.map(v => ({ color: v.color, quantity: v.quantity })) || []
+  );
+  const [details, setDetails] = useState<ProductDetail[]>(
+    initialData?.details.map(d => ({ label: d.label, description: d.description })) || []
+  );
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     description: initialData?.description || "",
     price: initialData?.price || "",
     sale: initialData?.sale || "",
     saleEndDate: initialData?.saleEndDate ? new Date(initialData.saleEndDate).toISOString().split('T')[0] : "",
-    stock: initialData?.stock || "",
+    stock: initialData?.stock.toString() || "",
     categoryId: initialData?.categoryId || "",
   });
+
+  useEffect(() => {
+    // Fetch available images from the API
+    const fetchImages = async () => {
+      try {
+        const response = await fetch('/api/images/products');
+        if (!response.ok) throw new Error('Failed to fetch images');
+        const images = await response.json();
+        setAvailableImages(images);
+      } catch (error) {
+        console.error('Error fetching images:', error);
+        toast.error('Failed to load available images');
+      }
+    };
+
+    fetchImages();
+  }, []);
+
+  // Function to get image name from path
+  const getImageName = (imagePath: string) => {
+    const parts = imagePath.split('/');
+    const fileName = parts[parts.length - 1];
+    return fileName.split('.')[0].replace(/[-_]/g, ' ');
+  };
 
   // Calculate sale price
   const salePrice = formData.price && formData.sale 
@@ -62,7 +99,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (quantityMismatch) {
-      toast.error("Total color quantities must match stock amount");
+      toast.error(`Total color quantities (${totalQuantity}) must match stock (${formData.stock})`);
       return;
     }
 
@@ -73,70 +110,53 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         ? `/api/products/${initialData.id}`
         : '/api/products';
         
+      // Format the data before sending
+      const productData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        sale: formData.sale ? parseFloat(formData.sale) : null,
+        salePrice: salePrice,
+        saleEndDate: formData.saleEndDate || null,
+        images,
+        thumbnails,
+        details,
+        variants: colorVariants
+      };
+
       const response = await fetch(url, {
         method: initialData ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          salePrice,
-          images,
-          thumbnails,
-          details,
-          variants: colorVariants,
-        }),
+        body: JSON.stringify(productData),
       });
 
-      if (!response.ok) throw new Error('Failed to save product');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save product');
+      }
 
       router.push('/admin/products');
       router.refresh();
       toast.success(initialData ? 'Product updated' : 'Product created');
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Something went wrong');
+      toast.error(error instanceof Error ? error.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageUpload = async (file: File, type: 'image' | 'thumbnail') => {
-    const maxFiles = type === 'image' ? 3 : 5;
-    const currentFiles = type === 'image' ? images : thumbnails;
+  const handleImageSelection = (imagePath: string, type: 'main' | 'thumbnail') => {
+    const maxFiles = type === 'main' ? 3 : 5;
+    const currentFiles = type === 'main' ? images : thumbnails;
+    const setFiles = type === 'main' ? setImages : setThumbnails;
 
-    if (currentFiles.length >= maxFiles) {
-      toast.error(`Maximum ${maxFiles} ${type}s allowed`);
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast.error('Image size should be less than 5MB');
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
-
-      const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('Upload failed');
-
-      const data = await response.json();
-      
-      if (type === 'image') {
-        setImages([...images, data.secure_url]);
-      } else {
-        setThumbnails([...thumbnails, data.secure_url]);
-      }
-      
-      toast.success('Image uploaded successfully');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
+    if (currentFiles.includes(imagePath)) {
+      setFiles(currentFiles.filter(img => img !== imagePath));
+    } else if (currentFiles.length < maxFiles) {
+      setFiles([...currentFiles, imagePath]);
+    } else {
+      toast.error(`Maximum ${maxFiles} ${type === 'main' ? 'main images' : 'thumbnails'} allowed`);
     }
   };
 
@@ -146,9 +166,9 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         <label className="block text-sm font-medium text-gray-700">Name</label>
         <input
           type="text"
-          name="name"
-          defaultValue={initialData?.name}
           required
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
         />
       </div>
@@ -158,8 +178,8 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           Description
         </label>
         <textarea
-          name="description"
-          defaultValue={initialData?.description}
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           required
           rows={4}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
@@ -171,11 +191,11 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           <label className="block text-sm font-medium text-gray-700">Price</label>
           <input
             type="number"
-            name="price"
-            defaultValue={initialData?.price.toString()}
             required
             min="0"
             step="0.01"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
           />
         </div>
@@ -184,10 +204,10 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           <label className="block text-sm font-medium text-gray-700">Stock</label>
           <input
             type="number"
-            name="stock"
-            defaultValue={initialData?.stock}
             required
             min="0"
+            value={formData.stock}
+            onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
           />
         </div>
@@ -198,8 +218,8 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           Category
         </label>
         <select
-          name="categoryId"
-          defaultValue={initialData?.categoryId}
+          value={formData.categoryId}
+          onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
           required
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
         >
@@ -214,22 +234,9 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
 
       {/* Pricing and Stock */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Pricing and Stock</h2>
+        <h2 className="text-xl font-semibold">Sale Settings</h2>
         
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Price</label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              value={formData.price.toString()}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-            />
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700">Sale Percentage</label>
             <input
@@ -243,15 +250,6 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">New Price</label>
-            <div className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-500">
-              {formData.price && formData.sale ? 
-                `$${calculateNewPrice(Number(formData.price), Number(formData.sale)).toFixed(2)}` 
-                : '-'}
-            </div>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700">Sale End Date</label>
             <input
               type="date"
@@ -260,12 +258,28 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
             />
           </div>
+
+          {formData.price && formData.sale && (
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Sale Price</label>
+              <div className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-500">
+                ${calculateNewPrice(Number(formData.price), Number(formData.sale)).toFixed(2)}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Color Variants */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Color Variants</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Color Variants</h2>
+          {quantityMismatch && (
+            <p className="text-sm text-red-600">
+              Total quantities ({totalQuantity}) must match stock ({formData.stock})
+            </p>
+          )}
+        </div>
         
         {colorVariants.map((variant, index) => (
           <div key={index} className="flex items-center gap-4">
@@ -312,12 +326,6 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           <Plus className="h-4 w-4" />
           Add Color Variant
         </button>
-
-        {quantityMismatch && (
-          <p className="text-sm text-red-600">
-            Total color quantities ({totalQuantity}) must match stock amount ({formData.stock})
-          </p>
-        )}
       </div>
 
       {/* Product Details */}
@@ -373,83 +381,61 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         </button>
       </div>
 
-      {/* Main Images */}
+      {/* Main Product Images */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Main Product Images</h2>
-          <span className="text-sm text-gray-500">
-            {images.length}/3 images
-          </span>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {images.map((url, index) => (
-            <div key={index} className="relative group aspect-square">
+        <h2 className="text-xl font-semibold">Main Product Images (Max 3)</h2>
+        <div className="grid grid-cols-4 gap-4">
+          {availableImages.map((imagePath) => (
+            <div
+              key={imagePath}
+              onClick={() => handleImageSelection(imagePath, 'main')}
+              className={`relative aspect-square cursor-pointer rounded-lg overflow-hidden border-2 ${
+                images.includes(imagePath) ? 'border-orange-500' : 'border-gray-200'
+              }`}
+            >
               <Image
-                src={url}
-                alt={`Product ${index + 1}`}
+                src={imagePath}
+                alt={getImageName(imagePath)}
                 fill
-                className="object-cover rounded-lg"
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 25vw"
               />
-              <button
-                type="button"
-                onClick={() => setImages(images.filter((_, i) => i !== index))}
-                className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {images.includes(imagePath) && (
+                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">Selected</span>
+                </div>
+              )}
             </div>
           ))}
-          
-          {images.length < 3 && (
-            <ImageUploadBox
-              onUpload={(file) => handleImageUpload(file, 'image')}
-              text="Add Main Image"
-            />
-          )}
         </div>
-
-        {images.length === 0 && (
-          <p className="text-sm text-red-500">
-            At least one main image is required
-          </p>
-        )}
       </div>
 
-      {/* Thumbnails */}
+      {/* Product Thumbnails */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Product Thumbnails</h2>
-          <span className="text-sm text-gray-500">
-            {thumbnails.length}/5 thumbnails
-          </span>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {thumbnails.map((url, index) => (
-            <div key={index} className="relative group aspect-square">
+        <h2 className="text-xl font-semibold">Product Thumbnails (Max 5)</h2>
+        <div className="grid grid-cols-4 gap-4">
+          {availableImages.map((imagePath) => (
+            <div
+              key={imagePath}
+              onClick={() => handleImageSelection(imagePath, 'thumbnail')}
+              className={`relative aspect-square cursor-pointer rounded-lg overflow-hidden border-2 ${
+                thumbnails.includes(imagePath) ? 'border-orange-500' : 'border-gray-200'
+              }`}
+            >
               <Image
-                src={url}
-                alt={`Thumbnail ${index + 1}`}
+                src={imagePath}
+                alt={getImageName(imagePath)}
                 fill
-                className="object-cover rounded-lg"
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 25vw"
               />
-              <button
-                type="button"
-                onClick={() => setThumbnails(thumbnails.filter((_, i) => i !== index))}
-                className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {thumbnails.includes(imagePath) && (
+                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">Selected</span>
+                </div>
+              )}
             </div>
           ))}
-          
-          {thumbnails.length < 5 && (
-            <ImageUploadBox
-              onUpload={(file) => handleImageUpload(file, 'thumbnail')}
-              text="Add Thumbnail"
-            />
-          )}
         </div>
       </div>
 
@@ -467,7 +453,10 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50"
         >
           {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {initialData ? 'Updating...' : 'Creating...'}
+            </div>
           ) : (
             initialData ? 'Update Product' : 'Create Product'
           )}

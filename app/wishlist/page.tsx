@@ -1,149 +1,78 @@
-'use client';
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/auth-options";
+import { redirect } from "next/navigation";
+import { Heart, ShoppingBag } from "lucide-react";
+import Link from "next/link";
+import WishlistItems from "@/components/wishlist/wishlist-items";
 
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
-import { useCart } from '@/hooks/use-cart';
-import { toast } from 'react-hot-toast';
-import { formatPrice } from '@/lib/utils';
+export default async function WishlistPage() {
+  const session = await getServerSession(authOptions);
 
-interface WishlistItem {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-  slug: string;
-  stock: number;
-}
+  if (!session?.user) {
+    redirect("/auth/signin");
+  }
 
-export default function WishlistPage() {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { addItem } = useCart();
-
-  useEffect(() => {
-    // Load wishlist from localStorage
-    const loadWishlist = () => {
-      const savedWishlist = localStorage.getItem('wishlist');
-      if (savedWishlist) {
-        setWishlistItems(JSON.parse(savedWishlist));
+  const wishlist = await prisma.wishlist.findUnique({
+    where: { userId: session.user.id },
+    include: {
+      products: {
+        include: {
+          variants: true,
+          category: true
+        }
       }
-      setLoading(false);
-    };
+    }
+  });
 
-    loadWishlist();
-  }, []);
-
-  const removeFromWishlist = (itemId: string) => {
-    const updatedWishlist = wishlistItems.filter(item => item.id !== itemId);
-    setWishlistItems(updatedWishlist);
-    localStorage.setItem('wishlist', JSON.stringify(updatedWishlist));
-    toast.success('Item removed from wishlist');
-  };
-
-  const addToCart = (item: WishlistItem) => {
-    addItem({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      images: item.images,
-      quantity: 1
-    });
-    toast.success('Added to cart');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (wishlistItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your wishlist is empty</h2>
-            <p className="text-gray-500 mb-6">Start adding items you love to your wishlist</p>
-            <Link 
-              href="/products"
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-orange-600 hover:bg-orange-700"
-            >
-              Browse Products
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Format products to handle Decimal serialization
+  const formattedProducts = wishlist?.products.map(product => ({
+    ...product,
+    price: Number(product.price),
+    salePrice: product.salePrice ? Number(product.salePrice) : null,
+    discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
+    variants: product.variants.map(variant => ({
+      ...variant,
+      price: Number(variant.price)
+    })),
+    // Convert dates to ISO strings
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+    saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null
+  })) || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
+    <div className="bg-gray-50 min-h-[calc(100vh-4rem)]">
+      <div className="container mx-auto py-12">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">My Wishlist</h1>
-          <p className="text-gray-500">{wishlistItems.length} items</p>
+          <div className="flex items-center gap-3">
+            <Heart className="w-8 h-8 text-rose-600" fill="currentColor" />
+            <h1 className="text-3xl font-bold">My Wishlist</h1>
+          </div>
+          <Link 
+            href="/cart" 
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ShoppingBag className="w-5 h-5" />
+            <span>View Cart</span>
+          </Link>
         </div>
 
-        {/* Wishlist Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {wishlistItems.map((item) => (
-            <div 
-              key={item.id} 
-              className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+        {formattedProducts.length === 0 ? (
+          <div className="bg-white rounded-2xl p-8 text-center">
+            <Heart className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h2 className="text-xl font-semibold mb-2">Your wishlist is empty</h2>
+            <p className="text-gray-500 mb-6">Start adding items you love to your wishlist!</p>
+            <Link 
+              href="/" 
+              className="inline-flex items-center gap-2 bg-orange-600 text-white px-6 py-3 rounded-full hover:bg-orange-700 transition-colors"
             >
-              {/* Product Image */}
-              <div className="relative aspect-square">
-                <Image
-                  src={item.images[0]}
-                  alt={item.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              {/* Product Info */}
-              <div className="p-4">
-                <Link 
-                  href={`/products/${item.slug}`}
-                  className="text-lg font-medium text-gray-900 hover:text-orange-600"
-                >
-                  {item.name}
-                </Link>
-                <p className="text-orange-600 font-semibold mt-2">
-                  {formatPrice(item.price)}
-                </p>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between mt-4">
-                  <button
-                    onClick={() => addToCart(item)}
-                    disabled={item.stock === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>{item.stock === 0 ? 'Out of Stock' : 'Add to Cart'}</span>
-                  </button>
-                  <button
-                    onClick={() => removeFromWishlist(item.id)}
-                    className="p-2 text-gray-400 hover:text-red-500"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              Continue Shopping
+            </Link>
+          </div>
+        ) : (
+          <WishlistItems products={formattedProducts} />
+        )}
       </div>
     </div>
   );

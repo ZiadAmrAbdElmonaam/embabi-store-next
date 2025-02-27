@@ -38,15 +38,45 @@ export async function POST(request: Request) {
       );
     }
 
+    // Parse numeric values
+    const price = parseFloat(data.price);
+    const stock = parseInt(data.stock) || 0;
+    const sale = data.sale ? parseFloat(data.sale) : null;
+    const salePrice = data.salePrice ? parseFloat(data.salePrice) : null;
+
+    // Create the product with all fields
     const product = await prisma.product.create({
       data: {
         name: data.name,
         description: data.description,
-        price: data.price,
-        stock: data.stock || 0,
+        price: price,
+        stock: stock,
         images: data.images || [],
+        thumbnails: data.thumbnails || [],
         slug,
         categoryId: data.categoryId,
+        sale: sale,
+        salePrice: salePrice,
+        saleEndDate: data.saleEndDate ? new Date(data.saleEndDate) : null,
+        // Create variants
+        variants: {
+          create: data.variants?.map((variant: any) => ({
+            color: variant.color,
+            quantity: parseInt(variant.quantity),
+          })) || [],
+        },
+        // Create details
+        details: {
+          create: data.details?.map((detail: any) => ({
+            label: detail.label,
+            description: detail.description,
+          })) || [],
+        },
+      },
+      // Include relations in response
+      include: {
+        variants: true,
+        details: true,
       },
     });
 
@@ -55,6 +85,25 @@ export async function POST(request: Request) {
     console.error('Error creating product:', error);
     return NextResponse.json(
       { error: 'Failed to create product' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        category: true,
+        variants: true,
+        details: true,
+      },
+    });
+    return NextResponse.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch products' },
       { status: 500 }
     );
   }

@@ -1,12 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { ProductFilters } from "@/components/products/product-filters";
-import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { SearchBar } from "@/components/ui/search-bar";
-import { PriceRange } from "@/components/ui/price-range";
-import { ProductSort } from "@/components/products/product-sort";
-import { ProductGrid, ProductWithDetails } from "@/components/products/product-grid";
 import { authOptions } from "../api/auth/auth-options";
+import { ProductsClient } from "@/components/products/products-client";
 
 interface SearchParams {
   category?: string;
@@ -14,6 +9,7 @@ interface SearchParams {
   maxPrice?: string;
   sort?: string;
   q?: string;
+  page?: string;
 }
 
 export default async function ProductsPage({
@@ -21,29 +17,58 @@ export default async function ProductsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  const ITEMS_PER_PAGE = 12;
+  const currentPage = Number(searchParams.page) || 1;
+  const skip = (currentPage - 1) * ITEMS_PER_PAGE;
+
   const session = await getServerSession(authOptions);
   const isAdmin = session?.user?.role === 'ADMIN';
 
-  const { category, minPrice, maxPrice, sort, q } = searchParams;
+  const totalProducts = await prisma.product.count({
+    where: {
+      AND: [
+        // Category filter
+        searchParams.category ? { categoryId: searchParams.category } : {},
+        // Price range filter
+        {
+          price: {
+            gte: searchParams.minPrice ? parseFloat(searchParams.minPrice) : undefined,
+            lte: searchParams.maxPrice ? parseFloat(searchParams.maxPrice) : undefined,
+          },
+        },
+        // Search query
+        searchParams.q
+          ? {
+              OR: [
+                { name: { contains: searchParams.q, mode: 'insensitive' } },
+                { description: { contains: searchParams.q, mode: 'insensitive' } },
+              ],
+            }
+          : {},
+      ],
+    },
+  });
+
+  const totalPages = Math.ceil(totalProducts / ITEMS_PER_PAGE);
 
   const products = await prisma.product.findMany({
     where: {
       AND: [
         // Category filter
-        category ? { categoryId: category } : {},
+        searchParams.category ? { categoryId: searchParams.category } : {},
         // Price range filter
         {
           price: {
-            gte: minPrice ? parseFloat(minPrice) : undefined,
-            lte: maxPrice ? parseFloat(maxPrice) : undefined,
+            gte: searchParams.minPrice ? parseFloat(searchParams.minPrice) : undefined,
+            lte: searchParams.maxPrice ? parseFloat(searchParams.maxPrice) : undefined,
           },
         },
         // Search query
-        q
+        searchParams.q
           ? {
               OR: [
-                { name: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
+                { name: { contains: searchParams.q, mode: 'insensitive' } },
+                { description: { contains: searchParams.q, mode: 'insensitive' } },
               ],
             }
           : {},
@@ -58,68 +83,36 @@ export default async function ProductsPage({
       },
     },
     orderBy: {
-      ...(sort === 'price_asc' && { price: 'asc' }),
-      ...(sort === 'price_desc' && { price: 'desc' }),
-      ...(sort === 'newest' && { createdAt: 'desc' }),
-      ...(sort === 'popular' && { reviews: { _count: 'desc' } }),
+      ...(searchParams.sort === 'price_asc' && { price: 'asc' }),
+      ...(searchParams.sort === 'price_desc' && { price: 'desc' }),
+      ...(searchParams.sort === 'newest' && { createdAt: 'desc' }),
+      ...(searchParams.sort === 'popular' && { reviews: { _count: 'desc' } }),
     },
+    skip,
+    take: ITEMS_PER_PAGE,
   });
-
-  // Convert Decimal to number before passing to client components
-  const serializedProducts: ProductWithDetails[] = products.map(product => ({
-    ...product,
-    price: Number(product.price),
-    createdAt: new Date(product.createdAt),
-    updatedAt: new Date(product.updatedAt)
-  }));
 
   const categories = await prisma.category.findMany();
   const maxProductPrice = await prisma.product.aggregate({
     _max: { price: true },
   });
 
+  // Convert Decimal to number before passing to client components
+  const serializedProducts = products.map(product => ({
+    ...product,
+    price: Number(product.price),
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString()
+  }));
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="w-full md:w-64 space-y-6">
-          <ProductFilters
-            categories={categories}
-            maxPrice={maxProductPrice._max.price ? Number(maxProductPrice._max.price) : 0}
-          />
-        </div>
-
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Products</h1>
-            <ProductSort />
-          </div>
-
-          <ProductGrid products={serializedProducts} />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <SearchBar />
-        <div className="flex justify-between items-start">
-          <div className="space-y-4">
-            <PriceRange />
-          </div>
-          {isAdmin && (
-            <Link
-              href="/products/new"
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-            >
-              Create Product
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {products.length === 0 && (
-        <div className="text-center py-10">
-          <p className="text-gray-500">No products found</p>
-        </div>
-      )}
-    </div>
+    <ProductsClient 
+      initialProducts={serializedProducts}
+      categories={categories}
+      maxPrice={Number(maxProductPrice._max.price) || 0}
+      isAdmin={isAdmin}
+      searchParams={searchParams}
+      totalPages={totalPages}
+    />
   );
 } 

@@ -42,7 +42,7 @@ export default function AdminProductsPage() {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     try {
-      const response = await fetch(`/api/products/${id}`, {
+      const response = await fetch(`/api/admin/products/${id}`, {
         method: 'DELETE',
       });
 
@@ -79,7 +79,7 @@ export default function AdminProductsPage() {
               <th className="px-6 py-3 text-left">Image</th>
               <th className="px-6 py-3 text-left">Name</th>
               <th className="px-6 py-3 text-left">Category</th>
-              <th className="px-6 py-3 text-left">Price</th>
+              <th className="px-6 py-3 text-left">Price (L.E)</th>
               <th className="px-6 py-3 text-left">Stock</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
@@ -89,32 +89,35 @@ export default function AdminProductsPage() {
               <tr key={product.id} className="border-b">
                 <td className="px-6 py-4">
                   {product.images[0] && (
-                    <Image
-                      src={product.images[0]}
-                      alt={product.name}
-                      width={500}
-                      height={300}
-                      layout="responsive"
-                    />
+                    <div className="relative w-20 h-20">
+                      <Image
+                        src={product.images[0]}
+                        alt={product.name}
+                        fill
+                        className="object-cover rounded"
+                      />
+                    </div>
                   )}
                 </td>
                 <td className="px-6 py-4">{product.name}</td>
                 <td className="px-6 py-4">{product.category.name}</td>
-                <td className="px-6 py-4">{formatPrice(product.price)}</td>
+                <td className="px-6 py-4">{product.price.toFixed(2)} L.E</td>
                 <td className="px-6 py-4">{product.stock}</td>
                 <td className="px-6 py-4">
-                  <Link
-                    href={`/admin/products/${product.id}/edit`}
-                    className="text-blue-600 hover:text-blue-800 mr-4"
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(product.id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center gap-4">
+                    <Link
+                      href={`/admin/products/${product.id}/edit`}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(product.id)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

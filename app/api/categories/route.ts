@@ -42,6 +42,7 @@ export async function POST(request: Request) {
       data: {
         name: data.name,
         description: data.description,
+        image: data.image,
         slug,
       },
     });
@@ -51,6 +52,26 @@ export async function POST(request: Request) {
     console.error('Error creating category:', error);
     return NextResponse.json(
       { error: 'Failed to create category' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const categories = await prisma.category.findMany({
+      include: {
+        _count: {
+          select: { products: true }
+        }
+      }
+    });
+
+    return NextResponse.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch categories' },
       { status: 500 }
     );
   }

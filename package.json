@@ -7,7 +7,7 @@
     "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "next lint",
-    "create-admin": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/create-admin.ts",
+    "create-admin": "ts-node -T scripts/create-admin.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -17,6 +17,7 @@
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.5.1",
     "csv-stringify": "^6.5.2",
+    "framer-motion": "^12.4.7",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.474.0",
     "next": "15.1.4",

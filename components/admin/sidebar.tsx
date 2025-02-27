@@ -4,6 +4,7 @@ import {
   Package, 
   ListOrdered, 
   Users,
+  FolderTree
 } from "lucide-react";
 
 export function AdminSidebar() {
@@ -28,6 +29,14 @@ export function AdminSidebar() {
         >
           <Package className="w-5 h-5" />
           <span>Products</span>
+        </Link>
+        
+        <Link 
+          href="/admin/categories" 
+          className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded"
+        >
+          <FolderTree className="w-5 h-5" />
+          <span>Categories</span>
         </Link>
         
         <Link 

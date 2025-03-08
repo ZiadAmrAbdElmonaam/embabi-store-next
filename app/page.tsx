@@ -8,6 +8,11 @@ import { ProductCard } from "@/components/products/product-card";
 export default async function HomePage() {
   // Fetch featured products
   const featuredProducts = await prisma.product.findMany({
+    where: {
+      stock: {
+        gt: 0  // Only get products with stock greater than 0
+      }
+    },
     take: 6,
     include: {
       category: true,
@@ -25,22 +30,57 @@ export default async function HomePage() {
     description: product.description,
     price: Number(product.price),
     salePrice: product.salePrice ? Number(product.salePrice) : null,
-    saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+    sale: product.sale,
+    stock: product.stock,
     images: product.images,
     slug: product.slug,
-    colors: product.variants.map(variant => variant.color)
+    category: product.category,
+    saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+    variants: product.variants.map(variant => ({
+      id: variant.id,
+      color: variant.color,
+      quantity: variant.quantity
+    }))
   }));
 
-  // Fetch categories
+  // Fetch categories with at least one in-stock product
   const categories = await prisma.category.findMany({
+    where: {
+      products: {
+        some: {
+          stock: {
+            gt: 0
+          }
+        }
+      }
+    },
     take: 4,
     select: {
       id: true,
       name: true,
       slug: true,
-      image: true
+      image: true,
+      products: {
+        where: {
+          stock: {
+            gt: 0
+          }
+        },
+        select: {
+          id: true
+        }
+      }
     }
   });
+
+  // Format categories to include product count
+  const formattedCategories = categories.map(category => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    image: category.image,
+    productCount: category.products.length
+  }));
 
   return (
     <div className="min-h-screen">
@@ -52,7 +92,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-2 sm:px-4">
           <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Shop by Category</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {categories.map((category) => (
+            {formattedCategories.map((category) => (
               <Link
                 key={category.id}
                 href={`/categories/${category.slug}`}
@@ -70,9 +110,14 @@ export default async function HomePage() {
                   )}
                   <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 group-hover:opacity-0" />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <h3 className="text-4xl font-bold text-white text-center px-4 py-2 transition-opacity duration-300 group-hover:opacity-0">
-                      {category.name}
-                    </h3>
+                    <div className="text-center">
+                      <h3 className="text-4xl font-bold text-white px-4 py-2 transition-opacity duration-300 group-hover:opacity-0">
+                        {category.name}
+                      </h3>
+                      <p className="text-sm text-white/80">
+                        {category.productCount} products
+                      </p>
+                    </div>
                   </div>
                 </div>
               </Link>
@@ -85,11 +130,15 @@ export default async function HomePage() {
       <section className="py-4">
         <div className="max-w-[1800px] mx-auto px-2">
           <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Featured Products</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {formattedProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {formattedProducts.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {formattedProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-gray-500 py-8">No products available at the moment.</p>
+          )}
           <div className="text-center mt-6">
             <Link
               href="/products"

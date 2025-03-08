@@ -6,7 +6,29 @@ export async function DELETE(
   { params }: { params: { categoryId: string } }
 ) {
   try {
-    // Delete the category and all related products
+    // Check if there are products in this category
+    const productsCount = await prisma.product.count({
+      where: {
+        categoryId: params.categoryId
+      }
+    });
+    
+    if (productsCount > 0) {
+      // Option 1: Prevent deletion if products exist
+      return NextResponse.json(
+        { error: `Cannot delete category because it contains ${productsCount} products. Please delete or move these products first.` },
+        { status: 400 }
+      );
+      
+      // Option 2 (commented out): Delete all products in the category first
+      // await prisma.product.deleteMany({
+      //   where: {
+      //     categoryId: params.categoryId
+      //   }
+      // });
+    }
+
+    // Now delete the category
     await prisma.category.delete({
       where: {
         id: params.categoryId,
@@ -16,8 +38,15 @@ export async function DELETE(
     return NextResponse.json({ message: 'Category deleted successfully' });
   } catch (error) {
     console.error('Error deleting category:', error);
+    
+    // Add more detailed error messages
+    let errorMessage = 'Failed to delete category';
+    if (error instanceof Error) {
+      errorMessage += `: ${error.message}`;
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to delete category' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

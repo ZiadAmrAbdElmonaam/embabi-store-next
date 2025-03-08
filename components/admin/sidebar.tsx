@@ -4,7 +4,8 @@ import {
   Package, 
   ListOrdered, 
   Users,
-  FolderTree
+  FolderTree,
+  AlertTriangle
 } from "lucide-react";
 
 export function AdminSidebar() {
@@ -53,6 +54,16 @@ export function AdminSidebar() {
         >
           <Users className="w-5 h-5" />
           <span>Users</span>
+        </Link>
+        
+        <div className="border-t border-gray-700 my-4"></div>
+        
+        <Link 
+          href="/admin/reset-db" 
+          className="flex items-center space-x-2 p-2 hover:bg-red-700 bg-red-900 rounded text-white"
+        >
+          <AlertTriangle className="w-5 h-5" />
+          <span>Reset Database</span>
         </Link>
       </nav>
     </div>

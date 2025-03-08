@@ -19,10 +19,16 @@ export async function GET() {
           },
         },
         items: {
-          include: {
+          select: {
+            id: true,
+            quantity: true,
+            price: true,
+            color: true,
             product: {
               select: {
+                id: true,
                 name: true,
+                variants: true,
               },
             },
           },

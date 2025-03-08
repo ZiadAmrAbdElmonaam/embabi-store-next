@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
-import { formatPrice } from "@/lib/utils";
 import Image from "next/image";
 import { CreditCard, Wallet, BanknoteIcon, QrCode } from "lucide-react";
+import { useCart } from "@/hooks/use-cart";
 
 // Egyptian governorates
 const EGYPTIAN_STATES = [
@@ -52,14 +52,18 @@ interface CheckoutFormProps {
     salePrice: number | null;
     images: string[];
     quantity: number;
+    selectedColor: string | null;
+    availableColors?: { color: string; quantity: number }[];
   }[];
   subtotal: number;
   shipping: number;
   total: number;
+  onOrderComplete: () => void;
 }
 
-export default function CheckoutForm({ user, items, subtotal, shipping, total }: CheckoutFormProps) {
+export default function CheckoutForm({ user, items, subtotal, shipping, total, onOrderComplete }: CheckoutFormProps) {
   const router = useRouter();
+  const { hasUnselectedColors, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: user.name || "",
@@ -77,6 +81,15 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total }:
     return phoneRegex.test(phone);
   };
 
+  // Check if any items require color selection but don't have one
+  const checkItemsWithMissingColors = () => {
+    return items.some(item => 
+      item.availableColors && 
+      item.availableColors.length > 0 && 
+      !item.selectedColor
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,46 +103,75 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total }:
       return;
     }
 
+    // Check if any items are missing color selection
+    if (checkItemsWithMissingColors() || hasUnselectedColors()) {
+      toast.error("Please select a color for all items in your cart");
+      router.push('/cart');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
+      console.log("Preparing order data...");
       const formDataToSend = new FormData();
       
       // Add items data
-      formDataToSend.append('items', JSON.stringify(items.map(item => ({
+      const itemsData = items.map(item => ({
         id: item.id,
         quantity: item.quantity,
-        price: item.salePrice || item.price
-      }))));
+        price: item.salePrice || item.price,
+        selectedColor: item.selectedColor
+      }));
+      console.log("Items data:", itemsData);
+      formDataToSend.append('items', JSON.stringify(itemsData));
 
       // Add shipping info
-      formDataToSend.append('shippingInfo', JSON.stringify({
+      const shippingData = {
         name: formData.name,
         phone: formData.phone,
         address: formData.address,
         city: formData.city,
         notes: `State: ${formData.state}`
-      }));
+      };
+      console.log("Shipping data:", shippingData);
+      formDataToSend.append('shippingInfo', JSON.stringify(shippingData));
 
       // Add payment method and total
       formDataToSend.append('paymentMethod', selectedPaymentMethod);
       formDataToSend.append('total', total.toString());
+      console.log("Total:", total, "Payment method:", selectedPaymentMethod);
 
+      console.log("Sending order request...");
       const response = await fetch('/api/orders/create', {
         method: 'POST',
         body: formDataToSend
       });
 
+      const responseData = await response.json();
+      console.log("API Response:", response.status, responseData);
+
       if (!response.ok) {
-        throw new Error('Failed to create order');
+        const errorMessage = responseData.error || 'Failed to create order';
+        console.error("API Error:", errorMessage);
+        throw new Error(errorMessage);
       }
 
-      const { id } = await response.json();
+      const { id } = responseData;
+      console.log("Order created successfully with ID:", id);
+      
+      // Set the order completed flag to prevent redirect to cart
+      onOrderComplete();
+      
+      // Clear the cart after successful order
+      clearCart();
+      
       toast.success('Order placed successfully!');
+      console.log("Redirecting to order page:", `/orders/${id}`);
       router.push(`/orders/${id}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Order creation error:', error);
-      toast.error('Failed to place order');
+      toast.error(error instanceof Error ? error.message : 'Failed to place order');
     } finally {
       setIsLoading(false);
     }
@@ -318,7 +360,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total }:
           
           <div className="space-y-4 max-h-[50vh] overflow-auto pr-2">
             {items.map((item) => (
-              <div key={item.id} className="flex gap-3">
+              <div key={`${item.id}-${item.selectedColor || 'default'}`} className="flex gap-3">
                 <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
                   <Image
                     src={item.images[0] || '/images/placeholder.png'}
@@ -329,9 +371,16 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total }:
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-gray-900 truncate">{item.name}</p>
-                  <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatPrice((item.salePrice || item.price) * item.quantity)}
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                    {item.selectedColor && (
+                      <p className="text-xs text-gray-500 ml-2">
+                        Color: <span className="font-medium">{item.selectedColor}</span>
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 mt-1">
+                    EGP {((item.salePrice || item.price) * item.quantity).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -341,15 +390,15 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total }:
           <div className="space-y-3 pt-3 border-t">
             <div className="flex justify-between text-sm text-gray-600">
               <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>EGP {subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm text-gray-600">
               <span>Shipping</span>
-              <span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span>
+              <span>{shipping === 0 ? 'Free' : `EGP ${shipping.toLocaleString()}`}</span>
             </div>
             <div className="flex justify-between text-base font-semibold pt-2 border-t">
               <span>Total</span>
-              <span>{formatPrice(total)}</span>
+              <span>EGP {total.toLocaleString()}</span>
             </div>
           </div>
 
@@ -363,8 +412,8 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total }:
           </button>
 
           {subtotal < 10000 && (
-            <p className="text-xs text-gray-500 text-center">
-              Add {formatPrice(10000 - subtotal)} more to get free shipping
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Free shipping on orders over EGP 10,000
             </p>
           )}
         </div>

@@ -1,316 +1,286 @@
 'use client';
 
-import { useState } from "react";
-import Image from "next/image";
-import { Minus, Plus, X, AlertCircle } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
-import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import { useState } from 'react';
+import Image from 'next/image';
+import { useCart } from '@/hooks/use-cart';
+import { Minus, Plus, X, ShoppingCart } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  salePrice: number | null;
-  images: string[];
-  quantity: number;
-  stock: number;
-  variants: {
-    id: string;
-    color: string;
-    quantity: number;
-    price: number;
-  }[];
-  selectedColor: string | null;
-}
-
-interface CartItemsProps {
-  initialItems: CartItem[];
-}
-
-export default function CartItems({ initialItems }: CartItemsProps) {
-  const [items, setItems] = useState<CartItem[]>(initialItems);
-  const [isLoading, setIsLoading] = useState<string>("");
+export default function CartItems() {
+  const { items, removeItem, updateQuantity, updateColor } = useCart();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const getColorName = (color: string) => {
-    const colors: { [key: string]: string } = {
-      'white': 'White',
-      'black': 'Black',
-      'gray': 'Gray',
-      'red': 'Red',
-      'blue': 'Blue',
-      'green': 'Green',
-      'yellow': 'Yellow',
-      'purple': 'Purple',
-      'pink': 'Pink',
-      'orange': 'Orange',
-      'brown': 'Brown',
-      'navy': 'Navy Blue',
-      'gold': 'Gold',
-      'silver': 'Silver'
+    const colorMap: { [key: string]: string } = {
+      '#000000': 'Black',
+      '#FFFFFF': 'White',
+      '#FF0000': 'Red',
+      '#00FF00': 'Green',
+      '#0000FF': 'Blue',
+      // Add more color mappings as needed
     };
-    return colors[color.toLowerCase()] || color;
+    return colorMap[color] || color;
   };
 
-  const getColorValue = (color: string) => {
-    const colors: { [key: string]: string } = {
-      'white': '#FFFFFF',
-      'black': '#000000',
-      'gray': '#808080',
-      'red': '#FF0000',
-      'blue': '#0000FF',
-      'green': '#008000',
-      'yellow': '#FFFF00',
-      'purple': '#800080',
-      'pink': '#FFC0CB',
-      'orange': '#FFA500',
-      'brown': '#A52A2A',
-      'navy': '#000080',
-      'gold': '#FFD700',
-      'silver': '#C0C0C0'
-    };
-    return colors[color.toLowerCase()] || color;
+  const handleRemoveItem = async (id: string) => {
+    setIsUpdating(true);
+    await removeItem(id);
+    setIsUpdating(false);
   };
 
-  const removeItem = async (id: string) => {
-    try {
-      setIsLoading(id);
-      const response = await fetch('/api/cart/remove', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ productId: id }),
-      });
+  const handleUpdateQuantity = async (id: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    const item = items.find(i => i.id === id);
+    if (!item) return;
 
-      if (!response.ok) {
-        throw new Error('Failed to remove item');
-      }
-
-      setItems(items.filter(item => item.id !== id));
-      toast.success('Item removed from cart');
-    } catch (error) {
-      toast.error('Failed to remove item');
-    } finally {
-      setIsLoading("");
-    }
-  };
-
-  const updateQuantity = async (id: string, newQuantity: number) => {
-    try {
-      const item = items.find(item => item.id === id);
-      if (!item) return;
-
-      if (newQuantity > item.stock) {
-        toast.error('Not enough stock available');
+    // If color is selected, check its available quantity
+    if (item.availableColors && item.availableColors.length > 0) {
+      if (!item.selectedColor) {
+        toast.error('Please select a color first');
         return;
       }
 
-      if (newQuantity < 1) {
-        toast.error('Quantity must be at least 1');
+      const selectedColorOption = item.availableColors.find(c => c.color === item.selectedColor);
+      if (!selectedColorOption) {
+        toast.error('Selected color not available');
         return;
       }
 
-      setIsLoading(id);
-      const response = await fetch('/api/cart/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ productId: id, quantity: newQuantity }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update quantity');
+      if (newQuantity > selectedColorOption.quantity) {
+        toast.error(`Only ${selectedColorOption.quantity} items available in ${getColorName(item.selectedColor)}`);
+        return;
       }
-
-      setItems(items.map(item => 
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      ));
-    } catch (error) {
-      toast.error('Failed to update quantity');
-    } finally {
-      setIsLoading("");
     }
+
+    setIsUpdating(true);
+    await updateQuantity(id, newQuantity);
+    setIsUpdating(false);
   };
 
-  const updateColor = (id: string, color: string) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, selectedColor: color } : item
-    ));
+  const handleColorSelect = (id: string, color: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    // Find the selected color's available quantity
+    const colorOption = item.availableColors.find(c => c.color === color);
+    if (!colorOption) return;
+
+    // If current quantity exceeds the new color's available quantity, adjust it
+    if (item.quantity > colorOption.quantity) {
+      updateQuantity(id, colorOption.quantity);
+      toast.success(`Quantity adjusted to ${colorOption.quantity} (maximum available for ${getColorName(color)})`);
+    }
+
+    updateColor(id, color);
   };
 
-  const hasUnselectedColors = items.some(item => 
-    item.variants.length > 0 && !item.selectedColor
-  );
+  const handleCheckout = () => {
+    // Check if all required colors are selected
+    if (items.some(item => item.availableColors?.length > 0 && !item.selectedColor)) {
+      toast.error('Please select colors for all items');
+      return;
+    }
 
-  const getEffectivePrice = (item: CartItem) => {
-    return item.salePrice || item.price;
+    // Check authentication status
+    if (status === 'loading') {
+      // Wait for authentication check to complete
+      return;
+    }
+
+    if (!session) {
+      // Save current URL to return after login
+      const returnUrl = '/checkout';
+      router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+      return;
+    }
+
+    // User is authenticated, proceed to checkout
+    toast.success('Proceeding to checkout...');
+    router.push('/checkout');
   };
 
-  const subtotal = items.reduce((total, item) => total + (getEffectivePrice(item) * item.quantity), 0);
-  const shipping = subtotal > 10000 ? 0 : 50;
-  const total = subtotal + shipping;
+  const subtotal = items.reduce((total, item) => {
+    // Use sale price if available, otherwise use regular price
+    const itemPrice = item.salePrice !== null ? item.salePrice : item.price;
+    return total + (itemPrice * item.quantity);
+  }, 0);
+
+  const totalBeforeSale = items.reduce((total, item) => {
+    return total + (item.price * item.quantity);
+  }, 0);
+
+  const savings = totalBeforeSale - subtotal;
+  const total = subtotal;
+
+  if (!items?.length) {
+    return (
+      <div className="bg-white rounded-2xl p-8 text-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <ShoppingCart className="w-8 h-8 text-gray-400" />
+        </div>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
+        <p className="text-gray-600 mb-6">Looks like you have not added any items to your cart yet.</p>
+        <Link
+          href="/products"
+          className="inline-block bg-orange-600 text-white px-8 py-3 rounded-full hover:bg-orange-700 transition-colors"
+        >
+          Start Shopping
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <div className="lg:col-span-8">
-        <div className="bg-white rounded-2xl overflow-hidden">
-          {items.map((item) => (
-            <div 
-              key={item.id}
-              className="flex gap-6 p-6 border-b last:border-0"
-            >
-              {/* Product Image */}
-              <div className="relative aspect-square w-24 rounded-lg overflow-hidden">
-                <Image
-                  src={item.images?.[0] || '/images/placeholder.png'}
-                  alt={item.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 truncate">
-                      {item.name}
-                    </h3>
-                    <div className="text-sm mt-1">
-                      {item.salePrice ? (
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="divide-y divide-gray-200">
+            {items.map((item) => (
+              <div key={`${item.id}-${item.selectedColor || 'default'}`} className="bg-white rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row gap-6">
+                  {/* Product Image */}
+                  <div className="w-full sm:w-28 h-28 bg-gray-50 rounded-xl overflow-hidden relative">
+                    <Image
+                      src={item.images[0]}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  
+                  {/* Product Details */}
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <Link href={`/products/${item.id}`} className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                        {item.name}
+                      </Link>
+                      <button
+                        onClick={() => handleRemoveItem(item.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        disabled={isUpdating}
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    
+                    {/* Price Display */}
+                    <div className="mt-2">
+                      {item.salePrice !== null && item.salePrice < item.price ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-orange-600 font-medium">
-                            {formatPrice(item.salePrice)}
-                          </span>
-                          <span className="text-gray-500 line-through">
-                            {formatPrice(item.price)}
-                          </span>
+                          <span className="font-medium text-red-600">EGP {item.salePrice.toLocaleString()}</span>
+                          <span className="text-sm text-gray-500 line-through">EGP {item.price.toLocaleString()}</span>
                         </div>
                       ) : (
-                        <span className="text-gray-500">
-                          Unit Price: {formatPrice(item.price)}
-                        </span>
+                        <span className="font-medium text-gray-900">EGP {item.price.toLocaleString()}</span>
                       )}
                     </div>
-                  </div>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    disabled={isLoading === item.id}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Color Selection */}
-                {item.variants.length > 0 && (
-                  <div className="mt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-gray-500">Select Color:</span>
-                      {!item.selectedColor && (
-                        <AlertCircle className="w-4 h-4 text-orange-500" />
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {item.variants.map((variant) => (
+                    
+                    {/* Color Selection - Show error if colors available but none selected */}
+                    {item.availableColors && item.availableColors.length > 0 && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">Color:</span>
+                          {!item.selectedColor && (
+                            <span className="text-xs text-red-600 font-medium">* Color required</span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {item.availableColors.map((colorOption) => (
+                            <div
+                              key={colorOption.color}
+                              onClick={() => handleColorSelect(item.id, colorOption.color)}
+                              className={`w-8 h-8 rounded-full border-2 cursor-pointer transition-all ${
+                                item.selectedColor === colorOption.color
+                                  ? 'border-blue-600 ring-2 ring-blue-600 ring-opacity-50 scale-110'
+                                  : 'border-gray-200 hover:border-blue-400'
+                              }`}
+                              style={{
+                                backgroundColor: colorOption.color,
+                                boxShadow: colorOption.color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined
+                              }}
+                              title={getColorName(colorOption.color)}
+                            />
+                          ))}
+                        </div>
+                        {item.selectedColor && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Selected: <span className="font-medium">{getColorName(item.selectedColor)}</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-4 mt-4">
+                      <div className="flex items-center border border-gray-200 rounded-lg">
                         <button
-                          key={variant.id}
-                          onClick={() => updateColor(item.id, variant.color)}
-                          className={`w-8 h-8 rounded-full border-2 transition-all ${
-                            item.selectedColor === variant.color
-                              ? 'border-orange-600 scale-110'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          style={{ 
-                            backgroundColor: getColorValue(variant.color),
-                            boxShadow: variant.color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined 
-                          }}
-                          title={getColorName(variant.color)}
-                        />
-                      ))}
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                          disabled={item.quantity <= 1 || isUpdating}
+                          className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="w-10 text-center text-gray-900">{item.quantity}</span>
+                        <button
+                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                          disabled={isUpdating}
+                          className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="text-gray-600 text-sm">
+                        Total: <span className="font-medium text-gray-900">
+                          EGP {((item.salePrice !== null ? item.salePrice : item.price) * item.quantity).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                )}
-
-                <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
-                  <div className="flex items-center gap-3 p-1 bg-gray-50 rounded-lg">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      disabled={item.quantity <= 1 || isLoading === item.id}
-                      className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="w-8 text-center font-medium text-gray-900">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      disabled={item.quantity >= item.stock || isLoading === item.id}
-                      className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <p className="text-lg font-semibold text-gray-900">
-                    {formatPrice(getEffectivePrice(item) * item.quantity)}
-                  </p>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
+      {/* Order Summary */}
       <div className="lg:col-span-4">
-        <div className="bg-white rounded-2xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
           
-          <div className="space-y-4">
-            <div className="flex justify-between text-base text-gray-900">
-              <p>Subtotal</p>
-              <p>{formatPrice(subtotal)}</p>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-medium">EGP {subtotal.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between text-base text-gray-900">
-              <p>Shipping</p>
-              <p>{shipping === 0 ? 'Free' : formatPrice(shipping)}</p>
-            </div>
-            <div className="h-px bg-gray-200" />
-            <div className="flex justify-between text-base font-semibold text-gray-900">
-              <p>Total</p>
-              <p>{formatPrice(total)}</p>
+            
+            {savings > 0 && (
+              <div className="flex justify-between text-green-600">
+                <span>Savings</span>
+                <span>- EGP {savings.toLocaleString()}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between pt-3 border-t border-gray-100">
+              <span className="font-semibold">Total</span>
+              <span className="font-semibold">EGP {total.toLocaleString()}</span>
             </div>
           </div>
-
+          
           <button
-            className="w-full mt-6 bg-orange-600 text-white py-3 px-4 rounded-full hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={items.length === 0 || hasUnselectedColors}
-            onClick={() => {
-              if (hasUnselectedColors) {
-                toast.error('Please select colors for all items');
-                return;
-              }
-              router.push('/checkout');
-            }}
+            onClick={handleCheckout}
+            disabled={isUpdating || items.length === 0}
+            className="w-full bg-orange-600 text-white py-3 rounded-lg mt-4 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {hasUnselectedColors ? 'Select Colors to Continue' : 'Proceed to Checkout'}
+            Proceed to Checkout
           </button>
-
-          {hasUnselectedColors && (
-            <p className="mt-4 text-sm text-orange-600 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              Please select colors for all items
-            </p>
-          )}
-
-          {subtotal < 10000 && (
-            <p className="mt-4 text-sm text-gray-500 flex items-center gap-2">
-              Add {formatPrice(10000 - subtotal)} more to get free shipping
-            </p>
-          )}
         </div>
       </div>
     </div>

@@ -4,7 +4,11 @@ import { CategoriesGrid } from "@/components/categories/categories-grid";
 
 export default async function CategoriesPage() {
   const categories = await prisma.category.findMany({
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      image: true,
       products: {
         select: {
           id: true,

@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl') || '/';
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -34,12 +36,17 @@ export function LoginForm() {
         const response = await fetch('/api/auth/check-role');
         const { role } = await response.json();
         
+        // Refresh the session first
+        await router.refresh();
+
+        // Then handle redirection
         if (role === 'ADMIN') {
           router.push('/admin');
+        } else if (returnUrl && returnUrl !== '/') {
+          router.push(returnUrl);
         } else {
           router.push('/');
         }
-        router.refresh();
       }
     } catch (error) {
       toast.error("Something went wrong");
@@ -127,7 +134,10 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Don't have an account?{" "}
-        <Link href="/signup" className="font-medium text-orange-600 hover:text-orange-500">
+        <Link 
+          href={`/signup${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`}
+          className="font-medium text-orange-600 hover:text-orange-500"
+        >
           Sign up
         </Link>
       </p>

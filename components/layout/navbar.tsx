@@ -14,7 +14,8 @@ import {
   Heart,
   Flame,
   LogOut,
-  UserCircle
+  UserCircle,
+  LayoutDashboard
 } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "@/hooks/use-cart";
@@ -27,6 +28,9 @@ export function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { items } = useCart();
 
+  // Check if user is admin
+  const isAdmin = session?.user?.role === 'ADMIN';
+
   return (
     <div className="sticky top-0 z-50">
       {/* Top Bar */}
@@ -35,15 +39,15 @@ export function Navbar() {
           <div className="flex justify-between items-center h-9">
             {/* Left Side - Social Links */}
             <div className="flex items-center gap-4 ml-2">
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" 
+              <a href="https://www.facebook.com/embabistore" target="_blank" rel="noopener noreferrer" 
                 className="hover:text-orange-400">
                 <Facebook size={18} />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer"
+              <a href="https://www.instagram.com/muhamed_embabi/" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
                 <Instagram size={18} />
               </a>
-              <a href="https://wa.me/yourwhatsappnumber" target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/201090202577" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
                 <Phone size={18} />
               </a>
@@ -75,8 +79,8 @@ export function Navbar() {
               <Image
                 src="/logo.png"
                 alt="Embabi Logo"
-                width={60}
-                height={60}
+                width={140}
+                height={100}
                 className="object-contain"
                 priority
               />
@@ -136,6 +140,16 @@ export function Navbar() {
                           </p>
                         </div>
                         <div className="py-1">
+                          {isAdmin && (
+                            <Link
+                              href="/admin"
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
+                              onClick={() => setIsProfileOpen(false)}
+                            >
+                              <LayoutDashboard className="h-4 w-4 mr-2" />
+                              Dashboard
+                            </Link>
+                          )}
                           <Link
                             href="/profile"
                             className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"

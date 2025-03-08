@@ -1,21 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "../../auth/auth-options";
+import { authOptions } from "@/app/api/auth/auth-options";
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
+    // For non-authenticated users, return success
+    // This allows the client to use local storage
     if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ success: true });
     }
 
     const body = await request.json();
     const { productId, quantity = 1 } = body;
 
     if (!productId) {
-      return new NextResponse("Product ID is required", { status: 400 });
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
     }
 
     // Check if product exists and has enough stock
@@ -24,11 +26,11 @@ export async function POST(request: Request) {
     });
 
     if (!product) {
-      return new NextResponse("Product not found", { status: 404 });
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
     if (product.stock < quantity) {
-      return new NextResponse("Not enough stock", { status: 400 });
+      return NextResponse.json({ error: 'Not enough stock' }, { status: 400 });
     }
 
     // Find or create a pending order for the user
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
         data: {
           userId: session.user.id,
           status: 'PENDING',
-          total: 0, // Will be updated later
+          total: 0,
           shippingName: '',
           shippingPhone: '',
           shippingAddress: '',
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
           orderId: order.id,
           productId: productId,
           quantity: quantity,
-          price: product.price
+          price: product.salePrice || product.price
         }
       });
     }
@@ -95,9 +97,12 @@ export async function POST(request: Request) {
       data: { total }
     });
 
-    return new NextResponse("Success", { status: 200 });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[CART_ADD]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    console.error('Failed to add to cart:', error);
+    return NextResponse.json(
+      { error: 'Failed to add to cart' },
+      { status: 500 }
+    );
   }
 } 

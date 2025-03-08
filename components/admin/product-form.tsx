@@ -384,58 +384,120 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       {/* Main Product Images */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Main Product Images (Max 3)</h2>
-        <div className="grid grid-cols-4 gap-4">
-          {availableImages.map((imagePath) => (
-            <div
-              key={imagePath}
-              onClick={() => handleImageSelection(imagePath, 'main')}
-              className={`relative aspect-square cursor-pointer rounded-lg overflow-hidden border-2 ${
-                images.includes(imagePath) ? 'border-orange-500' : 'border-gray-200'
-              }`}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Image Selection Dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Image</label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleImageSelection(e.target.value, 'main');
+                }
+              }}
+              value=""
             >
-              <Image
-                src={imagePath}
-                alt={getImageName(imagePath)}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 25vw"
-              />
-              {images.includes(imagePath) && (
-                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">Selected</span>
+              <option value="">Select an image...</option>
+              {availableImages
+                .filter(img => !images.includes(img))
+                .map((imagePath) => (
+                  <option key={imagePath} value={imagePath}>
+                    {getImageName(imagePath)}
+                  </option>
+                ))}
+            </select>
+          </div>
+          
+          {/* Selected Images Display */}
+          {images.length > 0 ? (
+            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {images.map((imagePath) => (
+                <div key={imagePath} className="relative aspect-square rounded-lg overflow-hidden border-2 border-orange-500">
+                  <Image
+                    src={imagePath}
+                    alt={getImageName(imagePath)}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 25vw"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImages(images.filter(img => img !== imagePath))}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs py-1 px-2 truncate">
+                    {getImageName(imagePath)}
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="col-span-1 md:col-span-2 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <p className="text-gray-500">No main images selected yet. Please select up to 3 images.</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Product Thumbnails */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Product Thumbnails (Max 5)</h2>
-        <div className="grid grid-cols-4 gap-4">
-          {availableImages.map((imagePath) => (
-            <div
-              key={imagePath}
-              onClick={() => handleImageSelection(imagePath, 'thumbnail')}
-              className={`relative aspect-square cursor-pointer rounded-lg overflow-hidden border-2 ${
-                thumbnails.includes(imagePath) ? 'border-orange-500' : 'border-gray-200'
-              }`}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Thumbnail Selection Dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Thumbnail</label>
+            <select
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleImageSelection(e.target.value, 'thumbnail');
+                }
+              }}
+              value=""
             >
-              <Image
-                src={imagePath}
-                alt={getImageName(imagePath)}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 25vw"
-              />
-              {thumbnails.includes(imagePath) && (
-                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">Selected</span>
+              <option value="">Select a thumbnail...</option>
+              {availableImages
+                .filter(img => !thumbnails.includes(img))
+                .map((imagePath) => (
+                  <option key={imagePath} value={imagePath}>
+                    {getImageName(imagePath)}
+                  </option>
+                ))}
+            </select>
+          </div>
+          
+          {/* Selected Thumbnails Display */}
+          {thumbnails.length > 0 ? (
+            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {thumbnails.map((imagePath) => (
+                <div key={imagePath} className="relative aspect-square rounded-lg overflow-hidden border-2 border-orange-500">
+                  <Image
+                    src={imagePath}
+                    alt={getImageName(imagePath)}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 25vw"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setThumbnails(thumbnails.filter(img => img !== imagePath))}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs py-1 px-2 truncate">
+                    {getImageName(imagePath)}
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="col-span-1 md:col-span-2 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <p className="text-gray-500">No thumbnails selected yet. Please select up to 5 thumbnails.</p>
+            </div>
+          )}
         </div>
       </div>
 

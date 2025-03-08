@@ -47,12 +47,20 @@ export function CategoryList() {
         method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error('Failed to delete category');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Extract error message from the response
+        const errorMessage = data.error || 'Failed to delete category';
+        throw new Error(errorMessage);
+      }
       
       toast.success('Category deleted successfully');
+      setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
       fetchCategories(); // Refresh the list
     } catch (error) {
-      toast.error('Failed to delete category');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete category';
+      toast.error(errorMessage);
     }
   };
 

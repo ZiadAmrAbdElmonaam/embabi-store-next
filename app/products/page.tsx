@@ -4,11 +4,6 @@ import { authOptions } from "../api/auth/auth-options";
 import { ProductsClient } from "@/components/products/products-client";
 
 interface SearchParams {
-  category?: string;
-  minPrice?: string;
-  maxPrice?: string;
-  sort?: string;
-  q?: string;
   page?: string;
 }
 
@@ -17,65 +12,26 @@ export default async function ProductsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Parse searchParams safely by extracting the page parameter early
+  const pageParam = searchParams?.page;
+  
+  // Simple pagination only
   const ITEMS_PER_PAGE = 12;
-  const currentPage = Number(searchParams.page) || 1;
+  const currentPage = pageParam ? parseInt(pageParam as string, 10) : 1;
   const skip = (currentPage - 1) * ITEMS_PER_PAGE;
 
   const session = await getServerSession(authOptions);
   const isAdmin = session?.user?.role === 'ADMIN';
 
-  const totalProducts = await prisma.product.count({
-    where: {
-      AND: [
-        // Category filter
-        searchParams.category ? { categoryId: searchParams.category } : {},
-        // Price range filter
-        {
-          price: {
-            gte: searchParams.minPrice ? parseFloat(searchParams.minPrice) : undefined,
-            lte: searchParams.maxPrice ? parseFloat(searchParams.maxPrice) : undefined,
-          },
-        },
-        // Search query
-        searchParams.q
-          ? {
-              OR: [
-                { name: { contains: searchParams.q, mode: 'insensitive' } },
-                { description: { contains: searchParams.q, mode: 'insensitive' } },
-              ],
-            }
-          : {},
-      ],
-    },
-  });
-
+  // Get total products count
+  const totalProducts = await prisma.product.count();
   const totalPages = Math.ceil(totalProducts / ITEMS_PER_PAGE);
 
+  // Get all products with simple pagination
   const products = await prisma.product.findMany({
-    where: {
-      AND: [
-        // Category filter
-        searchParams.category ? { categoryId: searchParams.category } : {},
-        // Price range filter
-        {
-          price: {
-            gte: searchParams.minPrice ? parseFloat(searchParams.minPrice) : undefined,
-            lte: searchParams.maxPrice ? parseFloat(searchParams.maxPrice) : undefined,
-          },
-        },
-        // Search query
-        searchParams.q
-          ? {
-              OR: [
-                { name: { contains: searchParams.q, mode: 'insensitive' } },
-                { description: { contains: searchParams.q, mode: 'insensitive' } },
-              ],
-            }
-          : {},
-      ],
-    },
     include: {
       category: true,
+      variants: true,
       reviews: {
         select: {
           rating: true,
@@ -83,10 +39,7 @@ export default async function ProductsPage({
       },
     },
     orderBy: {
-      ...(searchParams.sort === 'price_asc' && { price: 'asc' }),
-      ...(searchParams.sort === 'price_desc' && { price: 'desc' }),
-      ...(searchParams.sort === 'newest' && { createdAt: 'desc' }),
-      ...(searchParams.sort === 'popular' && { reviews: { _count: 'desc' } }),
+      createdAt: 'desc' // Default sort by newest
     },
     skip,
     take: ITEMS_PER_PAGE,
@@ -105,13 +58,16 @@ export default async function ProductsPage({
     updatedAt: product.updatedAt.toISOString()
   }));
 
+  // Create a simplified searchParams object with just the page info for the client
+  const clientSearchParams = { page: pageParam };
+
   return (
     <ProductsClient 
       initialProducts={serializedProducts}
       categories={categories}
       maxPrice={Number(maxProductPrice._max.price) || 0}
       isAdmin={isAdmin}
-      searchParams={searchParams}
+      searchParams={clientSearchParams}
       totalPages={totalPages}
     />
   );

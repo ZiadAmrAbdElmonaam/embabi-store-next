@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl') || '/';
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -45,7 +47,7 @@ export function SignUpForm() {
       }
 
       toast.success('Account created successfully');
-      router.push('/login');
+      router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
     } catch (error: any) {
       toast.error(error.message || 'Something went wrong');
     } finally {
@@ -125,8 +127,7 @@ export function SignUpForm() {
             value={formData.confirmPassword}
             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
             className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm ${
-              formData.password && formData.confirmPassword && 
-              formData.password !== formData.confirmPassword
+              formData.confirmPassword && formData.password !== formData.confirmPassword
                 ? 'border-red-300'
                 : 'border-gray-300'
             }`}
@@ -144,11 +145,8 @@ export function SignUpForm() {
             )}
           </button>
         </div>
-        {formData.password && formData.confirmPassword && 
-         formData.password !== formData.confirmPassword && (
-          <p className="mt-1 text-xs text-red-500">
-            Passwords do not match
-          </p>
+        {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+          <p className="mt-1 text-sm text-red-600">Passwords do not match</p>
         )}
       </div>
 
@@ -166,7 +164,10 @@ export function SignUpForm() {
 
       <p className="text-center text-sm text-gray-600 mt-4">
         Already have an account?{" "}
-        <Link href="/login" className="font-medium text-orange-600 hover:text-orange-500">
+        <Link 
+          href={`/login${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`}
+          className="font-medium text-orange-600 hover:text-orange-500"
+        >
           Sign in
         </Link>
       </p>

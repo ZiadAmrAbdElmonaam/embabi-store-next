@@ -1,104 +1,148 @@
 import { prisma } from "@/lib/prisma";
 import { ProductGrid } from "@/components/products/product-grid";
-import { Crown } from "lucide-react";
+import { TrendingUp, ArrowRight } from "lucide-react";
 
-export default async function MostSellingPage() {
-  // Fetch products and count their occurrences in order items
-  const productsWithSales = await prisma.product.findMany({
-    include: {
-      category: true,
-      reviews: {
-        select: {
-          rating: true,
-        },
-      },
-      orderItems: true,
+const ITEMS_PER_PAGE = 20;
+
+export default async function MostSellingPage({
+  searchParams,
+}: {
+  searchParams: { page?: string }
+}) {
+  const currentPage = Number(searchParams.page) || 1;
+
+  // Get total count for pagination
+  const totalProducts = await prisma.orderItem.groupBy({
+    by: ['productId'],
+    _count: true,
+    having: {
+      productId: {
+        _count: {
+          gt: 0
+        }
+      }
+    }
+  }).then(results => results.length);
+
+  // Get most sold products with their total quantities
+  const mostSoldProducts = await prisma.orderItem.groupBy({
+    by: ['productId'],
+    _sum: {
+      quantity: true
     },
+    orderBy: {
+      _sum: {
+        quantity: 'desc'
+      }
+    },
+    skip: (currentPage - 1) * ITEMS_PER_PAGE,
+    take: ITEMS_PER_PAGE,
   });
 
-  // Sort products by number of sales
-  const sortedProducts = productsWithSales
-    .map(product => ({
-      ...product,
-      totalSales: product.orderItems.length,
-      price: Number(product.price),
-      discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
-      createdAt: product.createdAt.toISOString(),
-      updatedAt: product.updatedAt.toISOString()
-    }))
-    .sort((a, b) => b.totalSales - a.totalSales);
+  // Get the product details for the most sold products
+  const productIds = mostSoldProducts.map(item => item.productId);
+  const products = await prisma.product.findMany({
+    where: {
+      id: {
+        in: productIds
+      }
+    },
+    include: {
+      category: {
+        select: {
+          name: true,
+          slug: true,
+        }
+      },
+      variants: true,
+      reviews: {
+        select: {
+          rating: true
+        }
+      }
+    }
+  });
 
-  // Get top 3 products for special display
-  const topProducts = sortedProducts.slice(0, 3);
+  // Create a map of total quantities
+  const quantityMap = new Map(
+    mostSoldProducts.map(item => [
+      item.productId,
+      item._sum.quantity || 0
+    ])
+  );
+
+  // Serialize the products and add the total sold quantity
+  const serializedProducts = products.map(product => ({
+    ...product,
+    price: Number(product.price),
+    salePrice: product.salePrice ? Number(product.salePrice) : null,
+    totalSold: quantityMap.get(product.id) || 0,
+    variants: product.variants || []
+  }));
+
+  // Sort products by total sold quantity (maintaining the same order as mostSoldProducts)
+  serializedProducts.sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0));
+
+  const totalPages = Math.ceil(totalProducts / ITEMS_PER_PAGE);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Most Popular Products</h1>
-          <p className="text-lg text-gray-600">
-            Our best-selling products loved by customers
+        {/* Hero Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 mb-8 text-white">
+          <div className="flex items-center gap-4 mb-4">
+            <TrendingUp className="w-8 h-8" />
+            <h1 className="text-3xl font-bold">Most Popular Products</h1>
+          </div>
+          <p className="text-white/90 max-w-2xl">
+            Discover our best-selling products loved by customers. These are the items that keep our customers coming back for more!
           </p>
+          <div className="mt-4 flex items-center gap-2 text-white/80">
+            <span className="font-semibold text-white">{totalProducts}</span>
+            {totalProducts === 1 ? 'product' : 'products'} with sales history
+          </div>
         </div>
 
-        {/* Top 3 Products Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {topProducts.map((product, index) => (
-            <div 
-              key={product.id}
-              className="bg-white rounded-xl shadow-sm overflow-hidden transform hover:scale-105 transition-transform duration-300"
+        {/* Products Grid */}
+        {serializedProducts.length > 0 ? (
+          <>
+            <ProductGrid products={serializedProducts} showDescription={true} />
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex justify-center items-center gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <a
+                    key={page}
+                    href={`/most-selling?page=${page}`}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {page}
+                  </a>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+            <TrendingUp className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              No Sales History Yet
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Check back later to see our most popular products!
+            </p>
+            <a
+              href="/products"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
             >
-              <div className="relative aspect-square">
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="object-cover w-full h-full"
-                />
-                <div className="absolute top-2 left-2 bg-orange-600 text-white px-3 py-1 rounded-full flex items-center gap-2">
-                  <Crown className="h-4 w-4" />
-                  <span>#{index + 1} Best Seller</span>
-                </div>
-                {product.discountPrice && (
-                  <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-md">
-                    Sale
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {product.name}
-                </h3>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-600 font-bold">
-                      ${product.discountPrice || product.price}
-                    </p>
-                    {product.discountPrice && (
-                      <p className="text-sm text-gray-500 line-through">
-                        ${product.price}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {product.totalSales} sold
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* All Products Grid */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-            All Popular Products
-          </h2>
-          <ProductGrid products={sortedProducts} />
-        </div>
-
-        {sortedProducts.length === 0 && (
-          <div className="text-center py-10">
-            <p className="text-gray-500">No products found</p>
+              Browse All Products
+              <ArrowRight className="w-4 h-4" />
+            </a>
           </div>
         )}
       </div>

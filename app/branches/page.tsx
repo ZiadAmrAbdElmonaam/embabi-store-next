@@ -2,24 +2,24 @@ import { MapPin, Clock, Phone } from 'lucide-react';
 
 // You can move this to a separate data file or fetch from an API
 const branches = [
+  // {
+  //   id: 1,
+  //   name: 'Main Store',
+  //   address: '123 Main Street, Downtown',
+  //   city: 'Cairo',
+  //   phone: '+20 123 456 7890',
+  //   hours: 'Mon-Sat: 10:00 AM - 10:00 PM',
+  //   mapUrl: 'https://www.google.com/maps/embed?pb=...', // Add your Google Maps embed URL
+  //   image: '/images/branches/main-store.jpg'
+  // },
   {
     id: 1,
-    name: 'Main Store',
-    address: '123 Main Street, Downtown',
+    name: 'Embabi Store',
+    address: 'Nagati Serag, Al Manteqah Ath Thamenah, Nasr City, Cairo Governorate 4441553',
     city: 'Cairo',
-    phone: '+20 123 456 7890',
-    hours: 'Mon-Sat: 10:00 AM - 10:00 PM',
-    mapUrl: 'https://www.google.com/maps/embed?pb=...', // Add your Google Maps embed URL
-    image: '/images/branches/main-store.jpg'
-  },
-  {
-    id: 2,
-    name: 'Mall Branch',
-    address: 'City Stars Mall, Level 2',
-    city: 'Cairo',
-    phone: '+20 123 456 7891',
+    phone: '+20 109 020 2577',
     hours: 'Mon-Sun: 10:00 AM - 11:00 PM',
-    mapUrl: 'https://www.google.com/maps/embed?pb=...',
+    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d887.0603714069835!2d31.348438600000003!3d30.050434!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14583fdf6dbf2d0d%3A0x6b9fd9dd440580d2!2sOxygen%20Os%20Store!5e0!3m2!1sen!2seg!4v1716304000000!5m2!1sen!2seg',
     image: '/images/branches/mall-branch.jpg'
   },
   // Add more branches as needed

@@ -8,6 +8,8 @@ import { OrderActions } from "@/components/admin/order-actions";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { UpdateStatusModal } from "@/components/admin/update-status-modal";
+import { CancelItemsModal } from "@/components/admin/cancel-items-modal";
+import { getColorValue, getColorName } from "@/lib/colors";
 
 export default function AdminOrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
@@ -15,6 +17,7 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updateModalOrder, setUpdateModalOrder] = useState<string | null>(null);
+  const [cancelItemsOrder, setCancelItemsOrder] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -47,7 +50,15 @@ export default function AdminOrdersPage() {
     setUpdateModalOrder(orderId);
   };
 
+  const handleCancelItems = (orderId: string) => {
+    setCancelItemsOrder(orderId);
+  };
+
   const handleStatusUpdated = () => {
+    fetchOrders(); // Refresh the orders list
+  };
+
+  const handleItemsCancelled = () => {
     fetchOrders(); // Refresh the orders list
   };
 
@@ -86,7 +97,7 @@ export default function AdminOrdersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Customer
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                 Items
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -129,10 +140,24 @@ export default function AdminOrdersPage() {
                   <div className="text-sm text-gray-500">{order.user.email}</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm text-gray-900 space-y-2">
                     {order.items.map((item) => (
-                      <div key={item.id}>
-                        {item.quantity}x {item.product.name}
+                      <div key={item.id} className="flex items-start">
+                        <span className="font-medium mr-2">{item.quantity}x</span>
+                        <div>
+                          <span>{item.product.name}</span>
+                          {item.color && (
+                            <div className="flex items-center mt-1">
+                              <div 
+                                className="w-3 h-3 rounded-full mr-1" 
+                                style={{ backgroundColor: getColorValue(item.color) }}
+                              ></div>
+                              <span className="text-xs text-gray-500">
+                                {getColorName(item.color)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -153,9 +178,15 @@ export default function AdminOrdersPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <button
                     onClick={() => handleUpdateStatus(order.id)}
-                    className="text-blue-600 hover:text-blue-900"
+                    className="text-blue-600 hover:text-blue-900 mr-3"
                   >
                     Update Status
+                  </button>
+                  <button
+                    onClick={() => handleCancelItems(order.id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Cancel Items
                   </button>
                 </td>
               </tr>
@@ -170,6 +201,14 @@ export default function AdminOrdersPage() {
           currentStatus={orders.find(o => o.id === updateModalOrder)?.status}
           onClose={() => setUpdateModalOrder(null)}
           onUpdate={handleStatusUpdated}
+        />
+      )}
+
+      {cancelItemsOrder && (
+        <CancelItemsModal
+          order={orders.find(o => o.id === cancelItemsOrder) || { id: cancelItemsOrder, items: [] }}
+          onClose={() => setCancelItemsOrder(null)}
+          onItemsCancelled={handleItemsCancelled}
         />
       )}
     </div>

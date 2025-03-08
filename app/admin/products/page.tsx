@@ -46,12 +46,19 @@ export default function AdminProductsPage() {
         method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error('Failed to delete product');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Extract error message from the response
+        const errorMessage = data.error || 'Failed to delete product';
+        throw new Error(errorMessage);
+      }
       
       toast.success('Product deleted successfully');
       fetchProducts(); // Refresh the list
     } catch (error) {
-      toast.error('Failed to delete product');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete product';
+      toast.error(errorMessage);
       console.error('Failed to delete product:', error);
     }
   };
@@ -79,7 +86,7 @@ export default function AdminProductsPage() {
               <th className="px-6 py-3 text-left">Image</th>
               <th className="px-6 py-3 text-left">Name</th>
               <th className="px-6 py-3 text-left">Category</th>
-              <th className="px-6 py-3 text-left">Price (L.E)</th>
+              <th className="px-6 py-3 text-left">Price (EGP)</th>
               <th className="px-6 py-3 text-left">Stock</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
@@ -101,7 +108,7 @@ export default function AdminProductsPage() {
                 </td>
                 <td className="px-6 py-4">{product.name}</td>
                 <td className="px-6 py-4">{product.category.name}</td>
-                <td className="px-6 py-4">{product.price.toFixed(2)} L.E</td>
+                <td className="px-6 py-4">{product.price.toFixed(2)} EGP</td>
                 <td className="px-6 py-4">{product.stock}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-4">

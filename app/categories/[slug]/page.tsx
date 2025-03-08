@@ -18,7 +18,8 @@ export default async function CategoryPage({
     include: {
       products: {
         include: {
-          category: true
+          category: true,
+          variants: true
         }
       },
     },
@@ -45,6 +46,7 @@ export default async function CategoryPage({
   const products = category.products.map(product => ({
     ...product,
     price: Number(product.price),
+    salePrice: product.salePrice ? Number(product.salePrice) : null,
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
   }));

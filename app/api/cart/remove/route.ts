@@ -1,24 +1,24 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "../../auth/auth-options";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/auth-options";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { productId } = body;
 
     if (!productId) {
-      return new NextResponse("Product ID is required", { status: 400 });
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
     }
 
-    // Find the pending order
+    // Find the pending order for the user
     const order = await prisma.order.findFirst({
       where: {
         userId: session.user.id,
@@ -30,37 +30,32 @@ export async function POST(request: Request) {
     });
 
     if (!order) {
-      return new NextResponse("Cart not found", { status: 404 });
+      return NextResponse.json({ error: 'No active cart found' }, { status: 404 });
     }
 
-    // Find and delete the item
-    const item = order.items.find(item => item.productId === productId);
-    if (!item) {
-      return new NextResponse("Item not found in cart", { status: 404 });
+    // Remove the item from the order
+    await prisma.orderItem.deleteMany({
+      where: {
+        orderId: order.id,
+        productId: productId
+      }
+    });
+
+    // If this was the last item, delete the order
+    if (order.items.length === 1 && order.items[0].productId === productId) {
+      await prisma.order.delete({
+        where: {
+          id: order.id
+        }
+      });
     }
 
-    await prisma.orderItem.delete({
-      where: { id: item.id }
-    });
-
-    // Update order total
-    const updatedItems = await prisma.orderItem.findMany({
-      where: { orderId: order.id },
-      include: { product: true }
-    });
-
-    const total = updatedItems.reduce((sum, item) => {
-      return sum + (Number(item.price) * item.quantity);
-    }, 0);
-
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { total }
-    });
-
-    return new NextResponse("Success", { status: 200 });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[CART_REMOVE]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    console.error('Failed to remove item from cart:', error);
+    return NextResponse.json(
+      { error: 'Failed to remove item from cart' },
+      { status: 500 }
+    );
   }
 } 

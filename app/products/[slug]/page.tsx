@@ -4,15 +4,21 @@ import { notFound } from "next/navigation";
 import { ProductDetails } from "@/components/products/product-details";
 import { authOptions } from "@/app/api/auth/auth-options";
 
-export default async function ProductPage({
-  params,
-}: {
+interface ProductPageProps {
   params: { slug: string };
-}) {
+}
+
+export default async function ProductPage({ params }: ProductPageProps) {
+  // In Next.js 13+, params should be directly used without checking async properties
+  if (!params || typeof params.slug !== 'string') {
+    notFound();
+  }
+
+  const slug = params.slug;
   const session = await getServerSession(authOptions);
   
   const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
+    where: { slug },
     include: {
       category: true,
       variants: true,
@@ -32,6 +38,9 @@ export default async function ProductPage({
     },
   });
 
+  // Add console log to debug the product data
+  console.log("Product thumbnails from DB:", product?.thumbnails);
+
   if (!product) {
     notFound();
   }
@@ -40,6 +49,11 @@ export default async function ProductPage({
   const serializedProduct = {
     ...product,
     price: Number(product.price),
+    discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
+    // Ensure images is an array
+    images: Array.isArray(product.images) ? product.images : [],
+    // Ensure thumbnails is an array
+    thumbnails: Array.isArray(product.thumbnails) ? product.thumbnails : [],
     reviews: product.reviews.map(review => ({
       ...review,
       createdAt: review.createdAt.toISOString(),

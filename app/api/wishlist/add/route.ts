@@ -1,78 +1,52 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "../../auth/auth-options";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/auth-options";
+import { prisma } from "@/lib/prisma";
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+
+  // For non-authenticated users, return success
+  // This allows the client to use local storage
+  if (!session?.user) {
+    return NextResponse.json({ success: true });
+  }
+
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    const body = await request.json();
+    const body = await req.json();
     const { productId } = body;
 
     if (!productId) {
-      return new NextResponse("Product ID is required", { status: 400 });
+      return NextResponse.json(
+        { error: "Product ID is required" },
+        { status: 400 }
+      );
     }
 
-    // Check if product exists
-    const product = await prisma.product.findUnique({
-      where: { id: productId }
-    });
-
-    if (!product) {
-      return new NextResponse("Product not found", { status: 404 });
-    }
-
-    // Get or create wishlist
-    let wishlist = await prisma.wishlist.findUnique({
+    // Get or create wishlist for user
+    let wishlist = await prisma.wishlist.findFirst({
       where: { userId: session.user.id },
-      include: { products: true }
     });
 
     if (!wishlist) {
       wishlist = await prisma.wishlist.create({
-        data: {
-          userId: session.user.id,
-          products: {
-            connect: { id: productId }
-          }
-        },
-        include: { products: true }
+        data: { userId: session.user.id },
       });
-    } else {
-      // Check if product is already in wishlist
-      const isProductInWishlist = wishlist.products.some(p => p.id === productId);
-
-      if (isProductInWishlist) {
-        // Remove product from wishlist
-        await prisma.wishlist.update({
-          where: { userId: session.user.id },
-          data: {
-            products: {
-              disconnect: { id: productId }
-            }
-          }
-        });
-      } else {
-        // Add product to wishlist
-        await prisma.wishlist.update({
-          where: { userId: session.user.id },
-          data: {
-            products: {
-              connect: { id: productId }
-            }
-          }
-        });
-      }
     }
 
-    return new NextResponse("Success", { status: 200 });
+    // Add product to wishlist
+    await prisma.wishlist.update({
+      where: { id: wishlist.id },
+      data: {
+        products: {
+          connect: { id: productId },
+        },
+      },
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[WISHLIST_ADD]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 } 

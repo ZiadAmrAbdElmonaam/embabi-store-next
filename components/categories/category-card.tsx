@@ -19,6 +19,7 @@ interface CategoryCardProps {
     id: string;
     name: string;
     slug: string;
+    image?: string | null;
     products: Product[];
   };
 }
@@ -40,6 +41,18 @@ export function CategoryCard({ category }: CategoryCardProps) {
         href={`/categories/${category.slug}`}
         className="block relative h-64 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
       >
+        {/* Category Image */}
+        {category.image ? (
+          <Image
+            src={category.image}
+            alt={category.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gray-100" />
+        )}
         <motion.div
           className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
           whileHover={{ opacity: 0.8 }}

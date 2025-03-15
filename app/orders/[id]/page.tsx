@@ -2,8 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import { Package } from "lucide-react";
+import { Package, Truck, CheckCircle, Clock, XCircle } from "lucide-react";
 import { authOptions } from "@/app/api/auth/auth-options";
+import Image from "next/image";
+import { format } from "date-fns";
+import { cookies } from "next/headers";
+import { translations } from "@/lib/translations";
+
 const statusSteps = [
   'PENDING',
   'PROCESSING',
@@ -11,6 +16,29 @@ const statusSteps = [
   'DELIVERED',
   'CANCELLED'
 ] as const;
+
+// Function to get translations
+function t(key: string) {
+  // Get the language from cookies, default to English
+  const cookieStore = cookies();
+  const lang = cookieStore.get('lang')?.value || 'en';
+  
+  // Split the key by dots to navigate the translations object
+  const keys = key.split('.');
+  let translation: any = translations[lang];
+  
+  // Navigate through the keys
+  for (const k of keys) {
+    if (translation && translation[k]) {
+      translation = translation[k];
+    } else {
+      // Return the key if translation not found
+      return key;
+    }
+  }
+  
+  return translation;
+}
 
 export default async function OrderPage({
   params,
@@ -43,106 +71,147 @@ export default async function OrderPage({
   }
 
   const currentStepIndex = statusSteps.indexOf(order.status);
+  
+  // Icons for each status step
+  const statusIcons = {
+    'PENDING': <Clock className="w-5 h-5" />,
+    'PROCESSING': <Package className="w-5 h-5" />,
+    'SHIPPED': <Truck className="w-5 h-5" />,
+    'DELIVERED': <CheckCircle className="w-5 h-5" />,
+    'CANCELLED': <XCircle className="w-5 h-5" />
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Order #{order.id}</h1>
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              {order.status.toLowerCase()}
-            </span>
-          </div>
-
-          {/* Progress Tracker */}
-          <div className="mb-8">
-            <div className="relative">
-              <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200">
-                <div
-                  style={{ width: `${(currentStepIndex + 1) * 25}%` }}
-                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500"
-                />
-              </div>
-              <div className="flex justify-between">
-                {statusSteps.map((step, index) => (
-                  <div
-                    key={step}
-                    className={`flex flex-col items-center ${
-                      index <= currentStepIndex ? 'text-blue-600' : 'text-gray-400'
-                    }`}
-                  >
-                    <Package className="h-6 w-6" />
-                    <span className="text-sm mt-1">{step.toLowerCase()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Order Details */}
-          <div className="space-y-6">
+    <div className="flex justify-center items-center py-12 px-4 bg-gray-50 min-h-[calc(100vh-4rem)]">
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden max-w-4xl w-full">
+        {/* Order Header */}
+        <div className="p-8 border-b">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold mb-2">Items</h2>
-              <div className="space-y-4">
-                {order.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between items-center border-b pb-4"
-                  >
-                    <div>
-                      <p className="font-medium">{item.product.name}</p>
-                      <p className="text-sm text-gray-600">
-                        Quantity: {item.quantity}
+              <h1 className="text-2xl font-bold">{t('order.orderDetails')}</h1>
+              <p className="text-gray-500 mt-2">
+                {t('order.orderId')}: {order.id}
+              </p>
+              <p className="text-gray-500 mt-1">
+                {t('order.placedOn')}: {format(order.createdAt, 'PPP')}
+              </p>
+            </div>
+            <div className="bg-gray-100 px-5 py-3 rounded-lg">
+              <p className="text-sm font-medium">
+                {t('order.status')}: <span className="text-orange-600 font-semibold">{t(`order.${order.status.toLowerCase()}`)}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Progress Tracker */}
+        {order.status !== 'CANCELLED' && (
+          <div className="p-8 border-b">
+            <h2 className="text-lg font-semibold mb-8 text-center">{t('order.trackYourOrder')}</h2>
+            <div className="relative px-4">
+              {/* Progress Bar */}
+              <div className="absolute top-1/2 left-0 w-full h-2 bg-gray-200 -translate-y-1/2 rounded-full"></div>
+              <div 
+                className="absolute top-1/2 left-0 h-2 bg-orange-500 -translate-y-1/2 transition-all duration-500 rounded-full"
+                style={{ width: `${(currentStepIndex / (statusSteps.length - 2)) * 100}%` }}
+              ></div>
+              
+              {/* Steps */}
+              <div className="relative flex justify-between">
+                {statusSteps.slice(0, -1).map((step, index) => {
+                  const isActive = index <= currentStepIndex;
+                  const isPast = index < currentStepIndex;
+                  
+                  return (
+                    <div key={step} className="flex flex-col items-center">
+                      <div 
+                        className={`w-12 h-12 rounded-full flex items-center justify-center z-10 shadow-sm transition-all ${
+                          isActive 
+                            ? 'bg-orange-500 text-white' 
+                            : 'bg-gray-200 text-gray-500'
+                        } ${isPast ? 'ring-2 ring-orange-200' : ''}`}
+                      >
+                        {statusIcons[step]}
+                      </div>
+                      <p className={`text-xs font-medium mt-3 text-center max-w-[80px] ${
+                        isActive ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
+                        {t(`order.${step.toLowerCase()}`)}
                       </p>
                     </div>
-                    <p className="font-medium">{formatPrice(item.price)}</p>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Order Items */}
+        <div className="p-8 border-b">
+          <h2 className="text-lg font-semibold mb-6">{t('order.items')}</h2>
+          <div className="space-y-6">
+            {order.items.map((item) => (
+              <div key={item.id} className="flex gap-6 p-4 bg-gray-50 rounded-lg">
+                <div className="w-24 h-24 bg-white rounded-lg overflow-hidden relative flex-shrink-0 border border-gray-100">
+                  <Image
+                    src={item.product.images[0]}
+                    alt={item.product.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-medium text-lg">{item.product.name}</h3>
+                  <div className="flex flex-wrap gap-x-6 mt-2 text-sm text-gray-500">
+                    <p>{t('order.quantity')}: {item.quantity}</p>
+                    {item.color && (
+                      <p>{t('order.color')}: {item.color}</p>
+                    )}
                   </div>
-                ))}
+                  <p className="mt-2 font-medium text-orange-600">
+                    EGP {(Number(item.price) * item.quantity).toLocaleString()}
+                  </p>
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Shipping Information */}
+        <div className="p-8 border-b">
+          <h2 className="text-lg font-semibold mb-6">{t('order.shippingInformation')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-lg">
+            <div>
+              <p className="text-gray-500 text-sm">{t('order.name')}</p>
+              <p className="font-medium mt-1">{order.shippingName}</p>
             </div>
-
-            <div className="border-t pt-4">
-              <div className="flex justify-between">
-                <span className="font-semibold">Total</span>
-                <span className="font-semibold">{formatPrice(order.total)}</span>
-              </div>
+            <div>
+              <p className="text-gray-500 text-sm">{t('order.phone')}</p>
+              <p className="font-medium mt-1">{order.shippingPhone}</p>
             </div>
-
-            {/* Status History */}
-            <div className="border-t pt-4">
-              <h2 className="text-lg font-semibold mb-2">Order History</h2>
-              <div className="space-y-4">
-                {order.statusHistory.map((update) => (
-                  <div key={update.id} className="flex items-start gap-4">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-blue-500" />
-                    <div>
-                      <p className="font-medium">
-                        Status changed to {update.status.toLowerCase()}
-                      </p>
-                      {update.comment && (
-                        <p className="text-sm text-gray-600">{update.comment}</p>
-                      )}
-                      <p className="text-sm text-gray-500">
-                        {new Date(update.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="md:col-span-2">
+              <p className="text-gray-500 text-sm">{t('order.address')}</p>
+              <p className="font-medium mt-1">{order.shippingAddress}</p>
+              <p className="font-medium">{order.shippingCity}{order.shippingNotes ? `, ${order.shippingNotes}` : ''}</p>
             </div>
-
-            <div className="border-t pt-4">
-              <h2 className="text-lg font-semibold mb-2">Shipping Information</h2>
-              <div className="space-y-2">
-                <p><span className="font-medium">Name:</span> {order.shippingName}</p>
-                <p><span className="font-medium">Phone:</span> {order.shippingPhone}</p>
-                <p><span className="font-medium">Address:</span> {order.shippingAddress}</p>
-                <p><span className="font-medium">City:</span> {order.shippingCity}</p>
-                {order.shippingNotes && (
-                  <p><span className="font-medium">Notes:</span> {order.shippingNotes}</p>
-                )}
-              </div>
+          </div>
+        </div>
+        
+        {/* Order Summary */}
+        <div className="p-8">
+          <h2 className="text-lg font-semibold mb-6">{t('order.orderSummary')}</h2>
+          <div className="space-y-3 bg-gray-50 p-6 rounded-lg">
+            <div className="flex justify-between">
+              <p className="text-gray-500">{t('order.subtotal')}</p>
+              <p>EGP {Number(order.total).toLocaleString()}</p>
+            </div>
+            <div className="flex justify-between">
+              <p className="text-gray-500">{t('order.shipping')}</p>
+              <p>EGP 0</p>
+            </div>
+            <div className="flex justify-between font-semibold text-lg pt-3 border-t border-gray-200 mt-3">
+              <p>{t('order.total')}</p>
+              <p className="text-orange-600">EGP {Number(order.total).toLocaleString()}</p>
             </div>
           </div>
         </div>

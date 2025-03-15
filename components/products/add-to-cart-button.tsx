@@ -4,6 +4,8 @@ import { useCart } from "@/hooks/use-cart";
 import { ShoppingCart } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useState, useEffect } from "react";
+import { useTranslation } from "@/hooks/use-translation";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 interface AddToCartButtonProps {
   product: {
@@ -25,6 +27,7 @@ interface AddToCartButtonProps {
 export function AddToCartButton({ product, selectedColor: initialColor }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [selectedColor, setSelectedColor] = useState<string | null>(initialColor || null);
+  const { t } = useTranslation();
 
   // Color name mapping
   const getColorName = (colorCode: string) => {
@@ -78,13 +81,13 @@ export function AddToCartButton({ product, selectedColor: initialColor }: AddToC
   const handleAddToCart = () => {
     console.log('ddddd');
     if (product.stock === 0) {
-      toast.error('Product is out of stock');
+      toast.error(t('cart.outOfStock'));
       return;
     }
     
     // Check if product has variants and requires color selection
     if (product.variants && product.variants.length > 0 && !selectedColor) {
-      toast.error('Please select a color');
+      toast.error(t('cart.selectColor'));
       return;
     }
     
@@ -109,7 +112,7 @@ export function AddToCartButton({ product, selectedColor: initialColor }: AddToC
         className="w-full flex items-center justify-center gap-2 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <ShoppingCart className="h-5 w-5" />
-        {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+        {product.stock === 0 ? t('productDetail.outOfStock') : t('cart.addToCart')}
       </button>
     </div>
   );

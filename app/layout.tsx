@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import { Inter, IBM_Plex_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from '@/components/layout/footer';
 import { cookies } from 'next/headers';
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -13,17 +15,17 @@ const arabicFont = IBM_Plex_Sans_Arabic({
   display: 'swap',
 });
 
-export const metadata = {
-  title: "Tech Store",
-  description: "Your one-stop shop for tech products",
+export const metadata: Metadata = {
+  title: "Embabi Store",
+  description: "Your one-stop shop for all your needs",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
-  const cookieStore = await cookies();
+}>) {
+  const cookieStore = cookies();
   const lang = cookieStore.get('lang')?.value || 'en';
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
 
@@ -37,6 +39,7 @@ export default async function RootLayout({
               {children}
             </main>
             <Footer />
+            <Toaster position="bottom-right" />
           </div>
         </Providers>
       </body>

@@ -2,13 +2,15 @@
 
 import { Session } from "next-auth";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Star, Eye, EyeOff } from "lucide-react";
 import { AddToCartButton } from "./add-to-cart-button";
 import { WishlistButton } from "@/components/ui/wishlist-button";
 import { formatPrice } from "@/lib/utils";
 import { ReviewForm } from "@/components/reviews/review-form";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 interface ProductDetailsProps {
   product: {
@@ -53,6 +55,10 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
   console.log("Product thumbnails:", product.thumbnails);
   
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [showImage, setShowImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(product.images[0] || '/images/placeholder.png');
+  const { t, lang } = useTranslation();
+  const isRtl = lang === 'ar';
   
   const averageRating = product.reviews.length > 0
     ? product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length
@@ -67,26 +73,26 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+    return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' }).format(date);
   };
 
   // Color name mapping
   const getColorName = (colorCode: string) => {
     const colorMap: { [key: string]: string } = {
-      'black': 'Black',
-      'white': 'White',
-      'red': 'Red',
-      'green': 'Green',
-      'blue': 'Blue',
-      'yellow': 'Yellow',
-      'purple': 'Purple',
-      'pink': 'Pink',
-      'gray': 'Gray',
-      'brown': 'Brown',
-      'orange': 'Orange',
-      'navy': 'Navy Blue',
-      'gold': 'Gold',
-      'silver': 'Silver',
+      'black': lang === 'ar' ? 'أسود' : 'Black',
+      'white': lang === 'ar' ? 'أبيض' : 'White',
+      'red': lang === 'ar' ? 'أحمر' : 'Red',
+      'green': lang === 'ar' ? 'أخضر' : 'Green',
+      'blue': lang === 'ar' ? 'أزرق' : 'Blue',
+      'yellow': lang === 'ar' ? 'أصفر' : 'Yellow',
+      'purple': lang === 'ar' ? 'بنفسجي' : 'Purple',
+      'pink': lang === 'ar' ? 'وردي' : 'Pink',
+      'gray': lang === 'ar' ? 'رمادي' : 'Gray',
+      'brown': lang === 'ar' ? 'بني' : 'Brown',
+      'orange': lang === 'ar' ? 'برتقالي' : 'Orange',
+      'navy': lang === 'ar' ? 'أزرق داكن' : 'Navy Blue',
+      'gold': lang === 'ar' ? 'ذهبي' : 'Gold',
+      'silver': lang === 'ar' ? 'فضي' : 'Silver',
     };
     return colorMap[colorCode.toLowerCase()] || colorCode;
   };
@@ -117,6 +123,16 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
     setSelectedColor(color);
   };
 
+  // Handle image selection
+  const handleImageSelect = (image: string) => {
+    setSelectedImage(image);
+  };
+
+  // Toggle image zoom
+  const toggleImageZoom = () => {
+    setShowImage(!showImage);
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
@@ -125,12 +141,19 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
           {/* Main Product Image */}
           <div className="aspect-square relative overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
             <Image
-              src={product.images[0] || '/images/placeholder.png'}
+              src={selectedImage}
               alt={product.name}
               fill
               className="object-cover hover:scale-105 transition-transform duration-300"
               priority
+              onClick={toggleImageZoom}
             />
+            <button 
+              onClick={toggleImageZoom}
+              className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors`}
+            >
+              {showImage ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
           </div>
           
           {/* Thumbnails or Additional Images */}
@@ -139,7 +162,11 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               {product.thumbnails.slice(0, 5).map((thumbnail, index) => (
                 <div
                   key={index}
-                  className="aspect-square relative overflow-hidden rounded-xl border border-gray-200 hover:border-orange-500 transition-colors duration-200"
+                  className={cn(
+                    "aspect-square relative overflow-hidden rounded-xl border hover:border-orange-500 transition-colors duration-200 cursor-pointer",
+                    selectedImage === thumbnail ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200"
+                  )}
+                  onClick={() => handleImageSelect(thumbnail)}
                 >
                   <Image
                     src={thumbnail}
@@ -152,14 +179,18 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
             </div>
           ) : product.images.length > 1 ? (
             <div className="grid grid-cols-5 gap-4">
-              {product.images.slice(1, 6).map((image, index) => (
+              {product.images.map((image, index) => (
                 <div
                   key={index}
-                  className="aspect-square relative overflow-hidden rounded-xl border border-gray-200 hover:border-orange-500 transition-colors duration-200"
+                  className={cn(
+                    "aspect-square relative overflow-hidden rounded-xl border hover:border-orange-500 transition-colors duration-200 cursor-pointer",
+                    selectedImage === image ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200"
+                  )}
+                  onClick={() => handleImageSelect(image)}
                 >
                   <Image
                     src={image}
-                    alt={`${product.name} image ${index + 2}`}
+                    alt={`${product.name} image ${index + 1}`}
                     fill
                     className="object-cover"
                   />
@@ -206,7 +237,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               ))}
             </div>
             <span className="text-gray-600 font-medium">
-              ({product.reviews.length} reviews)
+              ({product.reviews.length} {t('productDetail.reviews')})
             </span>
           </div>
 
@@ -218,7 +249,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
           {product.variants && product.variants.length > 0 && 
            product.variants.some(variant => variant.quantity > 0) && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Available Colors</h3>
+              <h3 className="text-lg font-medium text-gray-900">{t('productDetail.availableColors')}</h3>
               <div className="flex flex-wrap gap-3">
                 {product.variants
                   .filter(variant => variant.quantity > 0)
@@ -256,7 +287,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                 <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100">
                   <p className="text-sm text-gray-700 flex items-center">
                     <span className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: getColorValue(selectedColor) }}></span>
-                    Selected: <span className="font-medium text-gray-900 ml-1">{getColorName(selectedColor)}</span>
+                    {t('productDetail.selected')}: <span className="font-medium text-gray-900 ml-1">{getColorName(selectedColor)}</span>
                   </p>
                 </div>
               )}
@@ -279,11 +310,11 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                        Save {calculateDiscount()}%
+                        {t('productDetail.save')} {calculateDiscount()}%
                       </span>
                       {product.saleEndDate && (
                         <span className="text-sm text-gray-600">
-                          Sale ends {formatDate(product.saleEndDate)}
+                          {t('productDetail.saleEnds')} {formatDate(product.saleEndDate)}
                         </span>
                       )}
                     </div>
@@ -293,14 +324,14 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                     {formatPrice(product.price)}
                   </span>
                 )}
-                <p className="text-sm text-gray-500">Free shipping on orders over $100</p>
+                <p className="text-sm text-gray-500">{t('productDetail.freeShipping')}</p>
               </div>
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                 product.stock > 0 
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-red-100 text-red-800'
               }`}>
-                {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                {product.stock > 0 ? `${product.stock} ${t('productDetail.inStock')}` : t('productDetail.outOfStock')}
               </span>
             </div>
           </div>
@@ -316,7 +347,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
       {/* Product Details Section */}
       {product.details && product.details.length > 0 && (
         <div className="border-t border-gray-200 pt-16 mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Product Details</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">{t('productDetail.productDetails')}</h2>
           
           <div className="grid grid-cols-1 gap-8">
             {product.details.map((detail) => (
@@ -332,20 +363,20 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
       {/* Reviews Section */}
       <div className="border-t border-gray-200 pt-16">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Customer Reviews</h2>
+          <h2 className="text-3xl font-bold text-gray-900">{t('productDetail.customerReviews')}</h2>
           {hasPurchased && (
             <button 
               className="px-6 py-2 bg-orange-100 text-orange-700 rounded-full font-medium hover:bg-orange-200 transition-colors"
               onClick={() => document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' })}
             >
-              Write a Review
+              {t('productDetail.writeReview')}
             </button>
           )}
         </div>
 
         {product.reviews.length === 0 ? (
           <div className="bg-gray-50 rounded-xl p-8 text-center">
-            <p className="text-gray-600">No reviews yet. Be the first to review this product!</p>
+            <p className="text-gray-600">{t('productDetail.noReviews')}</p>
           </div>
         ) : (
           <div className="space-y-8">
@@ -357,9 +388,9 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                       {review.user.name?.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{review.user.name || 'Anonymous'}</p>
+                      <p className="font-medium text-gray-900">{review.user.name || t('productDetail.anonymous')}</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(review.createdAt).toLocaleDateString()}
+                        {new Date(review.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
                       </p>
                     </div>
                   </div>
@@ -385,7 +416,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
         {/* Review Form */}
         {hasPurchased && (
           <div id="review-form" className="mt-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Write a Review</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">{t('productDetail.writeReviewHeading')}</h3>
             <ReviewForm 
               productId={product.id} 
               onSuccess={() => window.location.reload()}
@@ -393,6 +424,29 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
           </div>
         )}
       </div>
+
+      {/* Image Zoom Modal */}
+      {showImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={toggleImageZoom}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full">
+            <Image
+              src={selectedImage}
+              alt={product.name}
+              fill
+              className="object-contain"
+            />
+            <button 
+              onClick={toggleImageZoom}
+              className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors`}
+            >
+              <EyeOff className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

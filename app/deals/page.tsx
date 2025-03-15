@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { ProductGrid } from "@/components/products/product-grid";
 import { Percent, ArrowRight } from "lucide-react";
+import { cookies } from "next/headers";
+import { translations } from "@/lib/translations";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -11,6 +13,19 @@ export default async function DealsPage({
 }) {
   const currentPage = Number(searchParams.page) || 1;
   const now = new Date();
+  
+  // Get language from cookies for server component
+  const cookieStore = cookies();
+  const lang = (cookieStore.get('lang')?.value || 'en') as 'en' | 'ar';
+  const t = (key: string) => {
+    const keys = key.split('.');
+    let result = translations[lang];
+    for (const k of keys) {
+      if (result[k] === undefined) return key;
+      result = result[k];
+    }
+    return result;
+  };
 
   // Get total count for pagination
   const totalProducts = await prisma.product.count({
@@ -81,14 +96,14 @@ export default async function DealsPage({
         <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-2xl p-8 mb-8 text-white">
           <div className="flex items-center gap-4 mb-4">
             <Percent className="w-8 h-8" />
-            <h1 className="text-3xl font-bold">Special Deals</h1>
+            <h1 className="text-3xl font-bold">{t('deals.title')}</h1>
           </div>
           <p className="text-white/90 max-w-2xl">
-            Discover amazing discounts on our products. Don't miss out on these limited-time offers!
+            {t('deals.description')}
           </p>
           <div className="mt-4 flex items-center gap-2 text-white/80">
             <span className="font-semibold text-white">{totalProducts}</span>
-            {totalProducts === 1 ? 'item' : 'items'} on sale
+            {totalProducts === 1 ? t('deals.itemOnSale') : t('deals.itemsOnSale')}
           </div>
         </div>
 
@@ -120,16 +135,16 @@ export default async function DealsPage({
           <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
             <Percent className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              No Active Deals
+              {t('deals.noActiveDeals')}
             </h2>
             <p className="text-gray-500 mb-6">
-              Check back later for new deals and discounts!
+              {t('deals.checkBackLater')}
             </p>
             <a
               href="/products"
               className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
             >
-              Browse All Products
+              {t('deals.browseAllProducts')}
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>

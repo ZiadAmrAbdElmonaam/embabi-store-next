@@ -8,16 +8,21 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  name      String?
-  email     String    @unique
-  password  String
-  role      Role      @default(USER)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  orders    Order[]
-  reviews   Review[]
-  wishlist  Wishlist?
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String    @unique
+  password              String
+  role                  Role      @default(USER)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  emailVerified         Boolean   @default(false)
+  verificationCode      String?
+  verificationCodeExpiry DateTime?
+  verificationAttempts  Int       @default(0)
+  lastVerificationSent  DateTime?
+  orders                Order[]
+  reviews               Review[]
+  wishlist              Wishlist?
 }
 
 model Category {

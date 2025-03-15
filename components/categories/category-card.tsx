@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { TranslatedContent } from '@/components/ui/translated-content';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface Product {
   id: string;
@@ -26,6 +28,7 @@ interface CategoryCardProps {
 
 export function CategoryCard({ category }: CategoryCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <motion.div
@@ -66,7 +69,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
         >
           <h3 className="text-xl font-semibold text-white">{category.name}</h3>
           <p className="text-white/80 text-sm mt-1">
-            {category.products.length} products
+            {category.products.length} <TranslatedContent translationKey="categories.products" />
           </p>
         </motion.div>
       </Link>
@@ -132,7 +135,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                 transition={{ delay: 0.4 }}
               >
                 <span className="text-sm text-gray-500">
-                  +{category.products.length - 4} more products
+                  +{category.products.length - 4} <TranslatedContent translationKey="categories.products" />
                 </span>
               </motion.div>
             )}

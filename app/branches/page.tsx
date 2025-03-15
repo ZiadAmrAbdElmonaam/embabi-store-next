@@ -1,4 +1,6 @@
 import { MapPin, Clock, Phone } from 'lucide-react';
+import { cookies } from "next/headers";
+import { translations } from "@/lib/translations";
 
 // You can move this to a separate data file or fetch from an API
 const branches = [
@@ -26,13 +28,26 @@ const branches = [
 ];
 
 export default function BranchesPage() {
+  // Get language from cookies for server component
+  const cookieStore = cookies();
+  const lang = (cookieStore.get('lang')?.value || 'en') as 'en' | 'ar';
+  const t = (key: string) => {
+    const keys = key.split('.');
+    let result = translations[lang];
+    for (const k of keys) {
+      if (result[k] === undefined) return key;
+      result = result[k];
+    }
+    return result;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Our Branches</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">{t('branches.title')}</h1>
           <p className="text-lg text-gray-600">
-            Find the nearest store location to you
+            {t('branches.description')}
           </p>
         </div>
 
@@ -67,7 +82,7 @@ export default function BranchesPage() {
                     <div className="flex items-start gap-3">
                       <MapPin className="h-5 w-5 text-orange-600 mt-1" />
                       <div>
-                        <h3 className="font-medium">Address</h3>
+                        <h3 className="font-medium">{t('branches.address')}</h3>
                         <p className="text-gray-600">{branch.address}</p>
                         <p className="text-gray-600">{branch.city}</p>
                       </div>
@@ -76,7 +91,7 @@ export default function BranchesPage() {
                     <div className="flex items-start gap-3">
                       <Clock className="h-5 w-5 text-orange-600 mt-1" />
                       <div>
-                        <h3 className="font-medium">Working Hours</h3>
+                        <h3 className="font-medium">{t('branches.workingHours')}</h3>
                         <p className="text-gray-600">{branch.hours}</p>
                       </div>
                     </div>
@@ -84,7 +99,7 @@ export default function BranchesPage() {
                     <div className="flex items-start gap-3">
                       <Phone className="h-5 w-5 text-orange-600 mt-1" />
                       <div>
-                        <h3 className="font-medium">Phone</h3>
+                        <h3 className="font-medium">{t('branches.phone')}</h3>
                         <p className="text-gray-600">{branch.phone}</p>
                       </div>
                     </div>
@@ -100,7 +115,7 @@ export default function BranchesPage() {
                     className="mt-6 inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors w-full md:w-auto"
                   >
                     <MapPin className="h-5 w-5" />
-                    Get Directions
+                    {t('branches.getDirections')}
                   </a>
                 </div>
               </div>

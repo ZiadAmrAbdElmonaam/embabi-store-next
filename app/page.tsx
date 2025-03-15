@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Carousel } from "@/components/ui/carousel";
 import { ProductCard } from "@/components/products/product-card";
-
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 export default async function HomePage() {
   // Fetch featured products
@@ -90,7 +90,9 @@ export default async function HomePage() {
       {/* Categories Section */}
       <section className="py-6 bg-gray-50">
         <div className="max-w-7xl mx-auto px-2 sm:px-4">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Shop by Category</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+            <TranslatedContent translationKey="home.shopByCategory" />
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {formattedCategories.map((category) => (
               <Link
@@ -115,7 +117,7 @@ export default async function HomePage() {
                         {category.name}
                       </h3>
                       <p className="text-sm text-white/80">
-                        {category.productCount} products
+                        {category.productCount} <TranslatedContent translationKey="home.products" />
                       </p>
                     </div>
                   </div>
@@ -129,7 +131,9 @@ export default async function HomePage() {
       {/* Featured Products Section */}
       <section className="py-4">
         <div className="max-w-[1800px] mx-auto px-2">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Featured Products</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
+            <TranslatedContent translationKey="home.featuredProducts" />
+          </h2>
           {formattedProducts.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {formattedProducts.map((product) => (
@@ -137,14 +141,16 @@ export default async function HomePage() {
               ))}
             </div>
           ) : (
-            <p className="text-center text-gray-500 py-8">No products available at the moment.</p>
+            <p className="text-center text-gray-500 py-8">
+              <TranslatedContent translationKey="home.noProducts" />
+            </p>
           )}
           <div className="text-center mt-6">
             <Link
               href="/products"
               className="inline-block bg-gradient-to-r from-orange-600 to-red-600 text-white px-8 py-3 rounded-full font-semibold hover:from-orange-700 hover:to-red-700 transition"
             >
-              View All Products
+              <TranslatedContent translationKey="home.viewAllProducts" />
             </Link>
           </div>
         </div>
@@ -160,8 +166,12 @@ export default async function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Genuine Products</h3>
-              <p className="text-gray-600">All our products are authentic and come with warranty</p>
+              <h3 className="text-xl font-semibold mb-2">
+                <TranslatedContent translationKey="home.features.genuineProducts.title" />
+              </h3>
+              <p className="text-gray-600">
+                <TranslatedContent translationKey="home.features.genuineProducts.description" />
+              </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -169,8 +179,12 @@ export default async function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Fast Delivery</h3>
-              <p className="text-gray-600">Quick and reliable shipping to your doorstep</p>
+              <h3 className="text-xl font-semibold mb-2">
+                <TranslatedContent translationKey="home.features.fastDelivery.title" />
+              </h3>
+              <p className="text-gray-600">
+                <TranslatedContent translationKey="home.features.fastDelivery.description" />
+              </p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -178,8 +192,12 @@ export default async function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Secure Payment</h3>
-              <p className="text-gray-600">Multiple secure payment options available</p>
+              <h3 className="text-xl font-semibold mb-2">
+                <TranslatedContent translationKey="home.features.securePayment.title" />
+              </h3>
+              <p className="text-gray-600">
+                <TranslatedContent translationKey="home.features.securePayment.description" />
+              </p>
             </div>
           </div>
         </div>

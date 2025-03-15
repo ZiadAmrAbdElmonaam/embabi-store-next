@@ -2,7 +2,18 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, set up your environment variables:
+
+1. Copy the `.env.example` file to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Update the `.env` file with your email credentials:
+   - For email verification to work, you need to set up a Gmail account with an app password
+   - See: https://support.google.com/accounts/answer/185833
+
+Then, run the development server:
 
 ```bash
 npm run dev
@@ -16,9 +27,15 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Email Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project includes email verification for user signup:
+
+1. When a user signs up, they receive a verification code via email
+2. The user must enter this code to verify their account
+3. After verification, they can log in
+
+If you don't configure email credentials in the `.env` file, the verification codes will be logged to the console instead of being sent via email. This is useful for development.
 
 ## Learn More
 

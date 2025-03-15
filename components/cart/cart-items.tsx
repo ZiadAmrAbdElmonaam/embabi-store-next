@@ -130,7 +130,9 @@ export default function CartItems() {
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">
           <TranslatedContent translationKey="cart.emptyCart" />
         </h2>
-        <p className="text-gray-600 mb-6">Looks like you have not added any items to your cart yet.</p>
+        <p className="text-gray-600 mb-6">
+          <TranslatedContent translationKey="cart.emptyCartMessage" />
+        </p>
         <Link
           href="/products"
           className="inline-block bg-orange-600 text-white px-8 py-3 rounded-full hover:bg-orange-700 transition-colors"
@@ -274,7 +276,7 @@ export default function CartItems() {
             
             {savings > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>Savings</span>
+                <span><TranslatedContent translationKey="cart.savings" /></span>
                 <span>- EGP {savings.toLocaleString()}</span>
               </div>
             )}

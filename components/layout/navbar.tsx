@@ -41,28 +41,32 @@ export function Navbar() {
         <div className="mx-auto px-2" style={{ maxWidth: '120rem' }}>
           <div className="flex justify-between items-center h-9">
             {/* Left Side - Social Links */}
-            <div className="flex items-center gap-4 ml-2">
+            <div className="flex items-center gap-3 ml-1">
               <a href="https://www.facebook.com/embabistore" target="_blank" rel="noopener noreferrer" 
                 className="hover:text-orange-400">
-                <Facebook size={18} />
+                <Facebook size={16} />
               </a>
               <a href="https://www.instagram.com/muhamed_embabi/" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
-                <Instagram size={18} />
+                <Instagram size={16} />
               </a>
               <a href="https://wa.me/201090202577" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
-                <Phone size={18} />
+                <Phone size={16} />
               </a>
             </div>
 
             {/* Right Side - Contact & Language */}
-            <div className="flex items-center gap-6 mr-2">
-              <Link href="/contact" className="hover:text-orange-400">
-                <TranslatedContent translationKey="navbar.contactUs" />
+            <div className="flex items-center gap-3 mr-1">
+              <Link href="/contact" className="hover:text-orange-400 text-xs sm:text-sm whitespace-nowrap">
+                <span className="hidden sm:inline"><TranslatedContent translationKey="navbar.contactUs" /></span>
+                <span className="sm:hidden flex items-center">
+                  <Phone size={14} className="mr-1" />
+                  <TranslatedContent translationKey="navbar.contactUs" />
+                </span>
               </Link>
-              <Link href="/branches" className="flex items-center gap-2 hover:text-orange-400">
-                <MapPin size={16} />
+              <Link href="/branches" className="flex items-center gap-1 hover:text-orange-400 text-xs sm:text-sm whitespace-nowrap">
+                <MapPin size={14} />
                 <span><TranslatedContent translationKey="navbar.ourBranches" /></span>
               </Link>
               <div className="hover:text-black transition-colors">

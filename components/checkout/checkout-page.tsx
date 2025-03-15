@@ -6,6 +6,8 @@ import CheckoutForm from './checkout-form';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/hooks/use-translation';
+import { TranslatedContent } from '@/components/ui/translated-content';
 
 interface CheckoutPageProps {
   user: {
@@ -20,6 +22,7 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isOrderCompleted, setIsOrderCompleted] = useState(false);
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Determine which items to use - only client items from cart storage
   const [checkoutItems, setCheckoutItems] = useState<any[]>([]);
@@ -110,13 +113,15 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
               >
                 <ArrowLeft className="w-5 h-5" />
               </Link>
-              <h1 className="text-2xl font-bold">Checkout</h1>
+              <h1 className="text-2xl font-bold">
+                <TranslatedContent translationKey="common.checkout" />
+              </h1>
             </div>
             <Link
               href="/products"
               className="text-sm text-gray-600 hover:text-gray-900"
             >
-              Continue Shopping
+              <TranslatedContent translationKey="common.continueShopping" />
             </Link>
           </div>
 

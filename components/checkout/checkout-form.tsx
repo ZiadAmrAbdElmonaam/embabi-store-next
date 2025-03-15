@@ -6,6 +6,8 @@ import { toast } from "react-hot-toast";
 import Image from "next/image";
 import { CreditCard, Wallet, BanknoteIcon, QrCode } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
+import { useTranslation } from "@/hooks/use-translation";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 // Egyptian governorates
 const EGYPTIAN_STATES = [
@@ -65,6 +67,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
   const router = useRouter();
   const { hasUnselectedColors, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: user.name || "",
     email: user.email,
@@ -94,18 +97,18 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
     e.preventDefault();
     
     if (!validateEgyptianPhone(formData.phone)) {
-      toast.error("Please enter a valid Egyptian phone number");
+      toast.error(t('checkout.enterValidPhone'));
       return;
     }
 
     if (!formData.state) {
-      toast.error("Please select a state");
+      toast.error(t('checkout.selectState'));
       return;
     }
 
     // Check if any items are missing color selection
     if (checkItemsWithMissingColors() || hasUnselectedColors()) {
-      toast.error("Please select a color for all items in your cart");
+      toast.error(t('checkout.selectColorForItems'));
       router.push('/cart');
       return;
     }
@@ -152,7 +155,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
       console.log("API Response:", response.status, responseData);
 
       if (!response.ok) {
-        const errorMessage = responseData.error || 'Failed to create order';
+        const errorMessage = responseData.error || t('checkout.failedToPlaceOrder');
         console.error("API Error:", errorMessage);
         throw new Error(errorMessage);
       }
@@ -166,12 +169,12 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
       // Clear the cart after successful order
       clearCart();
       
-      toast.success('Order placed successfully!');
+      toast.success(t('checkout.orderPlaced'));
       console.log("Redirecting to order page:", `/orders/${id}`);
       router.push(`/orders/${id}`);
     } catch (error: unknown) {
       console.error('Order creation error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to place order');
+      toast.error(error instanceof Error ? error.message : t('checkout.failedToPlaceOrder'));
     } finally {
       setIsLoading(false);
     }
@@ -182,12 +185,14 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
       <form id="checkout-form" onSubmit={handleSubmit} className="lg:col-span-2 space-y-4">
         {/* Contact Information */}
         <div className="bg-white rounded-xl p-5 space-y-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Contact Information</h2>
+          <h2 className="text-lg font-semibold">
+            <TranslatedContent translationKey="checkout.contactInformation" />
+          </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name
+                <TranslatedContent translationKey="checkout.fullName" />
               </label>
               <input
                 type="text"
@@ -199,7 +204,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+                <TranslatedContent translationKey="checkout.email" />
               </label>
               <input
                 type="email"
@@ -211,11 +216,11 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number
+                <TranslatedContent translationKey="checkout.phone" />
               </label>
               <input
                 type="tel"
-                placeholder="e.g., 01012345678"
+                placeholder="01xxxxxxxxx"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
@@ -227,35 +232,39 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
 
         {/* Shipping Information */}
         <div className="bg-white rounded-xl p-5 space-y-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Shipping Information</h2>
+          <h2 className="text-lg font-semibold">
+            <TranslatedContent translationKey="checkout.shippingInfo" />
+          </h2>
           
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address
+                <TranslatedContent translationKey="checkout.address" />
               </label>
-              <textarea
-                rows={2}
-                placeholder="Enter your full address"
+              <input
+                id="address"
+                type="text"
+                required
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                required
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                placeholder={t('checkout.addressPlaceholder')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
               />
             </div>
-
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State
+                <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+                  <TranslatedContent translationKey="checkout.state" />
                 </label>
                 <select
+                  id="state"
+                  required
                   value={formData.state}
                   onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                 >
-                  <option value="">Select a state</option>
+                  <option value="">{t('checkout.selectState')}</option>
                   {EGYPTIAN_STATES.map((state) => (
                     <option key={state} value={state}>
                       {state}
@@ -263,18 +272,19 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
                   ))}
                 </select>
               </div>
-
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  City
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                  <TranslatedContent translationKey="checkout.city" />
                 </label>
                 <input
+                  id="city"
                   type="text"
-                  placeholder="Enter your city"
+                  required
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  placeholder={t('checkout.cityPlaceholder')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
                 />
               </div>
             </div>
@@ -283,70 +293,72 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
 
         {/* Payment Method */}
         <div className="bg-white rounded-xl p-5 space-y-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Available Payment Methods</h2>
+          <h2 className="text-lg font-semibold">
+            <TranslatedContent translationKey="checkout.paymentMethod" />
+          </h2>
           
-          <div className="grid grid-cols-2 gap-3">
-            {/* Cash on Delivery */}
-            <div 
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                selectedPaymentMethod === 'cash'
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-orange-300'
+              }`}
               onClick={() => setSelectedPaymentMethod('cash')}
-              className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer ${
-                selectedPaymentMethod === 'cash' ? 'border-orange-500 bg-orange-50' : ''
-              }`}
             >
-              <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-white transition-colors">
-                <BanknoteIcon className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Cash on Delivery</p>
-                <p className="text-xs text-gray-500">Pay when you receive</p>
+              <div className="flex items-center gap-3">
+                <BanknoteIcon className="h-6 w-6 text-orange-600" />
+                <span className="font-medium">
+                  <TranslatedContent translationKey="checkout.cashOnDelivery" />
+                </span>
               </div>
             </div>
-
-            {/* Vodafone Cash */}
-            <div 
+            
+            <div
+              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                selectedPaymentMethod === 'vodafone'
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-orange-300'
+              }`}
               onClick={() => setSelectedPaymentMethod('vodafone')}
-              className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer ${
-                selectedPaymentMethod === 'vodafone' ? 'border-orange-500 bg-orange-50' : ''
-              }`}
             >
-              <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-white transition-colors">
-                <Wallet className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Vodafone Cash</p>
-                <p className="text-xs text-gray-500">Pay via Vodafone Cash</p>
+              <div className="flex items-center gap-3">
+                <Wallet className="h-6 w-6 text-orange-600" />
+                <span className="font-medium">
+                  <TranslatedContent translationKey="checkout.vodafoneCash" />
+                </span>
               </div>
             </div>
-
-            {/* Instapay */}
-            <div 
+            
+            <div
+              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                selectedPaymentMethod === 'instapay'
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-orange-300'
+              }`}
               onClick={() => setSelectedPaymentMethod('instapay')}
-              className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer ${
-                selectedPaymentMethod === 'instapay' ? 'border-orange-500 bg-orange-50' : ''
-              }`}
             >
-              <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-white transition-colors">
-                <QrCode className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">InstaPay</p>
-                <p className="text-xs text-gray-500">Pay using InstaPay</p>
+              <div className="flex items-center gap-3">
+                <QrCode className="h-6 w-6 text-orange-600" />
+                <span className="font-medium">
+                  <TranslatedContent translationKey="checkout.instapay" />
+                </span>
               </div>
             </div>
-
-            {/* Credit/Debit Card */}
-            <div 
-              onClick={() => setSelectedPaymentMethod('visa')}
-              className={`flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer ${
-                selectedPaymentMethod === 'visa' ? 'border-orange-500 bg-orange-50' : ''
+            
+            <div
+              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                selectedPaymentMethod === 'visa'
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-orange-300'
               }`}
+              onClick={() => setSelectedPaymentMethod('visa')}
             >
-              <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-white transition-colors">
-                <CreditCard className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Credit/Debit Card</p>
-                <p className="text-xs text-gray-500">Pay with Visa/Mastercard</p>
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-6 w-6 text-orange-600" />
+                <span className="font-medium">
+                  <TranslatedContent translationKey="checkout.creditCard" />
+                </span>
               </div>
             </div>
           </div>
@@ -355,67 +367,83 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
 
       {/* Order Summary */}
       <div className="lg:col-span-1">
-        <div className="bg-white rounded-xl p-5 space-y-5 shadow-sm sticky top-4">
-          <h2 className="text-lg font-semibold">Order Summary</h2>
+        <div className="bg-white rounded-xl p-5 shadow-sm sticky top-4">
+          <h2 className="text-lg font-semibold mb-4">
+            <TranslatedContent translationKey="checkout.orderSummary" />
+          </h2>
           
-          <div className="space-y-4 max-h-[50vh] overflow-auto pr-2">
-            {items.map((item) => (
-              <div key={`${item.id}-${item.selectedColor || 'default'}`} className="flex gap-3">
-                <div className="relative w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
-                  <Image
-                    src={item.images[0] || '/images/placeholder.png'}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-gray-900 truncate">{item.name}</p>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+          <div className="space-y-4">
+            <div className="max-h-60 overflow-y-auto pr-2">
+              {items.map((item) => (
+                <div key={item.id} className="flex gap-3 py-3 border-b border-gray-100">
+                  <div className="w-16 h-16 bg-gray-50 rounded-md overflow-hidden relative flex-shrink-0">
+                    <Image
+                      src={item.images[0]}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-sm text-gray-600">
+                        <TranslatedContent translationKey="cart.quantity" />: {item.quantity}
+                      </p>
+                      <p className="text-sm font-medium">
+                        EGP {((item.salePrice || item.price) * item.quantity).toLocaleString()}
+                      </p>
+                    </div>
                     {item.selectedColor && (
-                      <p className="text-xs text-gray-500 ml-2">
-                        Color: <span className="font-medium">{item.selectedColor}</span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        <TranslatedContent translationKey="cart.color" />: {item.selectedColor}
                       </p>
                     )}
                   </div>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
-                    EGP {((item.salePrice || item.price) * item.quantity).toLocaleString()}
-                  </p>
                 </div>
+              ))}
+            </div>
+            
+            <div className="border-t border-gray-100 pt-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">
+                  <TranslatedContent translationKey="cart.subtotal" />
+                </span>
+                <span>EGP {subtotal.toLocaleString()}</span>
               </div>
-            ))}
+              <div className="flex justify-between">
+                <span className="text-gray-600">
+                  <TranslatedContent translationKey="cart.shipping" />
+                </span>
+                <span>EGP {shipping.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-lg pt-2 border-t border-gray-100">
+                <span>
+                  <TranslatedContent translationKey="cart.total" />
+                </span>
+                <span>EGP {total.toLocaleString()}</span>
+              </div>
+            </div>
+            
+            <button
+              type="submit"
+              form="checkout-form"
+              disabled={isLoading}
+              className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                <TranslatedContent translationKey="checkout.placeOrder" />
+              )}
+            </button>
           </div>
-
-          <div className="space-y-3 pt-3 border-t">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Subtotal</span>
-              <span>EGP {subtotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Shipping</span>
-              <span>{shipping === 0 ? 'Free' : `EGP ${shipping.toLocaleString()}`}</span>
-            </div>
-            <div className="flex justify-between text-base font-semibold pt-2 border-t">
-              <span>Total</span>
-              <span>EGP {total.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            form="checkout-form"
-            disabled={isLoading}
-            className="w-full bg-orange-600 text-white py-2.5 px-4 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-          >
-            {isLoading ? 'Processing...' : 'Place Order'}
-          </button>
-
-          {subtotal < 10000 && (
-            <p className="text-xs text-gray-500 text-center mt-2">
-              Free shipping on orders over EGP 10,000
-            </p>
-          )}
         </div>
       </div>
     </div>

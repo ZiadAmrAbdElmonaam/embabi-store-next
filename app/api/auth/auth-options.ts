@@ -26,6 +26,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
+        if (!user.emailVerified) {
+          throw new Error("Please verify your email before logging in");
+        }
+
         const isValid = await compare(credentials.password, user.password);
         if (!isValid) {
           throw new Error("Invalid credentials");
@@ -45,6 +49,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+    error: "/login?error=true",
   },
   callbacks: {
     async session({ session, token }) {

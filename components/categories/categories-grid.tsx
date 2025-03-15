@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { CategoryCard } from "./category-card";
+import { TranslatedContent } from '@/components/ui/translated-content';
 
 const container = {
   hidden: { opacity: 0 },
@@ -37,7 +38,7 @@ export function CategoriesGrid({ categories }: CategoriesGridProps) {
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-bold text-gray-900 mb-8"
         >
-          Categories
+          <TranslatedContent translationKey="categories.title" />
         </motion.h1>
         
         <motion.div

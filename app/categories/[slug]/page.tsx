@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { ProductCard } from "@/components/ui/product-card";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { translations } from "@/lib/translations";
 
 interface CategoryPageProps {
   params: {
@@ -12,6 +14,19 @@ interface CategoryPageProps {
 export default async function CategoryPage({
   params,
 }: CategoryPageProps) {
+  // Get language from cookies for server component
+  const cookieStore = cookies();
+  const lang = (cookieStore.get('lang')?.value || 'en') as 'en' | 'ar';
+  const t = (key: string) => {
+    const keys = key.split('.');
+    let result = translations[lang];
+    for (const k of keys) {
+      if (result[k] === undefined) return key;
+      result = result[k];
+    }
+    return result;
+  };
+
   // Convert Decimal to number for serialization
   const category = await prisma.category.findUnique({
     where: { slug: params.slug },
@@ -28,15 +43,15 @@ export default async function CategoryPage({
   if (!category) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4">Category Not Found</h1>
+        <h1 className="text-3xl font-bold mb-4">{t('categoryDetail.categoryNotFound')}</h1>
         <p className="text-gray-600 mb-8">
-          The category you&apos;re looking for doesn&apos;t exist.
+          {t('categoryDetail.categoryNotExist')}
         </p>
         <Link 
           href="/categories" 
           className="text-blue-600 hover:text-blue-800 underline"
         >
-          Browse all categories
+          {t('categoryDetail.browseAllCategories')}
         </Link>
       </div>
     );
@@ -70,13 +85,13 @@ export default async function CategoryPage({
       ) : (
         <div className="text-center py-16">
           <p className="text-xl text-gray-500 mb-4">
-            No products in {category.name} category yet.
+            {t('categoryDetail.noProducts').replace('{category}', category.name)}
           </p>
           <Link 
             href="/products" 
             className="text-blue-600 hover:text-blue-800 underline"
           >
-            Browse all products
+            {t('categoryDetail.browseAllProducts')}
           </Link>
         </div>
       )}

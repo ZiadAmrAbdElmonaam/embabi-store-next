@@ -9,6 +9,8 @@ import { formatPrice } from "@/lib/utils";
 import { toast } from "react-hot-toast";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { TranslatedContent } from "@/components/ui/translated-content";
+import { useTranslation } from "@/hooks/use-translation";
 
 export default function WishlistPage() {
   const { items, removeItem, syncWithServer, isInitialized } = useWishlist();
@@ -18,6 +20,7 @@ export default function WishlistPage() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<typeof items[0] | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const initWishlist = async () => {
@@ -123,7 +126,7 @@ export default function WishlistPage() {
   const handleAddWithColor = () => {
     if (!selectedItem) return;
     if (!selectedColor) {
-      toast.error('Please select a color');
+      toast.error(t('products.selectColor'));
       return;
     }
     
@@ -173,7 +176,9 @@ export default function WishlistPage() {
           >
             <div className="flex items-center justify-center gap-3 mb-4">
               <Heart className="w-10 h-10 text-rose-600" fill="currentColor" />
-              <h1 className="text-4xl font-bold text-gray-900">My Wishlist</h1>
+              <h1 className="text-4xl font-bold text-gray-900">
+                <TranslatedContent translationKey="wishlist.myWishlist" />
+              </h1>
             </div>
             <p className="text-gray-600 text-lg">
               {items.length} {items.length === 1 ? 'item' : 'items'} saved for later
@@ -191,13 +196,15 @@ export default function WishlistPage() {
             <div className="bg-rose-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <Heart className="w-10 h-10 text-rose-400" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-3">Your wishlist is empty</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-3">
+              <TranslatedContent translationKey="wishlist.emptyWishlist" />
+            </h2>
             <p className="text-gray-600 mb-8">Start adding items you love to your wishlist!</p>
             <Link 
               href="/products" 
               className="inline-flex items-center gap-2 bg-rose-600 text-white px-8 py-4 rounded-full hover:bg-rose-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
             >
-              Browse Products
+              <TranslatedContent translationKey="cart.continueShopping" />
             </Link>
           </motion.div>
         ) : (
@@ -228,12 +235,14 @@ export default function WishlistPage() {
                   <button
                     onClick={() => handleRemoveFromWishlist(item.id)}
                     className="p-3 bg-white rounded-full shadow-lg hover:bg-red-50 transition-all duration-300 group/btn"
+                    title={t('wishlist.remove')}
                   >
                     <Trash2 className="w-5 h-5 text-gray-600 group-hover/btn:text-red-600" />
                   </button>
                   <button
                     onClick={() => handleAddToCart(item)}
                     className="p-3 bg-white rounded-full shadow-lg hover:bg-orange-50 transition-all duration-300 group/btn"
+                    title={t('wishlist.addToCart')}
                   >
                     <ShoppingCart className="w-5 h-5 text-gray-600 group-hover/btn:text-orange-600" />
                   </button>
@@ -294,7 +303,9 @@ export default function WishlistPage() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Select Color for {selectedItem.name}</h3>
+              <h3 className="text-lg font-semibold">
+                <TranslatedContent translationKey="products.selectColorFor" /> {selectedItem.name}
+              </h3>
               <button 
                 onClick={() => setShowColorModal(false)}
                 className="p-1 text-gray-400 hover:text-gray-600"
@@ -341,7 +352,7 @@ export default function WishlistPage() {
               
               {selectedColor && (
                 <p className="text-sm text-center text-gray-600">
-                  Selected: <span className="font-medium">{getColorName(selectedColor)}</span>
+                  <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(selectedColor)}</span>
                 </p>
               )}
               
@@ -350,7 +361,7 @@ export default function WishlistPage() {
                 className="w-full bg-rose-600 text-white py-2 px-4 rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                 disabled={!selectedColor}
               >
-                Add to Cart
+                <TranslatedContent translationKey="wishlist.addToCart" />
               </button>
             </div>
           </div>

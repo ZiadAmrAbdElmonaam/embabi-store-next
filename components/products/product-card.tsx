@@ -8,6 +8,8 @@ import { toast } from "react-hot-toast";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { useCart } from "@/hooks/use-cart";
 import { useState, useRef, useEffect } from "react";
+import { TranslatedContent } from "@/components/ui/translated-content";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ProductCardProps {
   product: {
@@ -31,6 +33,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem, removeItem, items } = useWishlist();
   const { addItem: addToCart } = useCart();
+  const { t } = useTranslation();
   const isInWishlist = items.some(item => item.id === product.id);
   const [showColorModal, setShowColorModal] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -165,7 +168,7 @@ export function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation();
     
     if (!selectedColor) {
-      toast.error('Please select a color');
+      toast.error(t('products.selectColor'));
       return;
     }
     
@@ -305,7 +308,9 @@ export function ProductCard({ product }: ProductCardProps) {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Select Color for {product.name}</h3>
+              <h3 className="text-lg font-semibold">
+                <TranslatedContent translationKey="products.selectColorFor" /> {product.name}
+              </h3>
               <button 
                 onClick={(e) => {
                   e.preventDefault();
@@ -385,7 +390,7 @@ export function ProductCard({ product }: ProductCardProps) {
               
               {selectedColor && (
                 <p className="text-sm text-center text-gray-600">
-                  Selected: <span className="font-medium">{getColorName(selectedColor)}</span>
+                  <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(selectedColor)}</span>
                 </p>
               )}
               
@@ -394,7 +399,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                 disabled={!selectedColor}
               >
-                Add to Cart
+                <TranslatedContent translationKey="products.addToCart" />
               </button>
             </div>
           </div>

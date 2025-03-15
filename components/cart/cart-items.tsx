@@ -8,12 +8,15 @@ import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { TranslatedContent } from '@/components/ui/translated-content';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function CartItems() {
   const { items, removeItem, updateQuantity, updateColor } = useCart();
   const [isUpdating, setIsUpdating] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const getColorName = (color: string) => {
     const colorMap: { [key: string]: string } = {
@@ -42,7 +45,7 @@ export default function CartItems() {
     // If color is selected, check its available quantity
     if (item.availableColors && item.availableColors.length > 0) {
       if (!item.selectedColor) {
-        toast.error('Please select a color first');
+        toast.error(t('products.selectColor'));
         return;
       }
 
@@ -83,7 +86,7 @@ export default function CartItems() {
   const handleCheckout = () => {
     // Check if all required colors are selected
     if (items.some(item => item.availableColors?.length > 0 && !item.selectedColor)) {
-      toast.error('Please select colors for all items');
+      toast.error(t('products.selectColor'));
       return;
     }
 
@@ -124,13 +127,15 @@ export default function CartItems() {
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <ShoppingCart className="w-8 h-8 text-gray-400" />
         </div>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-2">Your cart is empty</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+          <TranslatedContent translationKey="cart.emptyCart" />
+        </h2>
         <p className="text-gray-600 mb-6">Looks like you have not added any items to your cart yet.</p>
         <Link
           href="/products"
           className="inline-block bg-orange-600 text-white px-8 py-3 rounded-full hover:bg-orange-700 transition-colors"
         >
-          Start Shopping
+          <TranslatedContent translationKey="cart.startShopping" />
         </Link>
       </div>
     );
@@ -185,9 +190,11 @@ export default function CartItems() {
                     {item.availableColors && item.availableColors.length > 0 && (
                       <div className="mt-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">Color:</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            <TranslatedContent translationKey="cart.color" />:
+                          </span>
                           {!item.selectedColor && (
-                            <span className="text-xs text-red-600 font-medium">* Color required</span>
+                            <span className="text-xs text-red-600 font-medium">* <TranslatedContent translationKey="products.selectColor" /></span>
                           )}
                         </div>
                         <div className="flex gap-2 mt-2 flex-wrap">
@@ -210,7 +217,7 @@ export default function CartItems() {
                         </div>
                         {item.selectedColor && (
                           <p className="text-xs text-gray-600 mt-1">
-                            Selected: <span className="font-medium">{getColorName(item.selectedColor)}</span>
+                            <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(item.selectedColor)}</span>
                           </p>
                         )}
                       </div>
@@ -237,7 +244,7 @@ export default function CartItems() {
                       </div>
                       
                       <div className="text-gray-600 text-sm">
-                        Total: <span className="font-medium text-gray-900">
+                        <TranslatedContent translationKey="cart.total" />: <span className="font-medium text-gray-900">
                           EGP {((item.salePrice !== null ? item.salePrice : item.price) * item.quantity).toLocaleString()}
                         </span>
                       </div>
@@ -253,11 +260,15 @@ export default function CartItems() {
       {/* Order Summary */}
       <div className="lg:col-span-4">
         <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            <TranslatedContent translationKey="checkout.orderSummary" />
+          </h2>
           
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
+              <span className="text-gray-600">
+                <TranslatedContent translationKey="common.subtotal" />
+              </span>
               <span className="font-medium">EGP {subtotal.toLocaleString()}</span>
             </div>
             
@@ -269,7 +280,9 @@ export default function CartItems() {
             )}
             
             <div className="flex justify-between pt-3 border-t border-gray-100">
-              <span className="font-semibold">Total</span>
+              <span className="font-semibold">
+                <TranslatedContent translationKey="common.total" />
+              </span>
               <span className="font-semibold">EGP {total.toLocaleString()}</span>
             </div>
           </div>
@@ -279,7 +292,7 @@ export default function CartItems() {
             disabled={isUpdating || items.length === 0}
             className="w-full bg-orange-600 text-white py-3 rounded-lg mt-4 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Proceed to Checkout
+            <TranslatedContent translationKey="cart.proceedToCheckout" />
           </button>
         </div>
       </div>

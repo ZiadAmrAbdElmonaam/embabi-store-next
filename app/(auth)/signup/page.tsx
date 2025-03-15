@@ -1,7 +1,22 @@
 import Image from "next/image";
 import { SignUpForm } from "@/components/auth/signup-form";
+import { cookies } from "next/headers";
+import { translations } from "@/lib/translations";
 
 export default function SignUpPage() {
+  // Get language from cookies for server component
+  const cookieStore = cookies();
+  const lang = (cookieStore.get('lang')?.value || 'en') as 'en' | 'ar';
+  const t = (key: string) => {
+    const keys = key.split('.');
+    let result = translations[lang];
+    for (const k of keys) {
+      if (result[k] === undefined) return key;
+      result = result[k];
+    }
+    return result;
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-[1000px] mx-4 bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -21,8 +36,8 @@ export default function SignUpPage() {
           <div className="lg:w-1/2 p-8 lg:p-12">
             <div className="max-w-sm mx-auto">
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">Create Account</h1>
-                <p className="mt-2 text-sm text-gray-600">Join us and start shopping</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t('auth.createAccount')}</h1>
+                <p className="mt-2 text-sm text-gray-600">{t('auth.joinUs')}</p>
               </div>
               <SignUpForm />
             </div>

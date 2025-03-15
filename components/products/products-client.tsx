@@ -5,6 +5,7 @@ import { ProductGrid } from "@/components/products/product-grid";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 interface ProductsClientProps {
   initialProducts: any[];
@@ -39,12 +40,16 @@ export function ProductsClient({
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Products Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">All Products</h1>
+          <h1 className="text-3xl font-bold text-gray-800">
+            <TranslatedContent translationKey="products.allProducts" />
+          </h1>
         </div>
 
         {initialProducts.length === 0 ? (
           <div className="text-center py-10">
-            <p className="text-gray-500">No products found</p>
+            <p className="text-gray-500">
+              <TranslatedContent translationKey="products.noProductsFound" />
+            </p>
           </div>
         ) : (
           <ProductGrid products={initialProducts} />

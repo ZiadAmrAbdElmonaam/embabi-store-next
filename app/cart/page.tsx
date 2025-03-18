@@ -8,22 +8,41 @@ import { useCart } from "@/hooks/use-cart";
 import { TranslatedContent } from "@/components/ui/translated-content";
 
 export default function CartPage() {
-  const { syncWithServer, isInitialized, items } = useCart();
+  const { syncWithServer, isInitialized, items, appliedCoupon, loadCouponFromCookies } = useCart();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const initCart = async () => {
-      if (!isInitialized) {
-        console.log("Cart not initialized, syncing with server...");
-        await syncWithServer();
-      } else {
-        console.log("Cart already initialized:", items);
+      try {
+        if (!isInitialized) {
+          console.log("Cart not initialized, syncing with server...");
+          await syncWithServer();
+          
+          // Only check for a coupon if there are items in the cart
+          const cartItems = useCart.getState().items;
+          if (cartItems.length > 0 && !appliedCoupon) {
+            console.log("Cart has items but no coupon, checking cookies...");
+            await loadCouponFromCookies();
+          }
+        } else {
+          console.log("Cart already initialized");
+          
+          // Only check for a coupon if there are items in the cart
+          const cartItems = useCart.getState().items;
+          if (cartItems.length > 0 && !appliedCoupon) {
+            console.log("Cart has items but no coupon, checking cookies...");
+            await loadCouponFromCookies();
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing cart:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initCart();
-  }, [syncWithServer, isInitialized, items]);
+  }, [syncWithServer, isInitialized, appliedCoupon, loadCouponFromCookies]);
 
   if (isLoading) {
     return (

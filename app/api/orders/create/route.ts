@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/auth-options";
 import { v2 as cloudinary } from 'cloudinary';
 import { sendOrderConfirmationEmail } from '@/lib/email';
+import { cookies } from 'next/headers';
 
 // Add these interfaces at the top of the file
 interface OrderItem {
@@ -19,6 +20,13 @@ interface ShippingInfo {
   address: string;
   city: string;
   notes?: string;
+}
+
+interface CouponInfo {
+  id: string;
+  code: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
 }
 
 export async function POST(request: Request) {
@@ -85,6 +93,33 @@ export async function POST(request: Request) {
     console.log("Total string:", totalStr, "Type:", typeof totalStr);
     const total = typeof totalStr === 'string' ? Number(totalStr) : null;
     console.log("Parsed total:", total);
+
+    // Get discount amount if provided
+    console.log("Processing discount amount...");
+    const discountAmountStr = formData.get('discountAmount');
+    const discountAmount = typeof discountAmountStr === 'string' ? Number(discountAmountStr) : 0;
+    console.log("Discount amount:", discountAmount);
+
+    // Check for coupon from cookies
+    let couponData: CouponInfo | null = null;
+    try {
+      // First check if couponInfo was passed in the form
+      const couponInfoStr = formData.get('couponInfo');
+      if (typeof couponInfoStr === 'string') {
+        couponData = JSON.parse(couponInfoStr) as CouponInfo;
+        console.log("Coupon info from form:", couponData.code);
+      } else {
+        // Fall back to cookie if not in form
+        const couponCookie = cookies().get('coupon')?.value;
+        if (couponCookie) {
+          couponData = JSON.parse(couponCookie) as CouponInfo;
+          console.log("Applied coupon from cookie:", couponData.code);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing coupon data:', error);
+      // Continue without coupon if error occurs
+    }
 
     // Validate required fields
     console.log("Validating required fields...");
@@ -233,6 +268,8 @@ export async function POST(request: Request) {
           data: {
             userId: session.user.id,
             total,
+            discountAmount: discountAmount || 0,
+            couponId: couponData?.id || null, // Store the coupon ID
             status: paymentMethod === 'cash' ? 'PENDING' : 'PROCESSING',
             shippingName: shippingInfo.name,
             shippingPhone: shippingInfo.phone,
@@ -307,9 +344,30 @@ export async function POST(request: Request) {
         }
         
         console.log("Stock quantities updated");
+
+        // 3. Update coupon usage count if a coupon was used
+        if (couponData) {
+          console.log(`Updating coupon usage for coupon ID: ${couponData.id}`);
+          await prisma.coupon.update({
+            where: { id: couponData.id },
+            data: {
+              usedCount: {
+                increment: 1
+              }
+            }
+          });
+          console.log("Coupon usage count updated");
+        }
+
         return newOrder;
       });
       
+      // Clear the coupon cookie after order is created
+      if (couponData) {
+        cookies().delete('coupon');
+        console.log("Coupon cookie cleared");
+      }
+
       // Send confirmation email (re-enabled but with better error handling)
       if (session.user.email) {
         try {
@@ -319,6 +377,8 @@ export async function POST(request: Request) {
           const emailData = {
             id: order.id,
             total: Number(order.total),
+            discountAmount: Number(order.discountAmount || 0),
+            couponCode: couponData?.code || null,
             items: order.items.map(item => ({
               name: item.product.name || 'Product',
               quantity: item.quantity,

@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { formatPrice } from '@/lib/utils';
 import Image from 'next/image';
+
 interface Product {
   id: string;
   name: string;
   price: number;
   stock: number;
   images: string[];
+  sale: number | null;
+  salePrice: number | null;
+  saleEndDate: string | null;
   category: {
     name: string;
   };
@@ -29,6 +32,22 @@ export default function AdminProductsPage() {
       const response = await fetch('/api/admin/products');
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
+      
+      // Log products with sale end dates for debugging
+      data.forEach(product => {
+        if (product.saleEndDate) {
+          const endDate = new Date(product.saleEndDate);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
+          console.log('Product:', product.name);
+          console.log('Sale End Date:', endDate.toISOString());
+          console.log('Today:', today.toISOString());
+          console.log('Is sale expired?', endDate < today);
+          console.log('Timestamp comparison:', endDate.getTime(), '<', today.getTime(), '=', endDate.getTime() < today.getTime());
+          console.log('-----------------------');
+        }
+      });
+      
       setProducts(data);
     } catch (error) {
       toast.error('Failed to fetch products');
@@ -87,6 +106,7 @@ export default function AdminProductsPage() {
               <th className="px-6 py-3 text-left">Name</th>
               <th className="px-6 py-3 text-left">Category</th>
               <th className="px-6 py-3 text-left">Price (EGP)</th>
+              <th className="px-6 py-3 text-left">Sale</th>
               <th className="px-6 py-3 text-left">Stock</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
@@ -109,6 +129,20 @@ export default function AdminProductsPage() {
                 <td className="px-6 py-4">{product.name}</td>
                 <td className="px-6 py-4">{product.category.name}</td>
                 <td className="px-6 py-4">{product.price.toFixed(2)} EGP</td>
+                <td className="px-6 py-4">
+                  {product.sale ? (
+                    <div>
+                      <span className="text-green-600 font-medium">{product.sale}%</span>
+                      {product.saleEndDate && (
+                        <div className="text-xs text-gray-500">
+                          Until {new Date(product.saleEndDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">No sale</span>
+                  )}
+                </td>
                 <td className="px-6 py-4">{product.stock}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-4">

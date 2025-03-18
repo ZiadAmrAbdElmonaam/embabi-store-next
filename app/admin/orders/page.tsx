@@ -10,6 +10,7 @@ import { toast } from "react-hot-toast";
 import { UpdateStatusModal } from "@/components/admin/update-status-modal";
 import { CancelItemsModal } from "@/components/admin/cancel-items-modal";
 import { getColorValue, getColorName } from "@/lib/colors";
+import { Ticket } from "lucide-react";
 
 export default function AdminOrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
@@ -104,6 +105,9 @@ export default function AdminOrdersPage() {
                 Total
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Coupon
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -163,9 +167,37 @@ export default function AdminOrdersPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
-                    {formatPrice(order.total)}
-                  </span>
+                  <div className="text-sm">
+                    {order.discountAmount && Number(order.discountAmount) > 0 ? (
+                      <div>
+                        <div className="text-gray-500 line-through">
+                          {formatPrice(Number(order.total) + Number(order.discountAmount))}
+                        </div>
+                        <div className="text-gray-900 font-medium">
+                          {formatPrice(order.total)}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-900">{formatPrice(order.total)}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {order.coupon ? (
+                    <div className="flex items-center">
+                      <Ticket className="h-4 w-4 text-green-600 mr-1" />
+                      <div className="text-sm">
+                        <div className="font-medium text-gray-900">{order.coupon.code}</div>
+                        <div className="text-xs text-green-600">
+                          {order.coupon.type === 'PERCENTAGE' 
+                            ? `${order.coupon.value}% off` 
+                            : `${formatPrice(order.coupon.value)} off`}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-500">—</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <OrderStatusBadge status={order.status} />

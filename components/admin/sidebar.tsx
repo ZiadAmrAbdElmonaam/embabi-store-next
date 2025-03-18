@@ -5,7 +5,8 @@ import {
   ListOrdered, 
   Users,
   FolderTree,
-  AlertTriangle
+  AlertTriangle,
+  Ticket
 } from "lucide-react";
 
 export function AdminSidebar() {
@@ -38,6 +39,14 @@ export function AdminSidebar() {
         >
           <FolderTree className="w-5 h-5" />
           <span>Categories</span>
+        </Link>
+        
+        <Link 
+          href="/admin/coupons" 
+          className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded"
+        >
+          <Ticket className="w-5 h-5" />
+          <span>Coupons</span>
         </Link>
         
         <Link 

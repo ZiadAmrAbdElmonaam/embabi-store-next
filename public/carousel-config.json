@@ -1,0 +1,14 @@
+{
+  "images": [
+    {
+      "id": "img_1742317740573",
+      "url": "/images/carousel/logo-onepiece.png",
+      "order": 1
+    },
+    {
+      "id": "img_1742316948325",
+      "url": "/images/carousel/logo.png",
+      "order": 2
+    }
+  ]
+}

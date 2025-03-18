@@ -182,3 +182,10 @@ model Coupon {
   updatedAt   DateTime     @updatedAt
   orders      Order[]
 }
+
+model SiteSettings {
+  id                String   @id @default("site-settings")
+  maintenanceMode   Boolean  @default(false)
+  maintenanceMessage String  @default("Site is under maintenance. Please try again later.")
+  updatedAt         DateTime @updatedAt @default(now())
+}

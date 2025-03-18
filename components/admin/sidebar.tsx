@@ -6,14 +6,16 @@ import {
   Users,
   FolderTree,
   AlertTriangle,
-  Ticket
+  Ticket,
+  Settings
 } from "lucide-react";
 
 export function AdminSidebar() {
   return (
     <div className="w-64 bg-gray-800 text-white p-4">
-      <div className="mb-8">
-        <h1 className="text-xl font-bold">Admin Dashboard</h1>
+      <div className="mb-8 flex items-center">
+        <Package className="w-8 h-8 text-orange-500 mr-2" />
+        <h1 className="text-xl font-bold">Admin Panel</h1>
       </div>
       
       <nav className="space-y-2">
@@ -63,6 +65,14 @@ export function AdminSidebar() {
         >
           <Users className="w-5 h-5" />
           <span>Users</span>
+        </Link>
+        
+        <Link 
+          href="/admin/settings" 
+          className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded"
+        >
+          <Settings className="w-5 h-5" />
+          <span>Settings</span>
         </Link>
         
         <div className="border-t border-gray-700 my-4"></div>

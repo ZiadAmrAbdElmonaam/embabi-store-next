@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
-import { CreditCard, Wallet, BanknoteIcon, QrCode, Ticket } from "lucide-react";
+import { CreditCard, Wallet, BanknoteIcon, QrCode, Ticket, AlertTriangle } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { useTranslation } from "@/hooks/use-translation";
 import { TranslatedContent } from "@/components/ui/translated-content";
@@ -69,6 +69,29 @@ interface Coupon {
   value: number;
 }
 
+// Add maintenance mode check function
+const useMaintenance = () => {
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+
+  useEffect(() => {
+    const checkMaintenanceMode = async () => {
+      try {
+        const response = await fetch('/api/settings/maintenance');
+        const data = await response.json();
+        setIsMaintenanceMode(data.maintenanceMode);
+        setMaintenanceMessage(data.maintenanceMessage);
+      } catch (error) {
+        console.error('Failed to check maintenance status:', error);
+      }
+    };
+
+    checkMaintenanceMode();
+  }, []);
+
+  return { isMaintenanceMode, maintenanceMessage };
+};
+
 export default function CheckoutForm({ user, items, subtotal, shipping, onOrderComplete }: CheckoutFormProps) {
   const router = useRouter();
   const { hasUnselectedColors, clearCart } = useCart();
@@ -85,6 +108,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const { isMaintenanceMode, maintenanceMessage } = useMaintenance();
 
   // Fetch any applied coupon
   useEffect(() => {
@@ -140,6 +164,12 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if maintenance mode is enabled
+    if (isMaintenanceMode) {
+      toast.error(maintenanceMessage || 'Site is currently under maintenance. Please try again later.');
+      return;
+    }
+
     if (!validateEgyptianPhone(formData.phone)) {
       toast.error(t('checkout.enterValidPhone'));
       return;
@@ -242,6 +272,22 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Maintenance Mode Banner */}
+      {isMaintenanceMode && (
+        <div className="lg:col-span-3 bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                <span className="font-medium">Alert:</span> {maintenanceMessage || 'Site is currently under maintenance. Please try again later.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <form id="checkout-form" onSubmit={handleSubmit} className="lg:col-span-2 space-y-4">
         {/* Contact Information */}
         <div className="bg-white rounded-xl p-5 space-y-4 shadow-sm">
@@ -500,7 +546,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
             <button
               type="submit"
               form="checkout-form"
-              disabled={isLoading}
+              disabled={isLoading || isMaintenanceMode}
               className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {isLoading ? (

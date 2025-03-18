@@ -33,6 +33,19 @@ export async function POST(request: Request) {
   try {
     console.log("Starting order creation process...");
     
+    // Check if the site is in maintenance mode
+    console.log("Checking maintenance mode status...");
+    const siteSettings = await prisma.siteSettings.findUnique({
+      where: { id: "site-settings" }
+    });
+
+    if (siteSettings?.maintenanceMode) {
+      console.log("Site is in maintenance mode. Blocking order creation.");
+      return NextResponse.json({ 
+        error: siteSettings.maintenanceMessage || 'Site is currently under maintenance. Please try again later.'
+      }, { status: 503 });
+    }
+    
     const session = await getServerSession(authOptions);
     console.log("Session retrieved:", session ? "Valid" : "Invalid");
 

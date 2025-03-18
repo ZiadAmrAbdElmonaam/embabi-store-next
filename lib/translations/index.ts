@@ -175,7 +175,10 @@ export const translations = {
       quantity: 'Quantity',
       proceedToCheckout: 'Proceed to Checkout',
       savings: 'Savings',
-      emptyCartMessage: 'Looks like you have not added any items to your cart yet.'
+      emptyCartMessage: 'Looks like you have not added any items to your cart yet.',
+      applyCoupon: 'Have a coupon?',
+      couponDiscount: 'Coupon Discount',
+      removeCoupon: 'Remove'
     },
     wishlist: {
       myWishlist: 'My Wishlist',
@@ -464,7 +467,10 @@ export const translations = {
       quantity: 'الكمية',
       proceedToCheckout: 'المتابعة إلى الدفع',
       savings: 'التوفير',
-      emptyCartMessage: 'ابدأ التسوق لإضافة منتجات إلى سلتك'
+      emptyCartMessage: 'ابدأ التسوق لإضافة منتجات إلى سلتك',
+      applyCoupon: 'هل لديك كوبون؟',
+      couponDiscount: 'خصم الكوبون',
+      removeCoupon: 'إزالة'
     },
     wishlist: {
       myWishlist: 'قائمة الرغبات',

@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
-import { CreditCard, Wallet, BanknoteIcon, QrCode } from "lucide-react";
+import { CreditCard, Wallet, BanknoteIcon, QrCode, Ticket } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { useTranslation } from "@/hooks/use-translation";
 import { TranslatedContent } from "@/components/ui/translated-content";
@@ -59,11 +59,17 @@ interface CheckoutFormProps {
   }[];
   subtotal: number;
   shipping: number;
-  total: number;
   onOrderComplete: () => void;
 }
 
-export default function CheckoutForm({ user, items, subtotal, shipping, total, onOrderComplete }: CheckoutFormProps) {
+interface Coupon {
+  id: string;
+  code: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+}
+
+export default function CheckoutForm({ user, items, subtotal, shipping, onOrderComplete }: CheckoutFormProps) {
   const router = useRouter();
   const { hasUnselectedColors, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +83,44 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
     city: ""
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+
+  // Fetch any applied coupon
+  useEffect(() => {
+    const fetchCoupon = async () => {
+      try {
+        const response = await fetch('/api/coupons/current');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.coupon) {
+            setAppliedCoupon(data.coupon);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch applied coupon:', error);
+      }
+    };
+
+    fetchCoupon();
+  }, []);
+
+  // Calculate discount amount when coupon is applied
+  useEffect(() => {
+    if (appliedCoupon) {
+      if (appliedCoupon.type === 'PERCENTAGE') {
+        const discount = (subtotal * appliedCoupon.value) / 100;
+        setDiscountAmount(discount);
+      } else if (appliedCoupon.type === 'FIXED') {
+        setDiscountAmount(Math.min(appliedCoupon.value, subtotal));
+      }
+    } else {
+      setDiscountAmount(0);
+    }
+  }, [appliedCoupon, subtotal]);
+
+  // Recalculate total with discount
+  const totalWithDiscount = subtotal + shipping - discountAmount;
 
   const validateEgyptianPhone = (phone: string) => {
     // Egyptian phone number format: +20 1XX XXX XXXX
@@ -142,8 +186,24 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
 
       // Add payment method and total
       formDataToSend.append('paymentMethod', selectedPaymentMethod);
-      formDataToSend.append('total', total.toString());
-      console.log("Total:", total, "Payment method:", selectedPaymentMethod);
+      formDataToSend.append('total', totalWithDiscount.toString());
+      
+      // Add discount amount if there's a coupon applied
+      if (discountAmount > 0 && appliedCoupon) {
+        formDataToSend.append('discountAmount', discountAmount.toString());
+        // Also add the coupon info
+        formDataToSend.append('couponInfo', JSON.stringify({
+          id: appliedCoupon.id,
+          code: appliedCoupon.code,
+          type: appliedCoupon.type,
+          value: appliedCoupon.value
+        }));
+      }
+
+      console.log("Total:", totalWithDiscount, "Payment method:", selectedPaymentMethod);
+      if (discountAmount > 0 && appliedCoupon) {
+        console.log("Discount amount:", discountAmount, "Coupon:", appliedCoupon.code);
+      }
 
       console.log("Sending order request...");
       const response = await fetch('/api/orders/create', {
@@ -411,6 +471,18 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
                 </span>
                 <span>EGP {subtotal.toLocaleString()}</span>
               </div>
+              
+              {/* Display coupon discount if applied */}
+              {appliedCoupon && (
+                <div className="flex justify-between items-center text-green-600">
+                  <div className="flex items-center">
+                    <Ticket className="h-4 w-4 mr-1" />
+                    <span>{appliedCoupon.code}</span>
+                  </div>
+                  <span>- EGP {discountAmount.toLocaleString()}</span>
+                </div>
+              )}
+              
               <div className="flex justify-between">
                 <span className="text-gray-600">
                   <TranslatedContent translationKey="cart.shipping" />
@@ -421,7 +493,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, total, o
                 <span>
                   <TranslatedContent translationKey="cart.total" />
                 </span>
-                <span>EGP {total.toLocaleString()}</span>
+                <span>EGP {totalWithDiscount.toLocaleString()}</span> {/* Subtotal + Shipping - Discount */}
               </div>
             </div>
             

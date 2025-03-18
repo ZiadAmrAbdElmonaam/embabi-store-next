@@ -20,12 +20,12 @@ export const metadata: Metadata = {
   description: "Your one-stop shop for all your needs",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const lang = cookieStore.get('lang')?.value || 'en';
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
 

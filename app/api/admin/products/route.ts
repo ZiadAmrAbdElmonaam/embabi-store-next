@@ -9,7 +9,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Use the adminDashboard flag to trigger our middleware
     const products = await prisma.product.findMany({
+      where: {
+        adminDashboard: true // This custom flag will be removed by our middleware
+      },
       include: {
         category: {
           select: {

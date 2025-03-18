@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import { Package, Truck, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Package, Truck, CheckCircle, Clock, XCircle, Ticket } from "lucide-react";
 import { authOptions } from "@/app/api/auth/auth-options";
 import Image from "next/image";
 import { format } from "date-fns";
@@ -58,6 +58,7 @@ export default async function OrderPage({
           product: true,
         },
       },
+      coupon: true,
       statusHistory: {
         orderBy: {
           createdAt: 'desc',
@@ -80,6 +81,9 @@ export default async function OrderPage({
     'DELIVERED': <CheckCircle className="w-5 h-5" />,
     'CANCELLED': <XCircle className="w-5 h-5" />
   };
+
+  // Calculate the subtotal (without discount)
+  const subtotal = order.discountAmount ? Number(order.total) + Number(order.discountAmount) : Number(order.total);
 
   return (
     <div className="flex justify-center items-center py-12 px-4 bg-gray-50 min-h-[calc(100vh-4rem)]">
@@ -203,8 +207,30 @@ export default async function OrderPage({
           <div className="space-y-3 bg-gray-50 p-6 rounded-lg">
             <div className="flex justify-between">
               <p className="text-gray-500">{t('order.subtotal')}</p>
-              <p>EGP {Number(order.total).toLocaleString()}</p>
+              <p>EGP {subtotal.toLocaleString()}</p>
             </div>
+            
+            {/* Display coupon discount if applied */}
+            {order.coupon && order.discountAmount && Number(order.discountAmount) > 0 && (
+              <div className="flex justify-between text-green-600">
+                <div className="flex items-center">
+                  <Ticket className="w-4 h-4 mr-2" />
+                  <span>
+                    {t('order.couponDiscount')} 
+                    {order.coupon && (
+                      <span className="ml-2 bg-gray-100 px-2 py-0.5 rounded text-sm font-medium text-gray-700">
+                        {order.coupon.code}
+                      </span>
+                    )}
+                    {order.coupon && order.coupon.type === 'PERCENTAGE' && (
+                      <span className="text-sm ml-1">({order.coupon.value}%)</span>
+                    )}
+                  </span>
+                </div>
+                <span>- EGP {Number(order.discountAmount).toLocaleString()}</span>
+              </div>
+            )}
+            
             <div className="flex justify-between">
               <p className="text-gray-500">{t('order.shipping')}</p>
               <p>EGP 0</p>

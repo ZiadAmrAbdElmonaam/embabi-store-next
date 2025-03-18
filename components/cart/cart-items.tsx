@@ -1,18 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useCart } from '@/hooks/use-cart';
-import { Minus, Plus, X, ShoppingCart } from 'lucide-react';
+import { Minus, Plus, X, ShoppingCart, Ticket } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { TranslatedContent } from '@/components/ui/translated-content';
 import { useTranslation } from '@/hooks/use-translation';
+import CartCouponForm from './coupon-form';
+import { cookies } from 'next/headers';
+
+interface Coupon {
+  id: string;
+  code: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+}
 
 export default function CartItems() {
-  const { items, removeItem, updateQuantity, updateColor } = useCart();
+  const { items, removeItem, updateQuantity, updateColor, appliedCoupon, discountAmount, setCoupon, setDiscountAmount } = useCart();
   const [isUpdating, setIsUpdating] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -83,6 +92,30 @@ export default function CartItems() {
     updateColor(id, color);
   };
 
+  const handleRemoveCoupon = async () => {
+    try {
+      setIsUpdating(true);
+      const response = await fetch('/api/coupons/remove', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        // Clear coupon from cart state
+        setCoupon(null);
+        setDiscountAmount(0);
+        toast.success('Coupon removed successfully');
+      } else {
+        const data = await response.json();
+        toast.error(data.error || 'Failed to remove coupon');
+      }
+    } catch (error) {
+      console.error('Error removing coupon:', error);
+      toast.error('An error occurred while removing the coupon');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleCheckout = () => {
     // Check if all required colors are selected
     if (items.some(item => item.availableColors?.length > 0 && !item.selectedColor)) {
@@ -119,7 +152,7 @@ export default function CartItems() {
   }, 0);
 
   const savings = totalBeforeSale - subtotal;
-  const total = subtotal;
+  const total = subtotal + 0 - discountAmount; // Adding 0 for shipping (free) and subtracting discount
 
   if (!items?.length) {
     return (
@@ -280,19 +313,41 @@ export default function CartItems() {
                 <span>- EGP {savings.toLocaleString()}</span>
               </div>
             )}
+
+            {/* Display coupon discount if applied */}
+            {appliedCoupon && (
+              <div className="flex justify-between items-center text-green-600 border-t border-gray-100 pt-3">
+                <div className="flex items-center gap-1">
+                  <Ticket className="h-4 w-4" />
+                  <span className="font-medium">{appliedCoupon.code}</span>
+                  <button 
+                    onClick={handleRemoveCoupon}
+                    className="ml-2 text-red-500 text-xs hover:underline"
+                  >
+                    <TranslatedContent translationKey="cart.removeCoupon" defaultValue="Remove" />
+                  </button>
+                </div>
+                <span>- EGP {discountAmount.toLocaleString()}</span>
+              </div>
+            )}
             
             <div className="flex justify-between pt-3 border-t border-gray-100">
               <span className="font-semibold">
                 <TranslatedContent translationKey="common.total" />
               </span>
-              <span className="font-semibold">EGP {total.toLocaleString()}</span>
+              <span className="font-semibold text-lg text-orange-600">EGP {total.toLocaleString()}</span>
             </div>
+          </div>
+          
+          {/* Coupon form integrated into order summary */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <CartCouponForm />
           </div>
           
           <button
             onClick={handleCheckout}
             disabled={isUpdating || items.length === 0}
-            className="w-full bg-orange-600 text-white py-3 rounded-lg mt-4 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-orange-600 text-white py-3 rounded-lg mt-6 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <TranslatedContent translationKey="cart.proceedToCheckout" />
           </button>

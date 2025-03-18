@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Category, Product, ProductVariant, ProductDetail } from "@prisma/client";
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
-import { X, Image as ImageIcon, Plus, Loader2 } from 'lucide-react';
+import { X, Plus, Loader2 } from 'lucide-react';
 
 interface SerializedProduct extends Omit<Product, 'price' | 'salePrice' | 'discountPrice' | 'sale' | 'createdAt' | 'updatedAt' | 'saleEndDate'> {
   price: string;
@@ -34,7 +34,6 @@ interface ProductDetail {
   description: string;
 }
 
-const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
 
 export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
@@ -96,10 +95,56 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
     return price - (price * (salePercentage / 100));
   };
 
+  // Check if sale is expired and clear it if needed
+  useEffect(() => {
+    if (formData.saleEndDate) {
+      const endDate = new Date(formData.saleEndDate);
+      const today = new Date();
+      
+      // Log dates with full date-time details
+      console.log('Sale End Date:', endDate.toISOString());
+      console.log('Today:', today.toISOString());
+      console.log('Is sale expired?', endDate < today);
+      console.log('Timestamp comparison:', endDate.getTime(), '<', today.getTime(), '=', endDate.getTime() < today.getTime());
+      
+      // If sale end date is in the past, clear the sale fields
+      if (endDate < today) {
+        setFormData({
+          ...formData,
+          sale: "",
+          saleEndDate: ""
+        });
+        // Use toast.error instead of toast.info since 'info' might not exist
+        toast.error("Sale end date was in the past and has been cleared");
+      }
+    }
+  }, [formData.saleEndDate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (quantityMismatch) {
       toast.error(`Total color quantities (${totalQuantity}) must match stock (${formData.stock})`);
+      return;
+    }
+
+    // Validate sale end date is not in the past
+    if (formData.sale && formData.saleEndDate) {
+      const endDate = new Date(formData.saleEndDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
+      
+      console.log('Form Submission - Sale End Date:', endDate.toISOString());
+      console.log('Form Submission - Today (start of day):', today.toISOString());
+      console.log('Form Submission - Is sale expired?', endDate < today);
+      console.log('Form Submission - Timestamp comparison:', endDate.getTime(), '<', today.getTime(), '=', endDate.getTime() < today.getTime());
+      
+      if (endDate < today) {
+        console.error('Sale end date validation failed - date is in the past');
+        toast.error("Sale end date cannot be in the past");
+        return;
+      }
+    } else if (formData.sale && !formData.saleEndDate) {
+      toast.error("Sale end date is required when setting a sale percentage");
       return;
     }
 
@@ -234,7 +279,22 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
 
       {/* Pricing and Stock */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Sale Settings</h2>
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Sale Settings</h2>
+          {(formData.sale || formData.saleEndDate) && (
+            <button
+              type="button"
+              onClick={() => setFormData({
+                ...formData,
+                sale: "",
+                saleEndDate: ""
+              })}
+              className="text-sm text-red-600 hover:text-red-800"
+            >
+              Clear Sale
+            </button>
+          )}
+        </div>
         
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -256,6 +316,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
               value={formData.saleEndDate}
               onChange={(e) => setFormData({ ...formData, saleEndDate: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              required={!!formData.sale}
             />
           </div>
 
@@ -528,22 +589,3 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
   );
 }
 
-// Helper component for image upload box
-function ImageUploadBox({ onUpload, text }: { onUpload: (file: File) => void, text: string }) {
-  return (
-    <label className="border-2 border-dashed border-gray-300 rounded-lg aspect-square flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 transition-colors">
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onUpload(file);
-        }}
-      />
-      <ImageIcon className="h-8 w-8 text-gray-400" />
-      <span className="mt-2 text-sm text-gray-500">{text}</span>
-      <span className="mt-1 text-xs text-gray-400">Max 5MB</span>
-    </label>
-  );
-} 

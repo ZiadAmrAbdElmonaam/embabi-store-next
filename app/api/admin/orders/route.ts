@@ -18,6 +18,14 @@ export async function GET() {
             email: true,
           },
         },
+        coupon: {
+          select: {
+            id: true,
+            code: true,
+            type: true,
+            value: true,
+          },
+        },
         items: {
           select: {
             id: true,

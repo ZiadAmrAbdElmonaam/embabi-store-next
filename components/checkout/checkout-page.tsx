@@ -17,8 +17,15 @@ interface CheckoutPageProps {
   };
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  type: 'PERCENTAGE' | 'FIXED';
+  value: number;
+}
+
 export default function CheckoutPage({ user }: CheckoutPageProps) {
-  const { items, isInitialized, syncWithServer } = useCart();
+  const { items, isInitialized, syncWithServer, loadCouponFromCookies, appliedCoupon } = useCart();
   const [isLoading, setIsLoading] = useState(true);
   const [isOrderCompleted, setIsOrderCompleted] = useState(false);
   const router = useRouter();
@@ -29,20 +36,56 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
   const [subtotal, setSubtotal] = useState(0);
   const [shipping, setShipping] = useState(0);
   const [total, setTotal] = useState(0);
+  const [appliedCouponState, setAppliedCouponState] = useState<Coupon | null>(null);
 
   useEffect(() => {
     // Initialize cart from localStorage if needed
     const initCart = async () => {
-      if (!isInitialized) {
-        console.log("Cart not initialized, syncing with server...");
-        await syncWithServer();
-      } else {
-        console.log("Cart already initialized:", items);
+      try {
+        if (!isInitialized) {
+          console.log("Cart not initialized, syncing with server...");
+          await syncWithServer();
+          
+          // If there's a valid coupon already in the cart state, use it
+          if (appliedCoupon) {
+            setAppliedCouponState(appliedCoupon);
+          }
+          // Otherwise, check if there's a coupon in cookies that we need for checkout
+          else {
+            const coupon = await loadCouponFromCookies();
+            if (coupon) {
+              setAppliedCouponState(coupon);
+            }
+          }
+        } else {
+          console.log("Cart already initialized");
+          
+          // If there's a valid coupon already in the cart state, use it
+          if (appliedCoupon) {
+            setAppliedCouponState(appliedCoupon);
+          }
+          // Otherwise, load it from cookies only for checkout purposes
+          else {
+            const coupon = await loadCouponFromCookies();
+            if (coupon) {
+              setAppliedCouponState(coupon);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing cart:", error);
       }
     };
     
     initCart();
-  }, [isInitialized, syncWithServer, items]);
+  }, [isInitialized, syncWithServer, loadCouponFromCookies, appliedCoupon]);
+
+  // Update appliedCouponState when the cart's appliedCoupon changes
+  useEffect(() => {
+    if (appliedCoupon) {
+      setAppliedCouponState(appliedCoupon);
+    }
+  }, [appliedCoupon]);
 
   useEffect(() => {
     // Wait for cart to be initialized from localStorage
@@ -72,19 +115,34 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
       );
       const calculatedShipping = 50; // Fixed shipping cost
       
+      // Calculate discount if a coupon is applied
+      let discountAmount = 0;
+      if (appliedCouponState) {
+        if (appliedCouponState.type === 'PERCENTAGE') {
+          discountAmount = (calculatedSubtotal * appliedCouponState.value) / 100;
+        } else if (appliedCouponState.type === 'FIXED') {
+          discountAmount = Math.min(appliedCouponState.value, calculatedSubtotal);
+        }
+        console.log(`Applied ${appliedCouponState.type} discount of ${discountAmount} EGP (${appliedCouponState.value}${appliedCouponState.type === 'PERCENTAGE' ? '%' : ' EGP'})`);
+      }
+      
+      // Calculate total: subtotal + shipping - discount
+      const calculatedTotal = calculatedSubtotal + calculatedShipping - discountAmount;
+      
       setCheckoutItems(items);
       setSubtotal(calculatedSubtotal);
       setShipping(calculatedShipping);
-      setTotal(calculatedSubtotal + calculatedShipping);
+      setTotal(calculatedTotal);
       setIsLoading(false);
       console.log("Checkout items set:", items);
+      console.log(`Subtotal: ${calculatedSubtotal} EGP, Shipping: ${calculatedShipping} EGP, Total: ${calculatedTotal} EGP`);
     } else {
       // No items, redirect to cart
       console.log("No items found, redirecting to cart");
       router.push('/cart');
       return;
     }
-  }, [items, router, isInitialized, isOrderCompleted]);
+  }, [items, router, isInitialized, isOrderCompleted, appliedCouponState]);
 
   const handleOrderComplete = () => {
     console.log("Order completed, setting flag to prevent cart redirect");
@@ -130,7 +188,6 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
             items={checkoutItems}
             subtotal={subtotal}
             shipping={shipping}
-            total={total}
             onOrderComplete={handleOrderComplete}
           />
         </div>

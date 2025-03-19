@@ -2,9 +2,9 @@ import { ContactForm } from "@/components/contact/contact-form";
 import { cookies } from "next/headers";
 import { translations } from "@/lib/translations";
 
-export default function ContactPage() {
+export default async function ContactPage() {
   // Get language from cookies for server component
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const lang = (cookieStore.get('lang')?.value || 'en') as 'en' | 'ar';
   const t = (key: string) => {
     const keys = key.split('.');

@@ -7,7 +7,8 @@ import {
   FolderTree,
   AlertTriangle,
   Ticket,
-  Settings
+  Settings,
+  Image
 } from "lucide-react";
 
 export function AdminSidebar() {
@@ -65,6 +66,14 @@ export function AdminSidebar() {
         >
           <Users className="w-5 h-5" />
           <span>Users</span>
+        </Link>
+
+        <Link 
+          href="/admin/carousel" 
+          className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded"
+        >
+          <Image className="w-5 h-5" />
+          <span>Carousel</span>
         </Link>
         
         <Link 

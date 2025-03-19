@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
-import { Carousel } from "@/components/ui/carousel";
+import { HomeCarousel } from "@/components/home/carousel";
 import { ProductCard } from "@/components/products/product-card";
 import { TranslatedContent } from "@/components/ui/translated-content";
 
@@ -85,7 +85,9 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Carousel Section */}
-      <Carousel />
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4">
+        <HomeCarousel />
+      </div>
 
       {/* Categories Section */}
       <section className="py-6 bg-gray-50">
@@ -202,8 +204,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      
     </div>
   );
 }

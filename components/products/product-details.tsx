@@ -6,11 +6,9 @@ import { Star, Eye, EyeOff } from "lucide-react";
 import { AddToCartButton } from "./add-to-cart-button";
 import { WishlistButton } from "@/components/ui/wishlist-button";
 import { formatPrice } from "@/lib/utils";
-import { ReviewForm } from "@/components/reviews/review-form";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
-import { TranslatedContent } from "@/components/ui/translated-content";
 
 interface ProductDetailsProps {
   product: {
@@ -223,7 +221,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <div className="flex">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
@@ -239,7 +237,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
             <span className="text-gray-600 font-medium">
               ({product.reviews.length} {t('productDetail.reviews')})
             </span>
-          </div>
+          </div> */}
 
           <div className="prose prose-gray max-w-none">
             <p className="text-gray-700 text-lg leading-relaxed">{product.description}</p>
@@ -361,7 +359,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
       )}
 
       {/* Reviews Section */}
-      <div className="border-t border-gray-200 pt-16">
+      {/* <div className="border-t border-gray-200 pt-16">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-bold text-gray-900">{t('productDetail.customerReviews')}</h2>
           {hasPurchased && (
@@ -411,19 +409,20 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               </div>
             ))}
           </div>
-        )}
+      //   )} */
+      }
 
-        {/* Review Form */}
-        {hasPurchased && (
-          <div id="review-form" className="mt-16">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">{t('productDetail.writeReviewHeading')}</h3>
-            <ReviewForm 
-              productId={product.id} 
-              onSuccess={() => window.location.reload()}
-            />
-          </div>
-        )}
-      </div>
+         {/* Review Form */}
+      {/* //   {hasPurchased && ( */}
+      {/* //     <div id="review-form" className="mt-16">
+      //       <h3 className="text-2xl font-bold text-gray-900 mb-6">{t('productDetail.writeReviewHeading')}</h3>
+      //       <ReviewForm 
+      //         productId={product.id} 
+      //         onSuccess={() => window.location.reload()}
+      //       />
+      //     </div>
+      //   )}
+      // </div> */}
 
       {/* Image Zoom Modal */}
       {showImage && (

@@ -3,58 +3,83 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/auth-options";
 
+// GET route to fetch all site reviews (public)
+export async function GET() {
+  try {
+    const reviews = await prisma.review.findMany({
+      where: {
+        type: "site"
+      },
+      include: {
+        user: {
+          select: {
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    return NextResponse.json(reviews);
+  } catch (error) {
+    console.error('Error fetching site reviews:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch reviews' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST route to create a new site review (requires authentication)
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { productId, rating, comment } = await request.json();
-
-    // Check if user has purchased the product
-    const hasPurchased = await prisma.orderItem.findFirst({
-      where: {
-        productId,
-        order: {
-          userId: session.user.id,
-          status: 'DELIVERED',
-        },
-      },
-    });
-
-    if (!hasPurchased) {
+    const { rating, comment } = await request.json();
+    
+    if (rating === undefined || rating < 1 || rating > 5) {
       return NextResponse.json(
-        { error: 'You must purchase this product first' },
-        { status: 403 }
-      );
-    }
-
-    // Check if user has already reviewed
-    const existingReview = await prisma.review.findFirst({
-      where: {
-        productId,
-        userId: session.user.id,
-      },
-    });
-
-    if (existingReview) {
-      return NextResponse.json(
-        { error: 'You have already reviewed this product' },
+        { error: 'Rating must be between 1 and 5' },
         { status: 400 }
       );
     }
 
+    if (!comment || comment.trim().length === 0) {
+      return NextResponse.json(
+        { error: 'Comment is required' },
+        { status: 400 }
+      );
+    }
+
+    // Create the review with or without user association
     const review = await prisma.review.create({
       data: {
         rating,
         comment,
-        productId,
-        userId: session.user.id,
+        type: "site",
+        ...(session?.user ? { userId: session.user.id } : {})
       },
+      include: {
+        user: {
+          select: {
+            name: true
+          }
+        }
+      }
     });
 
-    return NextResponse.json(review);
+    // Format the response
+    const formattedReview = {
+      id: review.id,
+      rating: review.rating,
+      comment: review.comment || '',
+      createdAt: review.createdAt.toISOString(),
+      updatedAt: review.updatedAt.toISOString(),
+      userName: review.user?.name || null
+    };
+
+    return NextResponse.json(formattedReview);
   } catch (error) {
     console.error('Error creating review:', error);
     return NextResponse.json(

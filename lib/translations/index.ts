@@ -104,6 +104,7 @@ export const translations = {
       categories: 'Categories',
       aboutUs: 'About Us',
       contact: 'Contact',
+      reviews: 'Reviews',
       contactUs: 'Contact Us',
       email: 'Email',
       phone: 'Phone',
@@ -288,6 +289,25 @@ export const translations = {
       contactSupport: 'Contact Support',
       orderHistory: 'Order History'
     },
+    reviews: {
+      title: 'Customer Reviews',
+      description: 'We value your feedback. Let us know about your experience with our store.',
+      leaveReview: 'Leave a Review',
+      rating: 'Rating',
+      comment: 'Comment',
+      shareYourExperience: 'Share your experience with our store...',
+      submitReview: 'Submit Review',
+      submitting: 'Submitting...',
+      reviewSubmitted: 'Your review has been submitted successfully!',
+      customerFeedback: 'Customer Feedback',
+      noReviewsYet: 'No reviews yet.',
+      beFirstToReview: 'Be the first to review our store!',
+      anonymous: 'Anonymous',
+      pleaseSelectRating: 'Please select a rating',
+      pleaseEnterComment: 'Please enter a comment',
+      loginRequired: 'Login Required',
+      loginToLeaveReview: 'You need to be logged in to leave a review. Please sign in or create an account.'
+    },
   },
   ar: {
     common: {
@@ -396,6 +416,7 @@ export const translations = {
       categories: 'الفئات',
       aboutUs: 'من نحن',
       contact: 'اتصل بنا',
+      reviews: 'التقييمات',
       contactUs: 'اتصل بنا',
       email: 'البريد الإلكتروني',
       phone: 'الهاتف',
@@ -579,6 +600,25 @@ export const translations = {
       trackOrder: 'تتبع الطلب',
       contactSupport: 'اتصل بالدعم',
       orderHistory: 'سجل الطلبات'
+    },
+    reviews: {
+      title: 'تقييمات العملاء',
+      description: 'نحن نقدر آراءكم. أخبرنا عن تجربتك مع متجرنا.',
+      leaveReview: 'اترك تقييمًا',
+      rating: 'التقييم',
+      comment: 'التعليق',
+      shareYourExperience: 'شارك تجربتك مع متجرنا...',
+      submitReview: 'إرسال التقييم',
+      submitting: 'جارٍ الإرسال...',
+      reviewSubmitted: 'تم إرسال تقييمك بنجاح!',
+      customerFeedback: 'آراء العملاء',
+      noReviewsYet: 'لا توجد تقييمات حتى الآن.',
+      beFirstToReview: 'كن أول من يقيم متجرنا!',
+      anonymous: 'مجهول',
+      pleaseSelectRating: 'الرجاء اختيار تقييم',
+      pleaseEnterComment: 'الرجاء إدخال تعليق',
+      loginRequired: 'تسجيل الدخول مطلوب',
+      loginToLeaveReview: 'يجب أن تكون مسجلاً للدخول لترك تقييم. الرجاء تسجيل الدخول أو إنشاء حساب جديد.'
     },
   },
 };

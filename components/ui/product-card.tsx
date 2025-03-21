@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "react-hot-toast";
 import { WishlistButton } from "./wishlist-button";
-import { Star, ShoppingCart, X } from "lucide-react";
+import { ShoppingCart, X } from "lucide-react";
 import { useTranslation } from '@/hooks/use-translation';
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ interface ProductCardProps {
       name: string;
       slug: string;
     };
+    // Keep rating in the interface but we won't display it
     rating?: number;
     variants?: Array<{
       id: string;
@@ -286,24 +287,6 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
               <ShoppingCart className="h-4 w-4" />
             </button>
           )}
-        </div>
-
-        <div className="mt-3 flex items-center gap-2">
-          <div className="flex">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className={`h-4 w-4 ${
-                  star <= Math.round(product.rating || 0)
-                    ? 'text-yellow-400 fill-yellow-400'
-                    : 'text-gray-300'
-                }`}
-              />
-            ))}
-          </div>
-          <span className="text-sm text-gray-600">
-            ({product.rating?.toFixed(1) || '0.0'})
-          </span>
         </div>
 
         <div className="mt-2 flex items-center gap-2">

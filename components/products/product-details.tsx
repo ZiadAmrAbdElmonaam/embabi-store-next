@@ -269,9 +269,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                       }}
                       onClick={() => handleColorSelect(variant.color)}
                     >
-                      <span className="absolute -top-2 -right-2 bg-gray-900 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center">
-                        {variant.quantity}
-                      </span>
+                      {/* Quantity indicator removed */}
                     </div>
                     <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                       {getColorName(variant.color)}

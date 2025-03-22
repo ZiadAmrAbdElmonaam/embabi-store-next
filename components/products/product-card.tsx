@@ -348,9 +348,7 @@ export function ProductCard({ product }: ProductCardProps) {
                         handleColorSelect(variant.color);
                       }}
                     >
-                      <span className="absolute -top-2 -right-2 bg-gray-900 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center">
-                        {variant.quantity}
-                      </span>
+                      {/* Quantity indicator removed */}
                     </div>
                     <span className="text-xs font-medium text-gray-700">
                       {getColorName(variant.color)}
@@ -380,6 +378,7 @@ export function ProductCard({ product }: ProductCardProps) {
                         handleColorSelect(color);
                       }}
                     >
+                      {/* Quantity indicator removed */}
                     </div>
                     <span className="text-xs font-medium text-gray-700">
                       {getColorName(color)}

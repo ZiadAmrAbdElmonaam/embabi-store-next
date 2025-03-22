@@ -230,11 +230,7 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
                             boxShadow: variant.color.toLowerCase() === '#ffffff' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined 
                           }}
                         >
-                          {variant.quantity > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[8px] w-3 h-3 rounded-full flex items-center justify-center">
-                              {variant.quantity > 9 ? '9+' : variant.quantity}
-                            </span>
-                          )}
+                          {/* Quantity indicator removed */}
                         </div>
                         <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-black text-white text-[8px] px-1 py-0.5 rounded whitespace-nowrap opacity-0 group-hover/color:opacity-100 transition-opacity">
                           {getColorName(variant.color)}
@@ -360,9 +356,7 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
                         handleColorSelect(variant.color);
                       }}
                     >
-                      <span className="absolute -top-2 -right-2 bg-gray-900 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center">
-                        {variant.quantity}
-                      </span>
+                      {/* Quantity indicator removed */}
                     </div>
                     <span className="text-xs font-medium text-gray-700">
                       {getColorName(variant.color)}

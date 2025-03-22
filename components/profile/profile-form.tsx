@@ -5,12 +5,15 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { WarningModal } from "@/components/ui/modal";
+import { TranslatedContent } from "@/components/ui/translated-content";
+import { useTranslation } from "@/hooks/use-translation";
 
 export function ProfileForm() {
   const { data: session, update } = useSession();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: session?.user?.name || '',
     email: session?.user?.email || '',
@@ -28,9 +31,9 @@ export function ProfileForm() {
     setLoading(true);
     try {
       await update(formData);
-      toast.success('Profile updated successfully');
+      toast.success(t('profile.profileUpdated'));
     } catch (error) {
-      toast.error('Failed to update profile');
+      toast.error(t('profile.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -43,35 +46,35 @@ export function ProfileForm() {
           {/* Name Field */}
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
-              Name
+              <TranslatedContent translationKey="profile.name" />
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
-              placeholder="Enter your name"
+              placeholder={t('profile.enterYourName')}
             />
           </div>
 
           {/* Email Field */}
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
-              Email
+              <TranslatedContent translationKey="profile.email" />
             </label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
-              placeholder="Enter your email"
+              placeholder={t('auth.enterYourEmail')}
             />
           </div>
 
           {/* Current Password Field */}
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
-              Current Password
+              <TranslatedContent translationKey="profile.currentPassword" />
             </label>
             <div className="relative">
               <input
@@ -79,7 +82,7 @@ export function ProfileForm() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
-                placeholder="Enter current password"
+                placeholder={t('profile.enterCurrentPassword')}
               />
               <button
                 type="button"
@@ -98,7 +101,7 @@ export function ProfileForm() {
           {/* New Password Field */}
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
-              New Password
+              <TranslatedContent translationKey="profile.newPassword" />
             </label>
             <div className="relative">
               <input
@@ -106,7 +109,7 @@ export function ProfileForm() {
                 value={formData.newPassword}
                 onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
                 className="w-full text-lg py-3 bg-transparent border-b-2 border-gray-200 focus:border-orange-600 focus:outline-none transition-colors"
-                placeholder="Enter new password"
+                placeholder={t('profile.enterNewPassword')}
               />
               <button
                 type="button"
@@ -128,7 +131,7 @@ export function ProfileForm() {
           disabled={loading}
           className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Updating...' : 'Update Profile'}
+          {loading ? t('profile.updating') : t('profile.updateProfile')}
         </button>
       </form>
 
@@ -136,8 +139,8 @@ export function ProfileForm() {
         isOpen={showWarningModal}
         onClose={() => setShowWarningModal(false)}
         onConfirm={handleUpdate}
-        title="Update Profile"
-        message="Are you sure you want to update your profile information? This action cannot be undone."
+        title={t('profile.confirmUpdate')}
+        message={t('profile.confirmUpdateMessage')}
       />
     </>
   );

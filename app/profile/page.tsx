@@ -5,6 +5,7 @@ import { ProfileForm } from "@/components/profile/profile-form";
 import { OrderHistory } from "@/components/profile/order-history";
 import { useSession } from "next-auth/react";
 import { User, Package, ShoppingBag } from "lucide-react";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 export default function ProfilePage() {
   const { data: session } = useSession();
@@ -45,7 +46,7 @@ export default function ProfilePage() {
                 }`}
             >
               <User size={20} />
-              <span>Profile Settings</span>
+              <span><TranslatedContent translationKey="profile.title" /></span>
             </button>
             <button
               onClick={() => setActiveTab('orders')}
@@ -56,7 +57,7 @@ export default function ProfilePage() {
                 }`}
             >
               <Package size={20} />
-              <span>Order History</span>
+              <span><TranslatedContent translationKey="profile.orderHistory" /></span>
             </button>
           </div>
 
@@ -68,7 +69,7 @@ export default function ProfilePage() {
                   <ShoppingBag className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Orders</p>
+                  <p className="text-sm text-gray-600"><TranslatedContent translationKey="profile.totalOrders" /></p>
                   <p className="text-2xl font-bold text-gray-900">12</p>
                 </div>
               </div>

@@ -12,6 +12,7 @@ import { TranslatedContent } from '@/components/ui/translated-content';
 import { useTranslation } from '@/hooks/use-translation';
 import CartCouponForm from './coupon-form';
 import { cookies } from 'next/headers';
+import { getColorName } from '@/lib/colors';
 
 interface Coupon {
   id: string;
@@ -25,19 +26,7 @@ export default function CartItems() {
   const [isUpdating, setIsUpdating] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { t } = useTranslation();
-
-  const getColorName = (color: string) => {
-    const colorMap: { [key: string]: string } = {
-      '#000000': 'Black',
-      '#FFFFFF': 'White',
-      '#FF0000': 'Red',
-      '#00FF00': 'Green',
-      '#0000FF': 'Blue',
-      // Add more color mappings as needed
-    };
-    return colorMap[color] || color;
-  };
+  const { t, lang } = useTranslation();
 
   const handleRemoveItem = async (id: string) => {
     setIsUpdating(true);
@@ -65,7 +54,7 @@ export default function CartItems() {
       }
 
       if (newQuantity > selectedColorOption.quantity) {
-        toast.error(`Only ${selectedColorOption.quantity} items available in ${getColorName(item.selectedColor)}`);
+        toast.error(`Only ${selectedColorOption.quantity} items available in ${getColorName(item.selectedColor, lang)}`);
         return;
       }
     }
@@ -86,7 +75,7 @@ export default function CartItems() {
     // If current quantity exceeds the new color's available quantity, adjust it
     if (item.quantity > colorOption.quantity) {
       updateQuantity(id, colorOption.quantity);
-      toast.success(`Quantity adjusted to ${colorOption.quantity} (maximum available for ${getColorName(color)})`);
+      toast.success(`Quantity adjusted to ${colorOption.quantity} (maximum available for ${getColorName(color, lang)})`);
     }
 
     updateColor(id, color);
@@ -246,13 +235,13 @@ export default function CartItems() {
                                 backgroundColor: colorOption.color,
                                 boxShadow: colorOption.color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined
                               }}
-                              title={getColorName(colorOption.color)}
+                              title={getColorName(colorOption.color, lang)}
                             />
                           ))}
                         </div>
                         {item.selectedColor && (
                           <p className="text-xs text-gray-600 mt-1">
-                            <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(item.selectedColor)}</span>
+                            <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(item.selectedColor, lang)}</span>
                           </p>
                         )}
                       </div>

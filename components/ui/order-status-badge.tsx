@@ -1,5 +1,6 @@
 import { OrderStatus } from "@prisma/client";
 import React from 'react';
+import { useTranslation } from "@/hooks/use-translation";
 
 const statusStyles = {
   PENDING: "bg-yellow-100 text-yellow-800",
@@ -10,9 +11,11 @@ const statusStyles = {
 };
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+  const { t } = useTranslation();
+  
   return (
     <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusStyles[status]}`}>
-      {status.charAt(0) + status.slice(1).toLowerCase()}
+      {t(`order.${status.toLowerCase()}`)}
     </span>
   );
 } 

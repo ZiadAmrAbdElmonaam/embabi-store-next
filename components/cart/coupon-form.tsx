@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Ticket } from 'lucide-react';
 import { TranslatedContent } from '@/components/ui/translated-content';
 import { useCart } from '@/hooks/use-cart';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function CartCouponForm() {
   const [couponCode, setCouponCode] = useState('');
@@ -13,12 +14,13 @@ export default function CartCouponForm() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const router = useRouter();
   const { setCoupon, setDiscountAmount, items } = useCart();
+  const { t } = useTranslation();
 
   const applyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!couponCode.trim()) {
-      setCouponError('Please enter a coupon code');
+      setCouponError(t('cart.pleaseEnterCoupon'));
       return;
     }
 
@@ -37,13 +39,13 @@ export default function CartCouponForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setCouponError(data.error || 'Invalid coupon code');
+        setCouponError(data.error || t('cart.invalidCoupon'));
         setIsLoading(false);
         return;
       }
 
       // Success - get the coupon from cookies and update cart state
-      toast.success('Coupon applied successfully!');
+      toast.success(t('cart.couponApplied'));
       
       // Use the new loadCouponFromCookies method to load the coupon
       // This pulls the coupon data from the server cookies and updates the cart state
@@ -54,7 +56,7 @@ export default function CartCouponForm() {
       setCouponCode('');
     } catch (error) {
       console.error('Error applying coupon:', error);
-      setCouponError('An error occurred. Please try again.');
+      setCouponError(t('cart.errorOccurred'));
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +77,7 @@ export default function CartCouponForm() {
             className={`pl-8 pr-2 py-2 text-sm border rounded-lg w-full ${
               couponError ? 'border-red-500' : 'border-gray-300'
             } focus:outline-none focus:ring-1 focus:ring-orange-500`}
-            placeholder="Enter coupon code"
+            placeholder={t('cart.enterCouponCode')}
             value={couponCode}
             onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
             disabled={isLoading}
@@ -86,7 +88,7 @@ export default function CartCouponForm() {
           className="bg-orange-600 text-white px-3 py-2 text-sm rounded-lg hover:bg-orange-700 disabled:opacity-70 min-w-[70px] transition-colors"
           disabled={isLoading}
         >
-          {isLoading ? 'Applying...' : 'Apply'}
+          {isLoading ? t('cart.applying') : t('cart.apply')}
         </button>
       </form>
       {couponError && (

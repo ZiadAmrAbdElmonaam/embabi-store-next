@@ -8,6 +8,7 @@ import { CreditCard, Wallet, BanknoteIcon, QrCode, Ticket, AlertTriangle } from 
 import { useCart } from "@/hooks/use-cart";
 import { useTranslation } from "@/hooks/use-translation";
 import { TranslatedContent } from "@/components/ui/translated-content";
+import { getColorName } from "@/lib/colors";
 
 // Egyptian governorates
 const EGYPTIAN_STATES = [
@@ -96,7 +97,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
   const router = useRouter();
   const { hasUnselectedColors, clearCart } = useCart();
   const [isLoading, setIsLoading] = useState(false);
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [formData, setFormData] = useState({
     name: user.name || "",
     email: user.email,
@@ -502,7 +503,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
                     </div>
                     {item.selectedColor && (
                       <p className="text-xs text-gray-500 mt-1">
-                        <TranslatedContent translationKey="cart.color" />: {item.selectedColor}
+                        <TranslatedContent translationKey="cart.color" />: {getColorName(item.selectedColor, lang)}
                       </p>
                     )}
                   </div>

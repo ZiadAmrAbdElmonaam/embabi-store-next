@@ -23,9 +23,20 @@ export function ReviewCard({ review }: ReviewCardProps) {
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return format(date, 'MMM d, yyyy', {
-      locale: isRtl ? ar : enUS
-    });
+    
+    // Format based on language
+    if (isRtl) {
+      // Arabic date format
+      const year = date.getFullYear();
+      const month = date.toLocaleString('ar-EG', { month: 'long' });
+      const day = date.getDate();
+      return `${day} ${month}, ${year}`;
+    } else {
+      // English date format
+      return format(date, 'MMM d, yyyy', {
+        locale: enUS
+      });
+    }
   };
 
   // Get display name with fallback

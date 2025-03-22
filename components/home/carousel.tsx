@@ -115,7 +115,7 @@ export function HomeCarousel() {
   }
 
   return (
-    <div className="relative w-full h-[400px] overflow-hidden rounded-lg">
+    <div className="relative w-full h-[400px] overflow-hidden rounded-lg bg-white">
       {/* Main Carousel Image */}
       <div className="relative w-full h-full">
         {images.map((image, index) => (

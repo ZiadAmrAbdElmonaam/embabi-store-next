@@ -132,7 +132,7 @@ export default async function HomePage() {
 
       {/* Featured Products Section */}
       <section className="py-4">
-        <div className="max-w-[1800px] mx-auto px-2">
+        <div className="max-w-[1800px] mx-auto px-2 bg-white">
           <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
             <TranslatedContent translationKey="home.featuredProducts" />
           </h2>
@@ -168,7 +168,7 @@ export default async function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">
+              <h3 className="text-xl font-semibold mb-2 text-black-900">
                 <TranslatedContent translationKey="home.features.genuineProducts.title" />
               </h3>
               <p className="text-gray-600">
@@ -181,7 +181,7 @@ export default async function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">
+              <h3 className="text-xl font-semibold mb-2 text-black-900">
                 <TranslatedContent translationKey="home.features.fastDelivery.title" />
               </h3>
               <p className="text-gray-600">
@@ -194,7 +194,7 @@ export default async function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">
+              <h3 className="text-xl font-semibold mb-2 text-black-900F">
                 <TranslatedContent translationKey="home.features.securePayment.title" />
               </h3>
               <p className="text-gray-600">

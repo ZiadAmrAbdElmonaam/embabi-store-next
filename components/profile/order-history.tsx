@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { OrderStatus } from '@prisma/client';
 import { OrderStatusBadge } from '../ui/order-status-badge';
 import { formatPrice } from '../../lib/utils';
+import { TranslatedContent } from '@/components/ui/translated-content';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface Order {
   id: string;
@@ -23,6 +25,7 @@ interface Order {
 export function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetch('/api/user/orders')
@@ -38,18 +41,18 @@ export function OrderHistory() {
   }, []);
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading orders...</div>;
+    return <div className="text-center py-8">{t('profile.loadingOrders')}</div>;
   }
 
   if (orders.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 mb-4">You haven&apos;t placed any orders yet.</p>
+        <p className="text-gray-500 mb-4">{t('profile.noOrders')}</p>
         <Link
           href="/products"
           className="text-blue-600 hover:text-blue-500"
         >
-          Start Shopping
+          {t('profile.startShopping')}
         </Link>
       </div>
     );
@@ -66,17 +69,17 @@ export function OrderHistory() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-medium">
-                  Order #{order.id}
+                  {t('profile.orderNumber')}{order.id}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Placed on {new Date(order.createdAt).toLocaleDateString()}
+                  {t('profile.placedOn')} {new Date(order.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <OrderStatusBadge status={order.status} />
             </div>
 
             <div>
-              <h4 className="text-sm font-medium mb-2">Items</h4>
+              <h4 className="text-sm font-medium mb-2">{t('profile.items')}</h4>
               <div className="space-y-2">
                 {order.items.map((item, index) => (
                   <div key={index} className="flex justify-between text-sm">
@@ -89,7 +92,7 @@ export function OrderHistory() {
             </div>
 
             <div className="flex justify-between">
-              <span className="font-medium">Total</span>
+              <span className="font-medium"><TranslatedContent translationKey="common.total" /></span>
               <span className="font-medium">{formatPrice(order.total)}</span>
             </div>
 
@@ -98,7 +101,7 @@ export function OrderHistory() {
                 href={`/orders/${order.id}`}
                 className="text-blue-600 hover:text-blue-500 text-sm"
               >
-                View Order Details →
+                {t('profile.viewOrderDetails')} →
               </Link>
             </div>
           </div>

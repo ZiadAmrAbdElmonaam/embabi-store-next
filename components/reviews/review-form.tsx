@@ -36,7 +36,7 @@ export function ReviewForm({ onSubmit, isLoading }: ReviewFormProps) {
       {/* Rating Stars */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          {t('reviews.rating')}*
+          {t('reviews.rating')}
         </label>
         <div className="flex items-center">
           {[1, 2, 3, 4, 5].map((star) => (
@@ -68,7 +68,7 @@ export function ReviewForm({ onSubmit, isLoading }: ReviewFormProps) {
       {/* Comment Textarea */}
       <div className="space-y-2">
         <label htmlFor="comment" className="block text-sm font-medium text-gray-700">
-          {t('reviews.comment')}*
+          {t('reviews.comment')}
         </label>
         <textarea
           id="comment"

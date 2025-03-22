@@ -8,6 +8,7 @@ import Image from "next/image";
 import { format } from "date-fns";
 import { cookies } from "next/headers";
 import { translations } from "@/lib/translations";
+import { getColorName } from "@/lib/colors";
 
 const statusSteps = [
   'PENDING',
@@ -49,6 +50,10 @@ export default async function OrderPage({
   if (!session) {
     redirect('/login');
   }
+
+  // Get language from cookies for color name translation
+  const cookieStore = cookies();
+  const lang = cookieStore.get('lang')?.value || 'en';
 
   const order = await prisma.order.findUnique({
     where: { id: params.id },
@@ -169,7 +174,7 @@ export default async function OrderPage({
                   <div className="flex flex-wrap gap-x-6 mt-2 text-sm text-gray-500">
                     <p>{t('order.quantity')}: {item.quantity}</p>
                     {item.color && (
-                      <p>{t('order.color')}: {item.color}</p>
+                      <p>{t('order.color')}: {getColorName(item.color, lang)}</p>
                     )}
                   </div>
                   <p className="mt-2 font-medium text-orange-600">

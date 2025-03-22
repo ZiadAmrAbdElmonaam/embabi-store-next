@@ -109,7 +109,7 @@ export function AddToCartButton({ product, selectedColor: initialColor }: AddToC
       <button
         onClick={handleAddToCart}
         disabled={product.stock === 0}
-        className="w-full flex items-center justify-center gap-2 bg-orange-600 dark:bg-orange-700 text-white py-3 px-6 rounded-lg hover:bg-orange-700 dark:hover:bg-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-2 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <ShoppingCart className="h-5 w-5" />
         {product.stock === 0 ? t('productDetail.outOfStock') : t('cart.addToCart')}

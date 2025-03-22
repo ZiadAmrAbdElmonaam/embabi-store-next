@@ -60,7 +60,7 @@ export default function CartPage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <ShoppingBag className="w-8 h-8 text-orange-600" />
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-bold text-black-900">
               <TranslatedContent translationKey="cart.shoppingCart" />
             </h1>
           </div>

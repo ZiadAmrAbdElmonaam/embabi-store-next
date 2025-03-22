@@ -284,7 +284,7 @@ export default function CartItems() {
       {/* Order Summary */}
       <div className="lg:col-span-4">
         <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">
+          <h2 className="text-xl font-semibold mb-4 text-black-900">
             <TranslatedContent translationKey="checkout.orderSummary" />
           </h2>
           
@@ -293,7 +293,7 @@ export default function CartItems() {
               <span className="text-gray-600">
                 <TranslatedContent translationKey="common.subtotal" />
               </span>
-              <span className="font-medium">EGP {subtotal.toLocaleString()}</span>
+              <span className="font-medium text-gray-600">EGP {subtotal.toLocaleString()}</span>
             </div>
             
             {savings > 0 && (
@@ -321,7 +321,7 @@ export default function CartItems() {
             )}
             
             <div className="flex justify-between pt-3 border-t border-gray-100">
-              <span className="font-semibold">
+              <span className="font-semibold text-gray-600">
                 <TranslatedContent translationKey="common.total" />
               </span>
               <span className="font-semibold text-lg text-orange-600">EGP {total.toLocaleString()}</span>

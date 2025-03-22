@@ -303,7 +303,7 @@ export default function WishlistPage() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">
+              <h3 className="text-lg font-semibold text-black-900">
                 <TranslatedContent translationKey="products.selectColorFor" /> {selectedItem.name}
               </h3>
               <button 

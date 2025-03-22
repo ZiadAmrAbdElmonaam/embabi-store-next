@@ -137,7 +137,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
         {/* Product Images */}
         <div className="space-y-6">
           {/* Main Product Image */}
-          <div className="aspect-square relative overflow-hidden rounded-2xl border border-gray-200 shadow-sm">
+          <div className="aspect-square relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
             <Image
               src={selectedImage}
               alt={product.name}
@@ -148,7 +148,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
             />
             <button 
               onClick={toggleImageZoom}
-              className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors`}
+              className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors`}
             >
               {showImage ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -162,7 +162,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                   key={index}
                   className={cn(
                     "aspect-square relative overflow-hidden rounded-xl border hover:border-orange-500 transition-colors duration-200 cursor-pointer",
-                    selectedImage === thumbnail ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200"
+                    selectedImage === thumbnail ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200 dark:border-gray-800"
                   )}
                   onClick={() => handleImageSelect(thumbnail)}
                 >
@@ -182,7 +182,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                   key={index}
                   className={cn(
                     "aspect-square relative overflow-hidden rounded-xl border hover:border-orange-500 transition-colors duration-200 cursor-pointer",
-                    selectedImage === image ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200"
+                    selectedImage === image ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200 dark:border-gray-800"
                   )}
                   onClick={() => handleImageSelect(image)}
                 >
@@ -202,8 +202,8 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
         <div className="space-y-8">
           <div className="flex justify-between items-start gap-4">
             <div className="space-y-2">
-              <h1 className="text-4xl font-bold text-gray-900 tracking-tight">{product.name}</h1>
-              <p className="text-lg text-gray-600">{product.category.name}</p>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">{product.name}</h1>
+              <p className="text-lg text-gray-600 dark:text-gray-300">{product.category.name}</p>
             </div>
             <WishlistButton 
               productId={product.id} 
@@ -239,15 +239,15 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
             </span>
           </div> */}
 
-          <div className="prose prose-gray max-w-none">
-            <p className="text-gray-700 text-lg leading-relaxed">{product.description}</p>
+          <div className="prose prose-gray dark:prose-invert max-w-none">
+            <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">{product.description}</p>
           </div>
 
           {/* Colors Section */}
           {product.variants && product.variants.length > 0 && 
            product.variants.some(variant => variant.quantity > 0) && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">{t('productDetail.availableColors')}</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('productDetail.availableColors')}</h3>
               <div className="flex flex-wrap gap-3">
                 {product.variants
                   .filter(variant => variant.quantity > 0)
@@ -261,7 +261,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                         "h-12 w-12 rounded-full border-2 cursor-pointer transition-all duration-200 shadow-sm flex items-center justify-center",
                         selectedColor === variant.color 
                           ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50 scale-110" 
-                          : "border-gray-200 hover:border-orange-500"
+                          : "border-gray-200 dark:border-gray-700 hover:border-orange-500 dark:hover:border-orange-500"
                       )}
                       style={{ 
                         backgroundColor: getColorValue(variant.color),
@@ -271,7 +271,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                     >
                       {/* Quantity indicator removed */}
                     </div>
-                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                    <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
                       {getColorName(variant.color)}
                     </span>
                   </div>
@@ -280,10 +280,10 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               
               {/* Selected Color Display */}
               {selectedColor && (
-                <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-100">
-                  <p className="text-sm text-gray-700 flex items-center">
+                <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-100 dark:border-orange-900/50">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
                     <span className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: getColorValue(selectedColor) }}></span>
-                    {t('productDetail.selected')}: <span className="font-medium text-gray-900 ml-1">{getColorName(selectedColor)}</span>
+                    {t('productDetail.selected')}: <span className="font-medium text-gray-900 dark:text-gray-100 ml-1">{getColorName(selectedColor)}</span>
                   </p>
                 </div>
               )}
@@ -291,41 +291,41 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
           )}
 
           {/* Price Section */}
-          <div className="py-6 border-y border-gray-200 space-y-4">
+          <div className="py-6 border-y border-gray-200 dark:border-gray-800 space-y-4">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 {product.salePrice ? (
                   <>
                     <div className="flex items-center gap-3">
-                      <span className="text-4xl font-bold text-red-600">
+                      <span className="text-4xl font-bold text-red-600 dark:text-red-500">
                         {formatPrice(product.salePrice)}
                       </span>
-                      <span className="text-xl text-gray-500 line-through">
+                      <span className="text-xl text-gray-500 dark:text-gray-400 line-through">
                         {formatPrice(product.price)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
                         {t('productDetail.save')} {calculateDiscount()}%
                       </span>
                       {product.saleEndDate && (
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
                           {t('productDetail.saleEnds')} {formatDate(product.saleEndDate)}
                         </span>
                       )}
                     </div>
                   </>
                 ) : (
-                  <span className="text-4xl font-bold text-gray-900">
+                  <span className="text-4xl font-bold text-gray-900 dark:text-white">
                     {formatPrice(product.price)}
                   </span>
                 )}
-                <p className="text-sm text-gray-500">{t('productDetail.freeShipping')}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('productDetail.freeShipping')}</p>
               </div>
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                 product.stock > 0 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' 
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
               }`}>
                 {product.stock > 0 ? `${product.stock} ${t('productDetail.inStock')}` : t('productDetail.outOfStock')}
               </span>
@@ -342,14 +342,14 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
 
       {/* Product Details Section */}
       {product.details && product.details.length > 0 && (
-        <div className="border-t border-gray-200 pt-16 mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">{t('productDetail.productDetails')}</h2>
+        <div className="border-t border-gray-200 dark:border-gray-800 pt-16 mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">{t('productDetail.productDetails')}</h2>
           
           <div className="grid grid-cols-1 gap-8">
             {product.details.map((detail) => (
-              <div key={detail.id} className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors duration-200">
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{detail.label}</h3>
-                <p className="text-gray-700 leading-relaxed">{detail.description}</p>
+              <div key={detail.id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">{detail.label}</h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{detail.description}</p>
               </div>
             ))}
           </div>
@@ -437,7 +437,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
             />
             <button 
               onClick={toggleImageZoom}
-              className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white transition-colors`}
+              className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors`}
             >
               <EyeOff className="h-5 w-5" />
             </button>

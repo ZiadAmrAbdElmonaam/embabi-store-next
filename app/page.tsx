@@ -85,7 +85,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Carousel Section */}
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4">
+      <div className="w-full max-w-[1440px] mx-auto px-0 sm:px-2 md:px-4 py-0 sm:py-2 md:py-4">
         <HomeCarousel />
       </div>
 

@@ -56,8 +56,8 @@ export const useCart = create<CartStore>()(
       syncWithServer: async () => {
         try {
           // First try to load from localStorage to ensure we have data
-          const storedData = localStorage.getItem('cart-storage');
-          if (storedData) {
+            const storedData = localStorage.getItem('cart-storage');
+            if (storedData) {
             try {
               const { state } = JSON.parse(storedData);
               console.log("Loaded cart from localStorage:", state.items);
@@ -88,7 +88,7 @@ export const useCart = create<CartStore>()(
                 } catch (updateError) {
                   console.error('Failed to update localStorage:', updateError);
                 }
-              } else {
+            } else {
                 // Not empty, set items and continue
                 set({ 
                   items: state.items || [], 
@@ -122,7 +122,7 @@ export const useCart = create<CartStore>()(
         } catch (error) {
           console.error('Failed to sync cart:', error);
           // Ensure we're initialized even if there's an error
-          set({ isInitialized: true });
+            set({ isInitialized: true });
         }
       },
       
@@ -393,7 +393,7 @@ export const useCart = create<CartStore>()(
           
           // Otherwise, just update the color
           return {
-            items: state.items.map((item) =>
+          items: state.items.map((item) =>
               item.id === id ? { 
                 ...item, 
                 selectedColor: color,

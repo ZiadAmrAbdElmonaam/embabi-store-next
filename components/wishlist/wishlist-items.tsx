@@ -115,7 +115,7 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
             {/* Category and Stock */}
             <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
               <span>{product.category?.name}</span>
-              <span>{product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}</span>
+              <span>{product.stock > 0 ? '' : 'Out of stock'}</span>
             </div>
 
             {/* Actions */}

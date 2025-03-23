@@ -30,8 +30,13 @@ export default async function RootLayout({
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
 
   return (
-    <html lang={lang} dir={dir} className={lang === 'ar' ? arabicFont.className : inter.className}>
-      <body className={`${lang === 'ar' ? arabicFont.className : inter.className} min-h-screen`}>
+    <html 
+      lang={lang} 
+      dir={dir} 
+      className={lang === 'ar' ? arabicFont.className : inter.className}
+      suppressHydrationWarning
+    >
+      <body className={`${lang === 'ar' ? arabicFont.className : inter.className} min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}>
         <Providers>
           <div className="flex flex-col min-h-screen">
             <Navbar />

@@ -320,14 +320,13 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                     {formatPrice(product.price)}
                   </span>
                 )}
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('productDetail.freeShipping')}</p>
               </div>
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                 product.stock > 0 
                   ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
                   : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
               }`}>
-                {product.stock > 0 ? `${product.stock} ${t('productDetail.inStock')}` : t('productDetail.outOfStock')}
+                {product.stock > 0 ? t('productDetail.inStock') : t('productDetail.outOfStock')}
               </span>
             </div>
           </div>

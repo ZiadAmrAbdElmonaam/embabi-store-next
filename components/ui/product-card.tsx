@@ -301,12 +301,6 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
               {formatPrice(product.price)}
             </p>
           )}
-          
-          {product.stock > 0 && (
-            <span className="text-sm text-gray-500">
-              ({product.stock} in stock)
-            </span>
-          )}
         </div>
       </div>
 

@@ -46,27 +46,27 @@ export default function CartPage() {
 
   if (isLoading) {
     return (
-      <div className="bg-gray-50 min-h-[calc(100vh-4rem)] flex items-center justify-center">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)] flex items-center justify-center">
         <div className="animate-pulse">
-          <ShoppingBag className="w-12 h-12 text-gray-300" />
+          <ShoppingBag className="w-12 h-12 text-gray-300 dark:text-gray-700" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-[calc(100vh-4rem)]">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto py-12">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <ShoppingBag className="w-8 h-8 text-orange-600" />
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               <TranslatedContent translationKey="cart.shoppingCart" />
             </h1>
           </div>
           <Link 
             href="/products" 
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
           >
             <TranslatedContent translationKey="cart.continueShopping" />
           </Link>

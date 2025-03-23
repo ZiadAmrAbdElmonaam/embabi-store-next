@@ -137,7 +137,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
         {/* Product Images */}
         <div className="space-y-6">
           {/* Main Product Image */}
-          <div className="aspect-square relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div className="aspect-square relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
             <Image
               src={selectedImage}
               alt={product.name}
@@ -150,7 +150,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               onClick={toggleImageZoom}
               className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors`}
             >
-              {showImage ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              {showImage ? <EyeOff className="h-5 w-5 dark:text-gray-200" /> : <Eye className="h-5 w-5 dark:text-gray-200" />}
             </button>
           </div>
           
@@ -162,7 +162,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                   key={index}
                   className={cn(
                     "aspect-square relative overflow-hidden rounded-xl border hover:border-orange-500 transition-colors duration-200 cursor-pointer",
-                    selectedImage === thumbnail ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200 dark:border-gray-800"
+                    selectedImage === thumbnail ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200 dark:border-gray-700"
                   )}
                   onClick={() => handleImageSelect(thumbnail)}
                 >
@@ -182,7 +182,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                   key={index}
                   className={cn(
                     "aspect-square relative overflow-hidden rounded-xl border hover:border-orange-500 transition-colors duration-200 cursor-pointer",
-                    selectedImage === image ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200 dark:border-gray-800"
+                    selectedImage === image ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200 dark:border-gray-700"
                   )}
                   onClick={() => handleImageSelect(image)}
                 >
@@ -261,7 +261,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                         "h-12 w-12 rounded-full border-2 cursor-pointer transition-all duration-200 shadow-sm flex items-center justify-center",
                         selectedColor === variant.color 
                           ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50 scale-110" 
-                          : "border-gray-200 dark:border-gray-700 hover:border-orange-500 dark:hover:border-orange-500"
+                          : "border-gray-200 dark:border-gray-700 hover:border-orange-500"
                       )}
                       style={{ 
                         backgroundColor: getColorValue(variant.color),
@@ -280,10 +280,10 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               
               {/* Selected Color Display */}
               {selectedColor && (
-                <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-100 dark:border-orange-900/50">
+                <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-900/50">
                   <p className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
                     <span className="w-4 h-4 rounded-full mr-2" style={{ backgroundColor: getColorValue(selectedColor) }}></span>
-                    {t('productDetail.selected')}: <span className="font-medium text-gray-900 dark:text-gray-100 ml-1">{getColorName(selectedColor)}</span>
+                    {t('productDetail.selected')}: <span className="font-medium text-gray-900 dark:text-white ml-1">{getColorName(selectedColor)}</span>
                   </p>
                 </div>
               )}
@@ -291,7 +291,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
           )}
 
           {/* Price Section */}
-          <div className="py-6 border-y border-gray-200 dark:border-gray-800 space-y-4">
+          <div className="py-6 border-y border-gray-200 dark:border-gray-700 space-y-4">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
                 {product.salePrice ? (
@@ -305,7 +305,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
                         {t('productDetail.save')} {calculateDiscount()}%
                       </span>
                       {product.saleEndDate && (
@@ -323,8 +323,8 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               </div>
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                 product.stock > 0 
-                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' 
-                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
               }`}>
                 {product.stock > 0 ? t('productDetail.inStock') : t('productDetail.outOfStock')}
               </span>
@@ -341,12 +341,12 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
 
       {/* Product Details Section */}
       {product.details && product.details.length > 0 && (
-        <div className="border-t border-gray-200 dark:border-gray-800 pt-16 mb-16">
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-16 mb-16">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">{t('productDetail.productDetails')}</h2>
           
           <div className="grid grid-cols-1 gap-8">
             {product.details.map((detail) => (
-              <div key={detail.id} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200">
+              <div key={detail.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">{detail.label}</h3>
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{detail.description}</p>
               </div>
@@ -438,7 +438,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
               onClick={toggleImageZoom}
               className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-4 p-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors`}
             >
-              <EyeOff className="h-5 w-5" />
+              <EyeOff className="h-5 w-5 dark:text-gray-200" />
             </button>
           </div>
         </div>

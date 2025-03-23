@@ -119,20 +119,19 @@ export function HomeCarousel() {
   // If we're still loading, show a placeholder
   if (isLoading) {
     return (
-      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-200 animate-pulse rounded-lg">
+      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-lg">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-400">Loading carousel...</div>
+          <div className="text-gray-400 dark:text-gray-600">Loading carousel...</div>
         </div>
       </div>
     );
   }
 
-  // If there was an error, show error message
   if (error) {
     return (
-      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-100 rounded-lg">
+      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-500">{error}</div>
+          <div className="text-gray-500 dark:text-gray-400">{error}</div>
         </div>
       </div>
     );
@@ -141,9 +140,9 @@ export function HomeCarousel() {
   // If there are no images, show a placeholder
   if (images.length === 0) {
     return (
-      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-100 rounded-lg">
+      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-500">No carousel images available</div>
+          <div className="text-gray-500 dark:text-gray-400">No carousel images available</div>
         </div>
       </div>
     );
@@ -151,7 +150,7 @@ export function HomeCarousel() {
 
   return (
     <div 
-      className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden rounded-lg"
+      className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-900"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}

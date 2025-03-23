@@ -23,7 +23,6 @@ import Image from "next/image";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { useTranslation } from "@/hooks/use-translation";
-import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -38,7 +37,7 @@ export function Navbar() {
   return (
     <div className="sticky top-0 z-50">
       {/* Top Bar */}
-      <div className="bg-gray-900 dark:bg-gray-950 text-white text-sm">
+      <div className="bg-gray-900 text-white text-sm">
         <div className="mx-auto px-2" style={{ maxWidth: '120rem' }}>
           <div className="flex justify-between items-center h-9">
             {/* Left Side - Social Links */}
@@ -71,9 +70,6 @@ export function Navbar() {
                 <span><TranslatedContent translationKey="navbar.ourBranches" /></span>
               </Link>
               <div className="hover:text-black transition-colors">
-                <ThemeSwitcher />
-              </div>
-              <div className="hover:text-black transition-colors">
                 <LanguageSwitcher />
               </div>
             </div>
@@ -82,7 +78,7 @@ export function Navbar() {
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-orange-50 dark:bg-gray-800 shadow-sm">
+      <nav className="bg-orange-50 shadow-sm">
         <div className="mx-auto px-2" style={{ maxWidth: '115rem' }}>
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
@@ -99,17 +95,17 @@ export function Navbar() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/products" className="text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-500 text-base">
+              <Link href="/products" className="text-gray-700 hover:text-orange-600 text-base">
                 <TranslatedContent translationKey="navbar.products" />
               </Link>
-              <Link href="/categories" className="text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-500 text-base">
+              <Link href="/categories" className="text-gray-700 hover:text-orange-600 text-base">
                 <TranslatedContent translationKey="navbar.categories" />
               </Link>
-              <Link href="/deals" className="flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-500 text-base">
+              <Link href="/deals" className="flex items-center gap-2 text-gray-700 hover:text-orange-600 text-base">
                 <span><TranslatedContent translationKey="navbar.deals" /></span>
                 <Flame size={18} className="text-red-500" />
               </Link>
-              <Link href="/most-selling" className="text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-500 text-base">
+              <Link href="/most-selling" className="text-gray-700 hover:text-orange-600 text-base">
                 <TranslatedContent translationKey="navbar.mostSelling" />
               </Link>
             </div>
@@ -117,10 +113,10 @@ export function Navbar() {
             {/* Right Side Icons */}
             <div className="flex items-center gap-4 mr-2">
               <Link href="/wishlist" className="relative">
-                <Heart className="h-6 w-6 text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-500" />
+                <Heart className="h-6 w-6 text-gray-700 hover:text-orange-600" />
               </Link>
               <Link href="/cart" className="relative">
-                <ShoppingCart className="h-6 w-6 text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-500" />
+                <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-orange-600" />
                 {items.length > 0 && (
                   <span className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {items.length}
@@ -136,17 +132,17 @@ export function Navbar() {
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
                       className="relative"
                     >
-                      <User className="h-6 w-6 text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-500" />
+                      <User className="h-6 w-6 text-gray-700 hover:text-orange-600" />
                     </button>
                     
                     {/* Profile Dropdown */}
                     {isProfileOpen && (
                       <div 
-                        className="absolute end-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-50"
+                        className="absolute end-0 mt-2 w-48 bg-white rounded-lg shadow-lg overflow-hidden z-50"
                         onMouseLeave={() => setIsProfileOpen(false)}
                       >
-                        <div className="px-4 py-2 bg-orange-50 dark:bg-orange-950/20 border-b border-gray-100 dark:border-gray-700">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        <div className="px-4 py-2 bg-orange-50 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900 truncate">
                             {session.user?.name}
                           </p>
                         </div>
@@ -154,7 +150,7 @@ export function Navbar() {
                           {isAdmin && (
                             <Link
                               href="/admin"
-                              className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
                               onClick={() => setIsProfileOpen(false)}
                             >
                               <LayoutDashboard className="h-4 w-4 me-2" />
@@ -163,7 +159,7 @@ export function Navbar() {
                           )}
                           <Link
                             href="/profile"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
                             onClick={() => setIsProfileOpen(false)}
                           >
                             <UserCircle className="h-4 w-4 me-2" />
@@ -174,7 +170,7 @@ export function Navbar() {
                               signOut();
                               setIsProfileOpen(false);
                             }}
-                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
                           >
                             <LogOut className="h-4 w-4 me-2" />
                             <TranslatedContent translationKey="navbar.signOut" />
@@ -185,7 +181,7 @@ export function Navbar() {
                   </>
                 ) : (
                   <Link href="/login">
-                    <User className="h-6 w-6 text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-500" />
+                    <User className="h-6 w-6 text-gray-700 hover:text-orange-600" />
                   </Link>
                 )}
               </div>

@@ -22,11 +22,11 @@ const createTransporter = () => {
     
     // Create transporter with simpler configuration
     const transport = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
       secure: true,
       tls: {
         // Do not fail on invalid certificates
@@ -205,12 +205,12 @@ export async function sendOrderConfirmationEmail(
     const transporter = createTransporter();
     
     if (transporter) {
-      await transporter.sendMail({
+  await transporter.sendMail({
         from: `"Embabi Store" <${process.env.GMAIL_USER}>`,
-        to,
-        subject: `Order Confirmation #${orderDetails.id}`,
-        html,
-      });
+    to,
+    subject: `Order Confirmation #${orderDetails.id}`,
+    html,
+  });
     } else {
       logEmailContent(to, `Order Confirmation #${orderDetails.id}`, html);
     }
@@ -250,12 +250,12 @@ export async function sendOrderStatusEmail(
     const transporter = createTransporter();
     
     if (transporter) {
-      await transporter.sendMail({
+    await transporter.sendMail({
         from: `"Embabi Store" <${process.env.GMAIL_USER}>`,
-        to,
-        subject: `Order Status Update #${id}`,
-        html,
-      });
+      to,
+      subject: `Order Status Update #${id}`,
+      html,
+    });
     } else {
       logEmailContent(to, `Order Status Update #${id}`, html);
     }

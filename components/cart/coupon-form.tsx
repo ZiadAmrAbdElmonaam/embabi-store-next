@@ -64,19 +64,19 @@ export default function CartCouponForm() {
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-gray-700 mb-2">
+      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         <TranslatedContent translationKey="cart.applyCoupon" defaultValue="Have a coupon?" />
       </h3>
       <form onSubmit={applyCoupon} className="flex items-center gap-2">
         <div className="relative flex-grow">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-gray-400">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none text-gray-400 dark:text-gray-500">
             <Ticket className="h-4 w-4" />
           </div>
           <input
             type="text"
             className={`pl-8 pr-2 py-2 text-sm border rounded-lg w-full ${
-              couponError ? 'border-red-500' : 'border-gray-300'
-            } focus:outline-none focus:ring-1 focus:ring-orange-500`}
+              couponError ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+            } focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500`}
             placeholder={t('cart.enterCouponCode')}
             value={couponCode}
             onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
@@ -85,14 +85,14 @@ export default function CartCouponForm() {
         </div>
         <button
           type="submit"
-          className="bg-orange-600 text-white px-3 py-2 text-sm rounded-lg hover:bg-orange-700 disabled:opacity-70 min-w-[70px] transition-colors"
+          className="bg-orange-600 dark:bg-orange-700 text-white px-3 py-2 text-sm rounded-lg hover:bg-orange-700 dark:hover:bg-orange-800 disabled:opacity-70 min-w-[70px] transition-colors"
           disabled={isLoading}
         >
           {isLoading ? t('cart.applying') : t('cart.apply')}
         </button>
       </form>
       {couponError && (
-        <p className="text-red-500 text-xs mt-1">{couponError}</p>
+        <p className="text-red-500 dark:text-red-400 text-xs mt-1">{couponError}</p>
       )}
     </div>
   );

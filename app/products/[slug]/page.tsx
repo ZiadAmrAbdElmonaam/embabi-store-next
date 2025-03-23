@@ -85,7 +85,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }) : null;
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-white">
+    <div className="container mx-auto px-4 py-8 bg-white dark:bg-gray-900">
       <ProductDetails 
         product={{
           ...serializedProduct,

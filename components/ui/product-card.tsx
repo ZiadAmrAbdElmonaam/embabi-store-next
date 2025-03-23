@@ -10,6 +10,7 @@ import { ShoppingCart, X } from "lucide-react";
 import { useTranslation } from '@/hooks/use-translation';
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 interface ProductCardProps {
   product: {
@@ -314,17 +315,19 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div 
             ref={modalRef}
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Select Color</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <TranslatedContent translationKey="products.selectColorFor" /> {product.name}
+              </h3>
               <button 
                 onClick={(e) => {
                   e.preventDefault();
                   setShowColorModal(false);
                 }}
-                className="p-1 text-gray-400 hover:text-gray-600"
+                className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               >
                 <X size={20} />
               </button>

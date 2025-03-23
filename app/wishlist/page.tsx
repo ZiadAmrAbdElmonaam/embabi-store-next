@@ -165,133 +165,100 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-rose-50 to-white">
-      <div className="container mx-auto py-12 px-4 sm:px-6">
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Heart className="w-10 h-10 text-rose-600" fill="currentColor" />
-              <h1 className="text-4xl font-bold text-gray-900">
-                <TranslatedContent translationKey="wishlist.myWishlist" />
-              </h1>
-            </div>
-            <p className="text-gray-600 text-lg">
-              {items.length} {items.length === 1 ? 'item' : 'items'} saved for later
-            </p>
-          </motion.div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="container mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <TranslatedContent translationKey="wishlist.title" />
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <TranslatedContent translationKey="wishlist.subtitle" />
+          </p>
         </div>
 
-        {items.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-md mx-auto bg-white rounded-2xl p-8 text-center shadow-xl"
-          >
-            <div className="bg-rose-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Heart className="w-10 h-10 text-rose-400" />
-            </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-3">
-              <TranslatedContent translationKey="wishlist.emptyWishlist" />
-            </h2>
-            <p className="text-gray-600 mb-8">Start adding items you love to your wishlist!</p>
-            <Link 
-              href="/products" 
-              className="inline-flex items-center gap-2 bg-rose-600 text-white px-8 py-4 rounded-full hover:bg-rose-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-            >
-              <TranslatedContent translationKey="cart.continueShopping" />
-            </Link>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {items.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="group relative bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300"
+        {/* Wishlist Content */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          {items.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 mb-4">
+                <Heart className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <TranslatedContent translationKey="wishlist.empty" />
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
+                <TranslatedContent translationKey="wishlist.emptyMessage" />
+              </p>
+              <Link
+                href="/products"
+                className="inline-flex items-center px-4 py-2 bg-orange-600 border border-transparent rounded-md font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
               >
-                {/* Sale Badge */}
-                {item.salePrice && item.salePrice < item.price && (
-                  <div className="absolute left-0 top-4 z-10">
-                    <div className="bg-gradient-to-r from-rose-600 to-pink-600 text-white py-2 px-4 rounded-r-full shadow-lg">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-bold">
-                          Save {calculateDiscount(item.price, item.salePrice)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="absolute top-4 right-4 flex flex-col gap-3 z-10 opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all duration-300">
+                <TranslatedContent translationKey="wishlist.browse" />
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {items.map((item) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="relative group"
+                >
                   <button
                     onClick={() => handleRemoveFromWishlist(item.id)}
-                    className="p-3 bg-white rounded-full shadow-lg hover:bg-red-50 transition-all duration-300 group/btn"
-                    title={t('wishlist.remove')}
+                    className="absolute right-2 top-2 z-10 bg-white dark:bg-gray-800 p-1.5 rounded-full shadow-sm hover:bg-red-50 dark:hover:bg-red-900"
                   >
-                    <Trash2 className="w-5 h-5 text-gray-600 group-hover/btn:text-red-600" />
+                    <X
+                      className="h-4 w-4 text-gray-400 dark:text-gray-500 group-hover:text-red-500 dark:group-hover:text-red-400"
+                    />
                   </button>
-                  <button
-                    onClick={() => handleAddToCart(item)}
-                    className="p-3 bg-white rounded-full shadow-lg hover:bg-orange-50 transition-all duration-300 group/btn"
-                    title={t('wishlist.addToCart')}
-                  >
-                    <ShoppingCart className="w-5 h-5 text-gray-600 group-hover/btn:text-orange-600" />
-                  </button>
-                </div>
-
-                <Link href={`/products/${item.slug}`} className="block">
-                  <div className="relative aspect-square overflow-hidden">
-                    {item.images[0] && (
-                      <img
-                        src={item.images[0]}
-                        alt={item.name}
-                        className="object-cover w-full h-full transform transition-transform duration-500 group-hover:scale-110"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="font-semibold text-lg text-gray-900 group-hover:text-rose-600 transition-colors duration-300">
-                      {item.name}
-                    </h3>
-                    {item.description && (
-                      <p className="mt-2 text-gray-600 text-sm line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="space-y-1">
-                        {item.salePrice && item.salePrice < item.price ? (
-                          <>
-                            <div className="text-xl font-bold text-rose-600">
-                              {formatPrice(item.salePrice)}
-                            </div>
-                            <div className="text-sm text-gray-500 line-through">
+                  <Link href={`/products/${item.slug}`} className="block">
+                    <div className="relative aspect-square overflow-hidden">
+                      {item.images[0] && (
+                        <img
+                          src={item.images[0]}
+                          alt={item.name}
+                          className="object-cover w-full h-full transform transition-transform duration-500 group-hover:scale-110"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+                    </div>
+                    <div className="p-6">
+                      <h3 className="font-semibold text-lg text-gray-900 group-hover:text-rose-600 transition-colors duration-300">
+                        {item.name}
+                      </h3>
+                      {item.description && (
+                        <p className="mt-2 text-gray-600 text-sm line-clamp-2">
+                          {item.description}
+                        </p>
+                      )}
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="space-y-1">
+                          {item.salePrice && item.salePrice < item.price ? (
+                            <>
+                              <div className="text-xl font-bold text-rose-600">
+                                {formatPrice(item.salePrice)}
+                              </div>
+                              <div className="text-sm text-gray-500 line-through">
+                                {formatPrice(item.price)}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-xl font-bold text-gray-900">
                               {formatPrice(item.price)}
                             </div>
-                          </>
-                        ) : (
-                          <div className="text-xl font-bold text-gray-900">
-                            {formatPrice(item.price)}
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        )}
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Color Selection Modal */}

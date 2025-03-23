@@ -249,26 +249,26 @@ export default function CartItems() {
                     
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-4 mt-4">
-                      <div className="flex items-center border border-gray-200 rounded-lg">
+                      <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg">
                         <button
                           onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                           disabled={item.quantity <= 1 || isUpdating}
-                          className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                          className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
                           <Minus className="h-4 w-4" />
                         </button>
-                        <span className="w-10 text-center text-gray-900">{item.quantity}</span>
+                        <span className="w-10 text-center text-gray-900 dark:text-white">{item.quantity}</span>
                         <button
                           onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                           disabled={isUpdating}
-                          className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 disabled:text-gray-300 disabled:cursor-not-allowed"
+                          className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
                       
-                      <div className="text-gray-600 text-sm">
-                        <TranslatedContent translationKey="cart.total" />: <span className="font-medium text-gray-900">
+                      <div className="text-gray-600 dark:text-gray-400 text-sm">
+                        <TranslatedContent translationKey="cart.total" />: <span className="font-medium text-gray-900 dark:text-white">
                           EGP {((item.salePrice !== null ? item.salePrice : item.price) * item.quantity).toLocaleString()}
                         </span>
                       </div>
@@ -283,21 +283,21 @@ export default function CartItems() {
 
       {/* Order Summary */}
       <div className="lg:col-span-4">
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4 text-black-900">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
             <TranslatedContent translationKey="checkout.orderSummary" />
           </h2>
           
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">
+              <span className="text-gray-600 dark:text-gray-300">
                 <TranslatedContent translationKey="common.subtotal" />
               </span>
-              <span className="font-medium text-gray-600">EGP {subtotal.toLocaleString()}</span>
+              <span className="font-medium text-gray-600 dark:text-gray-300">EGP {subtotal.toLocaleString()}</span>
             </div>
             
             {savings > 0 && (
-              <div className="flex justify-between text-green-600">
+              <div className="flex justify-between text-green-600 dark:text-green-400">
                 <span><TranslatedContent translationKey="cart.savings" /></span>
                 <span>- EGP {savings.toLocaleString()}</span>
               </div>
@@ -305,31 +305,31 @@ export default function CartItems() {
 
             {/* Display coupon discount if applied */}
             {appliedCoupon && (
-              <div className="flex justify-between items-center text-green-600 border-t border-gray-100 pt-3">
+              <div className="flex justify-between items-center text-green-600 dark:text-green-400 border-t border-gray-100 dark:border-gray-700 pt-3">
                 <div className="flex items-center gap-1">
                   <Ticket className="h-4 w-4" />
                   <span className="font-medium">{appliedCoupon.code}</span>
                   <button 
                     onClick={handleRemoveCoupon}
-                    className="ml-2 text-red-500 text-xs hover:underline"
+                    className="ml-2 text-red-500 dark:text-red-400 text-xs hover:underline"
                   >
-                    <TranslatedContent translationKey="cart.removeCoupon" defaultValue="Remove" />
+                    <TranslatedContent translationKey="cart.removeCoupon" />
                   </button>
                 </div>
                 <span>- EGP {discountAmount.toLocaleString()}</span>
               </div>
             )}
             
-            <div className="flex justify-between pt-3 border-t border-gray-100">
-              <span className="font-semibold text-gray-600">
+            <div className="flex justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+              <span className="font-semibold text-gray-600 dark:text-gray-300">
                 <TranslatedContent translationKey="common.total" />
               </span>
-              <span className="font-semibold text-lg text-orange-600">EGP {total.toLocaleString()}</span>
+              <span className="font-semibold text-lg text-orange-600 dark:text-orange-500">EGP {total.toLocaleString()}</span>
             </div>
           </div>
           
           {/* Coupon form integrated into order summary */}
-          <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
             <CartCouponForm />
           </div>
           

@@ -24,10 +24,10 @@ export async function POST(req: Request) {
     // Email content - prepare this before creating the transporter
     const emailSubject = `Contact Form: ${subject}`;
     const emailText = `
-      Name: ${name}
-      Email: ${email}
-      Subject: ${subject}
-      Message: ${message}
+        Name: ${name}
+        Email: ${email}
+        Subject: ${subject}
+        Message: ${message}
     `;
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 5px;">

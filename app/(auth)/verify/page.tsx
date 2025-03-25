@@ -11,6 +11,7 @@ interface VerifyPageProps {
 export default function VerifyPage({ searchParams }: VerifyPageProps) {
   const email = searchParams.email as string;
   const returnUrl = (searchParams.returnUrl as string) || '/';
+  const fromCart = searchParams.fromCart === 'true';
 
   // If no email is provided, redirect to signup
   if (!email) {
@@ -58,7 +59,11 @@ export default function VerifyPage({ searchParams }: VerifyPageProps) {
             </p>
           </div>
 
-          <VerificationForm email={email} returnUrl={returnUrl} />
+          <VerificationForm 
+            email={email} 
+            returnUrl={returnUrl} 
+            fromCart={fromCart}
+          />
         </div>
       </div>
     </div>

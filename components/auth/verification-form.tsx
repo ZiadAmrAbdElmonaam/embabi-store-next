@@ -10,9 +10,10 @@ import { TranslatedContent } from '@/components/ui/translated-content';
 interface VerificationFormProps {
   email: string;
   returnUrl: string;
+  fromCart?: boolean;
 }
 
-export function VerificationForm({ email, returnUrl }: VerificationFormProps) {
+export function VerificationForm({ email, returnUrl, fromCart = false }: VerificationFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
@@ -95,8 +96,14 @@ export function VerificationForm({ email, returnUrl }: VerificationFormProps) {
       
       toast.success(t('auth.emailVerified'));
       
-      // Redirect to login page with return URL
-      router.push(`/login${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`);
+      // If coming from cart, redirect straight to the checkout after verification
+      if (fromCart) {
+        // Redirect to login with parameters to go to checkout after login
+        router.push(`/login?returnUrl=${encodeURIComponent('/checkout')}&verified=true`);
+      } else {
+        // Regular flow - redirect to login page with return URL
+        router.push(`/login${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}${returnUrl !== '/' ? '&' : '?'}verified=true`);
+      }
     } catch (error: any) {
       console.error('Verification error:', error);
       toast.error(error.message || t('auth.somethingWentWrong'));

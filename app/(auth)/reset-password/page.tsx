@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 export default function ResetPasswordPage() {
   return (
@@ -21,9 +22,11 @@ export default function ResetPasswordPage() {
           <div className="lg:w-1/2 p-8 lg:p-12">
             <div className="max-w-sm mx-auto">
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">Reset Password</h1>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  <TranslatedContent translationKey="auth.resetPassword" />
+                </h1>
                 <p className="mt-2 text-sm text-gray-600">
-                  Enter your email to receive a password reset link
+                  <TranslatedContent translationKey="auth.recoverAccount" />
                 </p>
               </div>
               <ResetPasswordForm />

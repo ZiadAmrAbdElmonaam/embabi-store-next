@@ -23,6 +23,7 @@ model User {
   orders                Order[]
   reviews               Review[]
   wishlist              Wishlist?
+  cart                  Cart?
 }
 
 model Category {
@@ -53,12 +54,15 @@ model Product {
   orderItems    OrderItem[]
   category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   reviews       Review[]
-  wishlists     Wishlist[]  @relation("ProductToWishlist")
   sale          Float?
   saleEndDate   DateTime?
   salePrice     Float?
   details       ProductDetail[]
   variants      ProductVariant[]
+  wishlistItems WishlistItem[]
+  cartItems     CartItem[]
+  anonymousCartItems AnonymousCartItem[]
+  anonymousWishlistItems AnonymousWishlistItem[]
 
   @@index([categoryId])
 }
@@ -111,13 +115,108 @@ model Review {
   type      String   @default("site") // "site" or "product"
 }
 
+// Updated Wishlist model without direct product relation - now using through table
 model Wishlist {
   id        String    @id @default(cuid())
   userId    String    @unique
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products  Product[] @relation("ProductToWishlist")
+  items     WishlistItem[]
+}
+
+// Through table for wishlist items
+model WishlistItem {
+  id          String   @id @default(cuid())
+  wishlistId  String
+  productId   String
+  createdAt   DateTime @default(now())
+  wishlist    Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId])
+  @@index([productId])
+}
+
+// Anonymous Wishlist for non-authenticated users
+model AnonymousWishlist {
+  id        String    @id @default(cuid())
+  sessionId String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  items     AnonymousWishlistItem[]
+}
+
+// Through table for anonymous wishlist items
+model AnonymousWishlistItem {
+  id          String           @id @default(cuid())
+  wishlistId  String
+  productId   String
+  createdAt   DateTime         @default(now())
+  wishlist    AnonymousWishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId])
+  @@index([productId])
+}
+
+// Cart model for authenticated users
+model Cart {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  couponId  String?
+  coupon    Coupon?   @relation(fields: [couponId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+
+  @@index([couponId])
+}
+
+// Cart item model
+model CartItem {
+  id            String   @id @default(cuid())
+  cartId        String
+  productId     String
+  quantity      Int      @default(1)
+  selectedColor String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+// Anonymous Cart for non-authenticated users
+model AnonymousCart {
+  id        String    @id @default(cuid())
+  sessionId String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  couponId  String?
+  coupon    Coupon?   @relation(fields: [couponId], references: [id])
+  items     AnonymousCartItem[]
+
+  @@index([couponId])
+}
+
+// Anonymous Cart Item
+model AnonymousCartItem {
+  id            String        @id @default(cuid())
+  cartId        String
+  productId     String
+  quantity      Int           @default(1)
+  selectedColor String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  cart          AnonymousCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([productId])
 }
 
 model StatusUpdate {
@@ -182,6 +281,8 @@ model Coupon {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   orders      Order[]
+  carts       Cart[]
+  anonymousCarts AnonymousCart[]
 }
 
 model SiteSettings {

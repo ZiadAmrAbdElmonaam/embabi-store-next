@@ -12,7 +12,8 @@ export function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl') || '/';
-  const { t } = useTranslation();
+  const fromCart = searchParams.get('fromCart') === 'true';
+  const { t, lang } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -57,8 +58,18 @@ export function SignUpForm() {
 
       toast.success(t('auth.accountCreated'));
       
-      // Redirect to verification page with email
-      router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
+      // Redirect to verification page with email and fromCart parameter if needed
+      let verifyRoute = `/verify?email=${encodeURIComponent(formData.email)}`;
+      
+      if (returnUrl !== '/') {
+        verifyRoute += `&returnUrl=${encodeURIComponent(returnUrl)}`;
+      }
+      
+      if (fromCart) {
+        verifyRoute += '&fromCart=true';
+      }
+      
+      router.push(verifyRoute);
     } catch (error: any) {
       console.error('Signup error:', error);
       setError(error.message || t('auth.somethingWentWrong'));
@@ -123,7 +134,7 @@ export function SignUpForm() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            className={`absolute inset-y-0 ${lang === 'ar' ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
           >
             {showPassword ? (
               <EyeOff className="h-4 w-4 text-gray-400" />
@@ -155,7 +166,7 @@ export function SignUpForm() {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            className={`absolute inset-y-0 ${lang === 'ar' ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
           >
             {showConfirmPassword ? (
               <EyeOff className="h-4 w-4 text-gray-400" />
@@ -184,7 +195,7 @@ export function SignUpForm() {
       <p className="text-center text-sm text-gray-600 mt-4">
         <TranslatedContent translationKey="auth.alreadyHaveAccount" />{" "}
         <Link 
-          href={`/login${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`}
+          href={`/login${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}${fromCart ? `${returnUrl !== '/' ? '&' : '?'}fromCart=true` : ''}`}
           className="font-medium text-orange-600 hover:text-orange-500"
         >
           <TranslatedContent translationKey="auth.signIn" />

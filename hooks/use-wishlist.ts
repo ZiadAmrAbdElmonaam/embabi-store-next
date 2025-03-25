@@ -35,7 +35,13 @@ export const useWishlist = create<WishlistStore>()(
 
       syncWithServer: async () => {
         try {
-          const response = await fetch('/api/wishlist');
+          console.log("Syncing wishlist with server...");
+          const response = await fetch('/api/wishlist', {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache'
+            }
+          });
           if (!response.ok) {
             // If unauthorized or any other error, try to load from localStorage
             const storedData = localStorage.getItem('wishlist-storage');
@@ -59,6 +65,7 @@ export const useWishlist = create<WishlistStore>()(
             !data.items.some(serverItem => serverItem.id === localItem.id)
           )];
           set({ items: mergedItems, isInitialized: true });
+          console.log("Wishlist synced successfully", mergedItems.length, "items");
         } catch (error) {
           console.error('Failed to sync wishlist:', error);
           // On error, try to load from localStorage

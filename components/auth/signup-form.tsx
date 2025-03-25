@@ -12,6 +12,7 @@ export function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl') || '/';
+  const fromCart = searchParams.get('fromCart') === 'true';
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -57,8 +58,18 @@ export function SignUpForm() {
 
       toast.success(t('auth.accountCreated'));
       
-      // Redirect to verification page with email
-      router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
+      // Redirect to verification page with email and fromCart parameter if needed
+      let verifyRoute = `/verify?email=${encodeURIComponent(formData.email)}`;
+      
+      if (returnUrl !== '/') {
+        verifyRoute += `&returnUrl=${encodeURIComponent(returnUrl)}`;
+      }
+      
+      if (fromCart) {
+        verifyRoute += '&fromCart=true';
+      }
+      
+      router.push(verifyRoute);
     } catch (error: any) {
       console.error('Signup error:', error);
       setError(error.message || t('auth.somethingWentWrong'));
@@ -184,7 +195,7 @@ export function SignUpForm() {
       <p className="text-center text-sm text-gray-600 mt-4">
         <TranslatedContent translationKey="auth.alreadyHaveAccount" />{" "}
         <Link 
-          href={`/login${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`}
+          href={`/login${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}${fromCart ? `${returnUrl !== '/' ? '&' : '?'}fromCart=true` : ''}`}
           className="font-medium text-orange-600 hover:text-orange-500"
         >
           <TranslatedContent translationKey="auth.signIn" />

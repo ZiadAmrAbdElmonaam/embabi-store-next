@@ -119,9 +119,9 @@ export default function CartItems() {
     }
 
     if (!session) {
-      // Save current URL to return after login
+      // Save current URL to return after login, with a special param to indicate cart redirect
       const returnUrl = '/checkout';
-      router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+      router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}&fromCart=true`);
       return;
     }
 
@@ -175,12 +175,15 @@ export default function CartItems() {
                 <div className="flex flex-col sm:flex-row gap-6">
                   {/* Product Image */}
                   <div className="w-full sm:w-28 h-28 bg-gray-50 rounded-xl overflow-hidden relative">
-                    <Image
-                      src={item.images[0]}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                    />
+                    <div className="relative h-full w-full">
+                      <Image
+                        src={item.images[0]}
+                        alt={item.name}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 112px"
+                        className="object-contain sm:object-cover"
+                      />
+                    </div>
                   </div>
                   
                   {/* Product Details */}

@@ -13,6 +13,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get('returnUrl') || '/';
+  const fromCart = searchParams.get('fromCart') === 'true';
   const verified = searchParams.get('verified') === 'true';
   const error = searchParams.get('error');
   const { t } = useTranslation();
@@ -62,6 +63,9 @@ export function LoginForm() {
         // Then handle redirection
         if (role === 'ADMIN') {
           router.push('/admin');
+        } else if (fromCart) {
+          // If coming from cart, redirect back to cart page instead of checkout
+          router.push('/cart');
         } else if (returnUrl && returnUrl !== '/') {
           router.push(returnUrl);
         } else {
@@ -155,7 +159,7 @@ export function LoginForm() {
       <p className="text-center text-sm text-gray-600 mt-4">
         <TranslatedContent translationKey="auth.dontHaveAccount" />{" "}
         <Link 
-          href={`/signup${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`}
+          href={`/signup${returnUrl !== '/' ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}${fromCart ? `${returnUrl !== '/' ? '&' : '?'}fromCart=true` : ''}`}
           className="font-medium text-orange-600 hover:text-orange-500"
         >
           <TranslatedContent translationKey="auth.signUp" />

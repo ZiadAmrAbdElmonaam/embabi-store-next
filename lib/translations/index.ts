@@ -52,7 +52,8 @@ export const translations = {
       popularity: 'Popularity',
       selectColorFor: 'Select Color for',
       selected: 'Selected',
-      selectColor: 'Please select a color'
+      selectColor: 'Please select a color',
+      off: 'OFF'
     },
     checkout: {
       shippingInfo: 'Shipping Information',
@@ -214,8 +215,13 @@ export const translations = {
       couponApplied: 'Coupon applied successfully!'
     },
     wishlist: {
+      title: 'My Wishlist',
+      subtitle: 'Your favorite items in one place',
       myWishlist: 'My Wishlist',
       emptyWishlist: 'Your wishlist is empty',
+      empty: 'Your wishlist is empty',
+      emptyMessage: 'Add items to your wishlist to keep track of products you love',
+      browse: 'Browse Products',
       addToCart: 'Add to Cart',
       remove: 'Remove'
     },
@@ -340,6 +346,21 @@ export const translations = {
       loginRequired: 'Login Required',
       loginToLeaveReview: 'You need to be logged in to leave a review. Please sign in or create an account.'
     },
+    colors: {
+      red: 'Red',
+      blue: 'Blue',
+      green: 'Green',
+      yellow: 'Yellow',
+      purple: 'Purple',
+      pink: 'Pink',
+      black: 'Black',
+      white: 'White',
+      gray: 'Gray',
+      orange: 'Orange',
+      brown: 'Brown',
+      gold: 'Gold',
+      silver: 'Silver'
+    },
   },
   ar: {
     common: {
@@ -394,7 +415,8 @@ export const translations = {
       popularity: 'الشعبية',
       selectColorFor: 'اختر لون لـ',
       selected: 'تم اختيار',
-      selectColor: 'الرجاء اختيار لون'
+      selectColor: 'الرجاء اختيار لون',
+      off: 'خصم'
     },
     checkout: {
       shippingInfo: 'معلومات الشحن',
@@ -558,8 +580,13 @@ export const translations = {
       couponApplied: 'تم تطبيق الكوبون بنجاح!'
     },
     wishlist: {
-      myWishlist: 'قائمة الرغبات',
-      emptyWishlist: 'قائمة الرغبات فارغة',
+      title: 'قائمة المفضلة',
+      subtitle: 'منتجاتك المفضلة في مكان واحد',
+      myWishlist: 'قائمة المفضلة',
+      emptyWishlist: 'قائمة المفضلة فارغة',
+      empty: 'قائمة المفضلة فارغة',
+      emptyMessage: 'أضف عناصر إلى قائمة المفضلة لتتبع المنتجات التي تحبها',
+      browse: 'تصفح المنتجات',
       addToCart: 'أضف إلى السلة',
       remove: 'إزالة'
     },
@@ -683,6 +710,21 @@ export const translations = {
       pleaseEnterComment: 'الرجاء إدخال تعليق',
       loginRequired: 'تسجيل الدخول مطلوب',
       loginToLeaveReview: 'يجب أن تكون مسجلاً للدخول لترك تقييم. الرجاء تسجيل الدخول أو إنشاء حساب جديد.'
+    },
+    colors: {
+      red: 'أحمر',
+      blue: 'أزرق',
+      green: 'أخضر',
+      yellow: 'أصفر',
+      purple: 'بنفسجي',
+      pink: 'وردي',
+      black: 'أسود',
+      white: 'أبيض',
+      gray: 'رمادي',
+      orange: 'برتقالي',
+      brown: 'بني',
+      gold: 'ذهبي',
+      silver: 'فضي'
     },
   },
 };

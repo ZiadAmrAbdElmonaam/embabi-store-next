@@ -44,6 +44,24 @@ export default function CartPage() {
     initCart();
   }, [syncWithServer, isInitialized, appliedCoupon, loadCouponFromCookies]);
 
+  // Always sync with server when cart page is loaded (similar to wishlist)
+  useEffect(() => {
+    const refreshCart = async () => {
+      if (!isLoading) {
+        console.log("Refreshing cart data from server...");
+        await syncWithServer();
+        
+        // Check for coupon after sync
+        const cartItems = useCart.getState().items;
+        if (cartItems.length > 0 && !appliedCoupon) {
+          await loadCouponFromCookies();
+        }
+      }
+    };
+    
+    refreshCart();
+  }, [syncWithServer, isLoading, appliedCoupon, loadCouponFromCookies]);
+
   if (isLoading) {
     return (
       <div className="bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)] flex items-center justify-center">
@@ -57,16 +75,16 @@ export default function CartPage() {
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto py-12">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
-            <ShoppingBag className="w-8 h-8 text-orange-600" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               <TranslatedContent translationKey="cart.shoppingCart" />
             </h1>
           </div>
           <Link 
             href="/products" 
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-gray-200 hover:border-orange-500 text-gray-700 hover:text-orange-600 dark:text-gray-300 dark:hover:text-white dark:border-gray-700 dark:hover:border-orange-500 transition-all"
           >
             <TranslatedContent translationKey="cart.continueShopping" />
           </Link>

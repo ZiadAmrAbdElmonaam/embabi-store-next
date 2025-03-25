@@ -13,7 +13,7 @@ export function ProfileForm() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showWarningModal, setShowWarningModal] = useState(false);
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [formData, setFormData] = useState({
     name: session?.user?.name || '',
     email: session?.user?.email || '',
@@ -27,12 +27,12 @@ export function ProfileForm() {
   
   const validatePassword = () => {
     if (formData.newPassword && formData.newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
+      setPasswordError(t('profile.passwordRequirements'));
       return false;
     }
     
     if (formData.newPassword !== formData.confirmPassword) {
-      setPasswordError('Passwords do not match');
+      setPasswordError(t('auth.passwordMismatch'));
       return false;
     }
     
@@ -74,7 +74,7 @@ export function ProfileForm() {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to update password');
+        throw new Error(data.error || t('profile.updateFailed'));
       }
       
       // Reset password fields
@@ -97,6 +97,12 @@ export function ProfileForm() {
     <>
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="space-y-6">
+          <div className="pb-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              <TranslatedContent translationKey="profile.personalInfo" />
+            </h3>
+          </div>
+          
           {/* Name Field - Read Only */}
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
@@ -106,6 +112,7 @@ export function ProfileForm() {
               type="text"
               value={formData.name}
               readOnly
+              title={t('profile.readOnlyField')}
               className="w-full text-lg py-3 bg-gray-50 border-b-2 border-gray-200 text-gray-700 cursor-not-allowed"
             />
           </div>
@@ -119,6 +126,7 @@ export function ProfileForm() {
               type="email"
               value={formData.email}
               readOnly
+              title={t('profile.readOnlyField')}
               className="w-full text-lg py-3 bg-gray-50 border-b-2 border-gray-200 text-gray-700 cursor-not-allowed"
             />
           </div>
@@ -145,7 +153,7 @@ export function ProfileForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className={`absolute ${lang === 'ar' ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700`}
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />
@@ -173,7 +181,7 @@ export function ProfileForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className={`absolute ${lang === 'ar' ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700`}
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" />

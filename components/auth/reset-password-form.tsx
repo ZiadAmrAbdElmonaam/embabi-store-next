@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "@/hooks/use-translation";
+import { TranslatedContent } from "@/components/ui/translated-content";
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -15,6 +17,7 @@ export function ResetPasswordForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<"request" | "verify" | "reset">("request");
+  const { t, lang } = useTranslation();
 
   // Request password reset
   const handleRequestReset = async (e: React.FormEvent) => {
@@ -34,13 +37,13 @@ export function ResetPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send reset email');
+        throw new Error(data.error || t('auth.failedToReset'));
       }
 
-      toast.success('Verification code sent to your email');
+      toast.success(t('auth.codeSent'));
       setStep("verify");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+      toast.error(error instanceof Error ? error.message : t('auth.somethingWentWrong'));
     } finally {
       setLoading(false);
     }
@@ -65,13 +68,13 @@ export function ResetPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to verify code');
+        throw new Error(data.error || t('auth.invalidCode'));
       }
 
-      toast.success('Code verified successfully');
+      toast.success(t('auth.verificationCode'));
       setStep("reset");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Invalid verification code');
+      toast.error(error instanceof Error ? error.message : t('auth.verificationFailed'));
     } finally {
       setLoading(false);
     }
@@ -82,12 +85,12 @@ export function ResetPasswordForm() {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('auth.passwordMismatch'));
       return;
     }
     
     if (password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+      toast.error(t('auth.passwordTooShort'));
       return;
     }
     
@@ -107,13 +110,13 @@ export function ResetPasswordForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to reset password');
+        throw new Error(data.error || t('auth.failedToReset'));
       }
 
-      toast.success('Password reset successfully');
+      toast.success(t('auth.passwordResetSuccess'));
       router.push('/login');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reset password');
+      toast.error(error instanceof Error ? error.message : t('auth.failedToReset'));
     } finally {
       setLoading(false);
     }
@@ -125,7 +128,7 @@ export function ResetPasswordForm() {
       <form onSubmit={handleRequestReset} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email Address
+            <TranslatedContent translationKey="auth.email" />
           </label>
           <input
             id="email"
@@ -134,7 +137,7 @@ export function ResetPasswordForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
-            placeholder="Enter your email"
+            placeholder={t('auth.enterYourEmail')}
           />
         </div>
 
@@ -146,7 +149,7 @@ export function ResetPasswordForm() {
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            "Send Verification Code"
+            <TranslatedContent translationKey="auth.sendVerificationCode" />
           )}
         </button>
 
@@ -156,7 +159,7 @@ export function ResetPasswordForm() {
             className="inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-500"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to login
+            <TranslatedContent translationKey="auth.backToLogin" />
           </Link>
         </div>
       </form>
@@ -169,10 +172,10 @@ export function ResetPasswordForm() {
       <form onSubmit={handleVerifyCode} className="space-y-4">
         <div className="mb-4">
           <p className="text-sm text-gray-600 mb-4">
-            We've sent a verification code to <span className="font-semibold">{email}</span>
+            <TranslatedContent translationKey="auth.weSentVerificationCode" /> <span className="font-semibold">{email}</span>
           </p>
           <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
-            Verification Code
+            <TranslatedContent translationKey="auth.verificationCode" />
           </label>
           <input
             id="code"
@@ -181,7 +184,7 @@ export function ResetPasswordForm() {
             value={verificationCode}
             onChange={(e) => setVerificationCode(e.target.value)}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
-            placeholder="Enter 6-digit code"
+            placeholder={t('auth.enterVerificationCode')}
           />
         </div>
 
@@ -193,7 +196,7 @@ export function ResetPasswordForm() {
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            "Verify Code"
+            <TranslatedContent translationKey="auth.verifyCode" />
           )}
         </button>
 
@@ -203,14 +206,14 @@ export function ResetPasswordForm() {
             onClick={() => setStep("request")}
             className="text-orange-600 hover:text-orange-500 font-medium"
           >
-            Change email
+            <TranslatedContent translationKey="auth.changeEmail" />
           </button>
           <button
             type="button"
             onClick={handleRequestReset}
             className="text-orange-600 hover:text-orange-500 font-medium"
           >
-            Resend code
+            <TranslatedContent translationKey="auth.resendVerificationCode" />
           </button>
         </div>
       </form>
@@ -222,7 +225,7 @@ export function ResetPasswordForm() {
     <form onSubmit={handleResetPassword} className="space-y-4">
       <div>
         <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-          New Password
+          <TranslatedContent translationKey="auth.newPassword" />
         </label>
         <div className="relative">
           <input
@@ -232,12 +235,12 @@ export function ResetPasswordForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
-            placeholder="Enter new password"
+            placeholder={t('auth.enterNewPassword')}
             minLength={8}
           />
           <button 
             type="button"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            className={`absolute inset-y-0 ${lang === 'ar' ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center`}
             onClick={() => setShowPassword(!showPassword)}
           >
             {showPassword ? (
@@ -251,7 +254,7 @@ export function ResetPasswordForm() {
 
       <div>
         <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-          Confirm Password
+          <TranslatedContent translationKey="auth.confirmPassword" />
         </label>
         <input
           id="confirmPassword"
@@ -260,7 +263,7 @@ export function ResetPasswordForm() {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
-          placeholder="Confirm new password"
+          placeholder={t('auth.confirmNewPassword')}
           minLength={8}
         />
       </div>
@@ -273,7 +276,7 @@ export function ResetPasswordForm() {
         {loading ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          "Reset Password"
+          <TranslatedContent translationKey="auth.resetPasswordButton" />
         )}
       </button>
 
@@ -284,7 +287,7 @@ export function ResetPasswordForm() {
           className="inline-flex items-center text-sm font-medium text-orange-600 hover:text-orange-500"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to verification
+          <TranslatedContent translationKey="auth.backToVerification" />
         </button>
       </div>
     </form>

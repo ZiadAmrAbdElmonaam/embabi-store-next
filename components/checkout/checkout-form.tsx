@@ -304,8 +304,10 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
               <input
                 type="text"
                 value={formData.name}
-                disabled
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-sm"
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                placeholder={t('checkout.fullNamePlaceholder')}
               />
             </div>
 
@@ -316,8 +318,10 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
               <input
                 type="email"
                 value={formData.email}
-                disabled
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 text-sm"
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                placeholder={t('checkout.emailPlaceholder')}
               />
             </div>
 
@@ -327,11 +331,11 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
               </label>
               <input
                 type="tel"
-                placeholder="01xxxxxxxxx"
+                placeholder={t('checkout.phonePlaceholder')}
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
               />
             </div>
           </div>

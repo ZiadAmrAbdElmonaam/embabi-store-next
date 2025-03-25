@@ -23,7 +23,7 @@ export default function ResetPasswordPage() {
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-900">Reset Password</h1>
                 <p className="mt-2 text-sm text-gray-600">
-                  Enter your email to receive a password reset link
+                  Recover your account in 3 easy steps
                 </p>
               </div>
               <ResetPasswordForm />

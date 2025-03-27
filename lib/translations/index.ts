@@ -274,8 +274,11 @@ export const translations = {
     mostSelling: {
       title: 'Most Popular Products',
       description: 'Discover our best-selling products loved by customers. These are the items that keep our customers coming back for more!',
+      topProductsDescription: 'Discover our top 5 best-selling products loved by customers. These are the most popular items in our store!',
       productsWithSales: 'products with sales history',
       productWithSales: 'product with sales history',
+      productsWithTopSales: 'top selling products',
+      productWithTopSales: 'top selling product',
       noSalesHistory: 'No Sales History Yet',
       checkBackLater: 'Check back later to see our most popular products!',
       browseAllProducts: 'Browse All Products'
@@ -676,8 +679,11 @@ export const translations = {
     mostSelling: {
       title: 'المنتجات الأكثر شعبية',
       description: 'اكتشف منتجاتنا الأكثر مبيعًا والتي يحبها العملاء. هذه هي العناصر التي تجعل عملائنا يعودون للمزيد!',
+      topProductsDescription: 'اكتشف أفضل 5 منتجات مبيعًا لدينا والتي يحبها العملاء. هذه هي العناصر الأكثر شعبية في متجرنا!',
       productsWithSales: 'منتجات لها سجل مبيعات',
       productWithSales: 'منتج له سجل مبيعات',
+      productsWithTopSales: 'منتجات الأكثر مبيعًا',
+      productWithTopSales: 'منتج الأكثر مبيعًا',
       noSalesHistory: 'لا يوجد سجل مبيعات بعد',
       checkBackLater: 'تحقق لاحقًا لمشاهدة منتجاتنا الأكثر شعبية!',
       browseAllProducts: 'تصفح جميع المنتجات'

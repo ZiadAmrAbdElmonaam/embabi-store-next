@@ -1,0 +1,19 @@
+# Robots.txt for Embabi Store
+# https://embabi-store.com
+
+User-agent: *
+Allow: /
+
+# Private areas
+Disallow: /api/
+Disallow: /admin/
+Disallow: /(auth)/
+Disallow: /reset-password
+Disallow: /verify
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /profile
+
+# Sitemap
+Sitemap: https://embabi-store.com/sitemap.xml 

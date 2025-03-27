@@ -403,6 +403,24 @@ export const translations = {
       gold: 'Gold',
       silver: 'Silver'
     },
+    breadcrumbs: {
+      home: 'Home',
+      products: 'Products',
+      categories: 'Categories',
+      deals: 'Deals',
+      mostSelling: 'Most Selling',
+      contact: 'Contact',
+      branches: 'Branches',
+      reviews: 'Reviews',
+      orders: 'Orders',
+      profile: 'Profile',
+      checkout: 'Checkout',
+      cart: 'Cart',
+      login: 'Login',
+      signup: 'Sign Up',
+      resetPassword: 'Reset Password',
+      verify: 'Verify Email'
+    },
   },
   ar: {
     common: {
@@ -807,6 +825,24 @@ export const translations = {
       brown: 'بني',
       gold: 'ذهبي',
       silver: 'فضي'
+    },
+    breadcrumbs: {
+      home: 'الرئيسية',
+      products: 'المنتجات',
+      categories: 'الفئات',
+      deals: 'العروض',
+      mostSelling: 'الأكثر مبيعاً',
+      contact: 'اتصل بنا',
+      branches: 'الفروع',
+      reviews: 'التقييمات',
+      orders: 'الطلبات',
+      profile: 'الملف الشخصي',
+      checkout: 'الدفع',
+      cart: 'عربة التسوق',
+      login: 'تسجيل الدخول',
+      signup: 'إنشاء حساب',
+      resetPassword: 'إعادة تعيين كلمة المرور',
+      verify: 'تأكيد البريد الإلكتروني'
     },
   },
 };

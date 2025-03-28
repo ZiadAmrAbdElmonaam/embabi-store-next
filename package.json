@@ -11,7 +11,9 @@
     "postinstall": "prisma generate",
     "seed": "ts-node -T prisma/seed.ts",
     "check-admin": "ts-node -T scripts/check-admin.ts",
-    "delete-dummy-products": "ts-node -T scripts/delete-dummy-products.ts"
+    "delete-dummy-products": "ts-node -T scripts/delete-dummy-products.ts",
+    "delete-electronics": "ts-node -T scripts/delete-electronics.ts",
+    "delete-clothing": "ts-node -T scripts/delete-clothing.ts"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",

@@ -1,55 +1,23 @@
-import nodemailer from 'nodemailer';
+import { createTransport } from 'nodemailer';
 
-// Log email configuration
-console.log('Email configuration check:');
-console.log('GMAIL_USER configured:', !!process.env.GMAIL_USER);
-console.log('GMAIL_APP_PASSWORD configured:', !!process.env.GMAIL_APP_PASSWORD);
-console.log('GMAIL_USER length:', process.env.GMAIL_USER?.length);
-console.log('GMAIL_APP_PASSWORD length:', process.env.GMAIL_APP_PASSWORD?.length);
-
-// Create a simpler transporter configuration
+// Create email transporter if credentials are configured
 const createTransporter = () => {
-  try {
-    // Check if credentials are available
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-      console.log('Email credentials not configured');
-      return null;
-    }
-
-    console.log('Creating transporter with credentials:');
-    console.log('- User:', process.env.GMAIL_USER);
-    console.log('- Password length:', process.env.GMAIL_APP_PASSWORD.length);
-    
-    // Create transporter with simpler configuration
-    const transport = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-      secure: true,
-      tls: {
-        // Do not fail on invalid certificates
-        rejectUnauthorized: false
-      },
-      debug: true, // Enable debug output
-      logger: true  // Log information about the transport
-    });
-
-    console.log('Email transporter created with simple configuration');
-    return transport;
-  } catch (error) {
-    console.error('Error creating email transporter:', error);
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_APP_PASSWORD;
+  
+  if (!user || !pass) {
     return null;
   }
+  
+  return createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
 };
 
 // Function to log email content when transporter is not available
 const logEmailContent = (to: string, subject: string, html: string) => {
-  console.log('Email would be sent (credentials not configured):');
-  console.log(`To: ${to}`);
-  console.log(`Subject: ${subject}`);
-  console.log('Content preview:', html.substring(0, 100) + '...');
+  // Remove console.log statements that preview email content
 };
 
 // Function to send verification code email
@@ -58,7 +26,7 @@ export async function sendVerificationEmail(
   code: string,
   name?: string
 ) {
-  console.log(`Attempting to send verification code ${code} to ${to}`);
+  // Remove console.log about sending verification code
   
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -83,20 +51,7 @@ export async function sendVerificationEmail(
     const transporter = createTransporter();
     
     if (transporter) {
-      console.log('Transporter created, sending email...');
-      console.log('From:', `"Embabi Store" <${process.env.GMAIL_USER}>`);
-      console.log('To:', to);
-      
-      // Verify connection configuration
-      try {
-        console.log('Verifying transporter connection...');
-        const verifyResult = await transporter.verify();
-        console.log('Transporter verification result:', verifyResult);
-      } catch (verifyError) {
-        console.error('Transporter verification failed:', verifyError);
-        // Continue anyway since verification might fail but sending could still work
-      }
-      
+      // Send the email
       const result = await transporter.sendMail({
         from: `"Embabi Store" <${process.env.GMAIL_USER}>`,
         to,
@@ -104,12 +59,10 @@ export async function sendVerificationEmail(
         html,
       });
       
-      console.log('Email sent successfully:', result.messageId);
       return result;
     } else {
-      console.log('No transporter available, logging to console instead');
+      // If no transporter is available, log email content
       logEmailContent(to, `Verification Code for Embabi Store`, html);
-      console.log('VERIFICATION CODE:', code);
     }
   } catch (error: unknown) {
     console.error('Failed to send verification email. Error details:', error);
@@ -123,9 +76,7 @@ export async function sendVerificationEmail(
     }
     
     // Fall back to logging the code
-    console.log('Falling back to console logging');
     logEmailContent(to, `Verification Code for Embabi Store`, html);
-    console.log('VERIFICATION CODE:', code);
   }
 }
 

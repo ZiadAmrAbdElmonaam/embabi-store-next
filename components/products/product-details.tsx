@@ -49,9 +49,6 @@ interface ProductDetailsProps {
 }
 
 export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
-  // Add console log to debug thumbnails
-  console.log("Product thumbnails:", product.thumbnails);
-  
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [showImage, setShowImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState(product.images[0] || '/images/placeholder.png');

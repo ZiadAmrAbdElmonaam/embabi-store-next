@@ -61,8 +61,6 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
     setIsLoading(true);
 
     try {
-      console.log(`Submitting request to cancel items for order ${order.id}:`, selectedItems);
-      
       const response = await fetch(`/api/orders/${order.id}/cancel-items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,7 +71,6 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
       });
 
       const responseText = await response.text();
-      console.log(`Response text:`, responseText);
       
       let data;
       try {
@@ -87,7 +84,6 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
         throw new Error(data.error || 'Failed to cancel items');
       }
 
-      console.log('Cancel items response:', data);
       toast.success(data.message || 'Items cancelled successfully');
       onItemsCancelled();
       onClose();

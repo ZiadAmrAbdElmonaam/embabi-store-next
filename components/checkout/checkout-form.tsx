@@ -191,7 +191,6 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
     setIsLoading(true);
 
     try {
-      console.log("Preparing order data...");
       const formDataToSend = new FormData();
       
       // Add items data
@@ -201,7 +200,6 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         price: item.salePrice || item.price,
         selectedColor: item.selectedColor
       }));
-      console.log("Items data:", itemsData);
       formDataToSend.append('items', JSON.stringify(itemsData));
 
       // Add shipping info
@@ -212,7 +210,6 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         city: formData.city,
         notes: `State: ${formData.state}`
       };
-      console.log("Shipping data:", shippingData);
       formDataToSend.append('shippingInfo', JSON.stringify(shippingData));
 
       // Add payment method and total
@@ -231,19 +228,12 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         }));
       }
 
-      console.log("Total:", totalWithDiscount, "Payment method:", selectedPaymentMethod);
-      if (discountAmount > 0 && appliedCoupon) {
-        console.log("Discount amount:", discountAmount, "Coupon:", appliedCoupon.code);
-      }
-
-      console.log("Sending order request...");
       const response = await fetch('/api/orders/create', {
         method: 'POST',
         body: formDataToSend
       });
 
       const responseData = await response.json();
-      console.log("API Response:", response.status, responseData);
 
       if (!response.ok) {
         const errorMessage = responseData.error || t('checkout.failedToPlaceOrder');
@@ -252,7 +242,6 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
       }
 
       const { id } = responseData;
-      console.log("Order created successfully with ID:", id);
       
       // Set the order completed flag to prevent redirect to cart
       onOrderComplete();
@@ -261,7 +250,6 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
       clearCart();
       
       toast.success(t('checkout.orderPlaced'));
-      console.log("Redirecting to order page:", `/orders/${id}`);
       router.push(`/orders/${id}`);
     } catch (error: unknown) {
       console.error('Order creation error:', error);

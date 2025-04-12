@@ -112,9 +112,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
     },
   });
 
-  // Add console log to debug the product data
-  console.log("Product thumbnails from DB:", product?.thumbnails);
-
   if (!product) {
     notFound();
   }

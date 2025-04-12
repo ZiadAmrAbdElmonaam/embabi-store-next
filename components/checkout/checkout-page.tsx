@@ -90,19 +90,16 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
   useEffect(() => {
     // Wait for cart to be initialized from localStorage
     if (!isInitialized) {
-      console.log("Waiting for cart to initialize...");
       return;
     }
     
     // If we've already completed an order, don't do anything
     if (isOrderCompleted) {
-      console.log("Order completed, skipping cart check");
       return;
     }
     
     // Use client items from localStorage
     if (items.length > 0) {
-      console.log("Using client items from localStorage:", items);
       
       // Calculate totals
       const calculatedSubtotal = items.reduce(
@@ -123,7 +120,6 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
         } else if (appliedCouponState.type === 'FIXED') {
           discountAmount = Math.min(appliedCouponState.value, calculatedSubtotal);
         }
-        console.log(`Applied ${appliedCouponState.type} discount of ${discountAmount} EGP (${appliedCouponState.value}${appliedCouponState.type === 'PERCENTAGE' ? '%' : ' EGP'})`);
       }
       
       // Calculate total: subtotal + shipping - discount
@@ -134,18 +130,14 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
       setShipping(calculatedShipping);
       setTotal(calculatedTotal);
       setIsLoading(false);
-      console.log("Checkout items set:", items);
-      console.log(`Subtotal: ${calculatedSubtotal} EGP, Shipping: ${calculatedShipping} EGP, Total: ${calculatedTotal} EGP`);
     } else {
       // No items, redirect to cart
-      console.log("No items found, redirecting to cart");
       router.push('/cart');
       return;
     }
   }, [items, router, isInitialized, isOrderCompleted, appliedCouponState]);
 
   const handleOrderComplete = () => {
-    console.log("Order completed, setting flag to prevent cart redirect");
     setIsOrderCompleted(true);
   };
 

@@ -42,6 +42,8 @@ interface CartStore {
   recalculateDiscount: () => void;
   loadCouponFromCookies: () => Promise<Coupon | null>;
   checkCartEmptyAndClearCoupon: () => void;
+  applyCoupon: (code: string) => Promise<{ success: boolean; coupon?: Coupon }>;
+  removeCoupon: () => Promise<boolean>;
 }
 
 export const useCart = create<CartStore>()((set, get) => ({
@@ -52,80 +54,60 @@ export const useCart = create<CartStore>()((set, get) => ({
       
       syncWithServer: async () => {
         try {
-          console.log("Syncing cart with server...");
-          // Fetch cart data from the server
-          const response = await fetch('/api/cart', {
-            cache: 'no-store',
-            headers: {
-              'Cache-Control': 'no-cache'
-            }
-          });
+          const response = await fetch('/api/cart');
       
           if (!response.ok) {
             console.error(`Failed to sync cart: ${response.status}`);
             // Still set initialized to true but keep empty cart
-            set({ 
+            set({
               items: [],
               appliedCoupon: null,
-              discountAmount: 0,
-              isInitialized: true
+              isInitialized: true,
             });
             return;
           }
       
           const data = await response.json();
       
-          // Update local state with server data
-          set({ 
+          // Update the store with the server data
+          set({
             items: data.items || [],
             appliedCoupon: data.appliedCoupon || null,
-            discountAmount: data.discountAmount || 0,
-            isInitialized: true
+            isInitialized: true,
           });
-      
-          console.log("Cart synced successfully", data.items.length, "items");
         } catch (error) {
           console.error('Failed to sync cart:', error);
           // Set an empty initialized state on error
-          set({ 
+          set({
             items: [],
-            appliedCoupon: null, 
-            discountAmount: 0,
-            isInitialized: true 
+            appliedCoupon: null,
+            isInitialized: true,
           });
         }
       },
   
-  // Load coupon from server - maintains same interface but now gets data from server
+  // Load coupon from cookie
   loadCouponFromCookies: async () => {
     try {
-      console.log("Explicitly loading coupon from server...");
-      
-      // If cart is empty, don't try to load a coupon
-      const { items } = get();
-      if (items.length === 0) {
-        console.log("Cart is empty, not loading coupon");
+      // If cart is empty, don't load coupon
+      if (get().items.length === 0) {
         return null;
       }
       
-      // Fetch cart with coupon from server
-      const response = await fetch('/api/cart', {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache'
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.appliedCoupon) {
-          console.log("Loaded coupon from server:", data.appliedCoupon);
-          set({ 
-            appliedCoupon: data.appliedCoupon,
-            discountAmount: data.discountAmount || 0 
-          });
-          return data.appliedCoupon;
-        }
+      const response = await fetch('/api/coupons/current');
+      
+      if (!response.ok) {
+        return null;
       }
+      
+      const data = await response.json();
+      
+      if (data.coupon) {
+        // Set the coupon in the store
+        set({ appliedCoupon: data.coupon });
+        return data.coupon;
+      }
+      
       return null;
     } catch (couponError) {
       console.error('Failed to load coupon data:', couponError);
@@ -493,8 +475,57 @@ export const useCart = create<CartStore>()((set, get) => ({
     const { items, appliedCoupon } = get();
     
     if (items.length === 0 && appliedCoupon) {
-      console.log("Cart is empty, clearing coupon");
       get().setCoupon(null);
+    }
+  },
+
+  // Apply a coupon code to the cart
+  applyCoupon: async (code: string) => {
+    try {
+      const response = await fetch('/api/coupons/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      if (!response.ok) {
+        return { success: false, message: "Invalid coupon code" };
+      }
+
+      const data = await response.json();
+      
+      if (data.coupon) {
+        // Update state with the validated coupon
+        set({ appliedCoupon: data.coupon });
+        return { success: true, coupon: data.coupon };
+      }
+      
+      return { success: false, message: "Coupon not found" };
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      return { success: false, message: "Error verifying coupon" };
+    }
+  },
+
+  // Remove coupon from cart
+  removeCoupon: async () => {
+    try {
+      // Make server request to remove the coupon
+      const response = await fetch('/api/coupons/verify', {
+        method: 'DELETE',
+      });
+
+      // Even if server fails, still remove from client
+      set({ appliedCoupon: null });
+      
+      return true;
+    } catch (error) {
+      console.error('Error removing coupon:', error);
+      // Still remove from client state
+      set({ appliedCoupon: null });
+      return false;
     }
   },
 }));

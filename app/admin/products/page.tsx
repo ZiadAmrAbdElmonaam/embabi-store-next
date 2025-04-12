@@ -33,18 +33,12 @@ export default function AdminProductsPage() {
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
       
-      // Log products with sale end dates for debugging
+      // Check sale end dates
       data.forEach(product => {
         if (product.saleEndDate) {
           const endDate = new Date(product.saleEndDate);
           const today = new Date();
           today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
-          console.log('Product:', product.name);
-          console.log('Sale End Date:', endDate.toISOString());
-          console.log('Today:', today.toISOString());
-          console.log('Is sale expired?', endDate < today);
-          console.log('Timestamp comparison:', endDate.getTime(), '<', today.getTime(), '=', endDate.getTime() < today.getTime());
-          console.log('-----------------------');
         }
       });
       

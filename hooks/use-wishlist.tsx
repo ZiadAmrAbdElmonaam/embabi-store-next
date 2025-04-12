@@ -29,36 +29,22 @@ export const useWishlist = create<WishlistStore>()((set, get) => ({
   
   syncWithServer: async () => {
     try {
-      console.log("Syncing wishlist with server...");
-      // Fetch wishlist data from the server
       const response = await fetch('/api/wishlist');
       
       if (!response.ok) {
         console.error(`Failed to sync wishlist: ${response.status}`);
-        // Still set initialized to true but keep empty wishlist
-        set({ 
-          items: [],
-          isInitialized: true
-        });
         return;
       }
       
       const data = await response.json();
       
-      // Update local state with server data
-      set({ 
-        items: data.items || [],
-        isInitialized: true
-      });
+      // Update the store with the server data
+      set({ items: data.items || [] });
       
-      console.log("Wishlist synced successfully", data.items.length, "items");
+      // Mark as initialized
+      set({ isInitialized: true });
     } catch (error) {
       console.error('Failed to sync wishlist:', error);
-      // Set an empty initialized state on error
-      set({ 
-        items: [],
-        isInitialized: true 
-      });
     }
   },
   

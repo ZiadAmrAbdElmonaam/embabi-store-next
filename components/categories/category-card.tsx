@@ -29,6 +29,9 @@ interface CategoryCardProps {
 export function CategoryCard({ category }: CategoryCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { t } = useTranslation();
+  
+  // Check if the category has products
+  const hasProducts = category.products.length > 0;
 
   return (
     <motion.div
@@ -42,7 +45,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
       {/* Category Card */}
       <Link
         href={`/categories/${category.slug}`}
-        className="block relative h-64 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
+        className={`block relative h-64 bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 ${!hasProducts ? 'opacity-70' : ''}`}
       >
         {/* Category Image */}
         {category.image ? (
@@ -50,7 +53,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
             src={category.image}
             alt={category.name}
             fill
-            className="object-cover"
+            className={`object-cover ${!hasProducts ? 'grayscale' : ''}`}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         ) : (
@@ -69,14 +72,22 @@ export function CategoryCard({ category }: CategoryCardProps) {
         >
           <h3 className="text-xl font-semibold text-white">{category.name}</h3>
           <p className="text-white/80 text-sm mt-1">
-            {category.products.length} <TranslatedContent translationKey="categories.products" />
+            {hasProducts ? (
+              <>
+                {category.products.length} <TranslatedContent translationKey="categories.products" />
+              </>
+            ) : (
+              <span className="text-yellow-300">
+                <TranslatedContent translationKey="categories.noProducts" />
+              </span>
+            )}
           </p>
         </motion.div>
       </Link>
 
       {/* Products Preview Popup */}
       <AnimatePresence>
-        {isHovered && category.products.length > 0 && (
+        {isHovered && hasProducts && (
           <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

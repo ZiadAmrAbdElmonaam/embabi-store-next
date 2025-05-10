@@ -269,7 +269,8 @@ export const translations = {
       browseAll: 'Browse All',
       products: 'products',
       viewAll: 'View All',
-      noCategories: 'No categories available at the moment.'
+      noCategories: 'No categories available at the moment.',
+      noProducts: 'No products available'
     },
     mostSelling: {
       title: 'Most Popular Products',
@@ -692,7 +693,8 @@ export const translations = {
       browseAll: 'تصفح الكل',
       products: 'منتجات',
       viewAll: 'عرض الكل',
-      noCategories: 'لا توجد فئات متاحة في الوقت الحالي.'
+      noCategories: 'لا توجد فئات متاحة في الوقت الحالي.',
+      noProducts: 'لا توجد منتجات متاحة'
     },
     mostSelling: {
       title: 'المنتجات الأكثر شعبية',

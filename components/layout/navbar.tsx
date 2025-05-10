@@ -37,7 +37,7 @@ export function Navbar() {
   return (
     <div className="sticky top-0 z-50">
       {/* Top Bar */}
-      <div className="bg-gray-900 text-white text-sm">
+      <div className="bg-orange-150 text-blac text-sm">
         <div className="mx-auto px-2" style={{ maxWidth: '120rem' }}>
           <div className="flex justify-between items-center h-9">
             {/* Left Side - Social Links */}
@@ -78,7 +78,7 @@ export function Navbar() {
       </div>
 
       {/* Main Navbar */}
-      <nav className="bg-orange-50 shadow-sm">
+      <nav className="bg-white shadow-sm">
         <div className="mx-auto px-2" style={{ maxWidth: '115rem' }}>
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
@@ -86,8 +86,8 @@ export function Navbar() {
               <Image
                 src="/logo.png"
                 alt="Embabi Logo"
-                width={140}
-                height={100}
+                width={200}
+                height={200}
                 className="object-contain"
                 priority
               />

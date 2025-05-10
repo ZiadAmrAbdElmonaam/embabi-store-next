@@ -317,6 +317,10 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                     {formatPrice(product.price)}
                   </span>
                 )}
+                {/* Tax disclaimer text */}
+                <p className="text-sm font-bold text-orange-600 dark:text-orange-400 mt-3 text-center pt-2 opacity-90 tracking-wide" dir="rtl">
+                  الجهاز غير شامل الضريبه
+                </p>
               </div>
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                 product.stock > 0 

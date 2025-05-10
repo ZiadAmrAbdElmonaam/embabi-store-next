@@ -79,7 +79,6 @@ export function AddToCartButton({ product, selectedColor: initialColor }: AddToC
   }, [initialColor]);
 
   const handleAddToCart = () => {
-    console.log('ddddd');
     if (product.stock === 0) {
       toast.error(t('cart.outOfStock'));
       return;

@@ -1,3 +1,5 @@
+# Embabi Store Next.js E-commerce
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -51,3 +53,80 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## 🔍 SEO Optimization Guide
+
+This application has been optimized for search engines to improve visibility and traffic. Here's what's included:
+
+### SEO Features
+- **Metadata**: Dynamic metadata for all pages with proper title, description, and keywords
+- **Structured Data**: Schema.org JSON-LD data for products, organization, and breadcrumbs
+- **Sitemap**: Auto-generated sitemap.xml at `/sitemap.xml`
+- **Robots.txt**: Properly configured robots.txt at `/robots.txt`
+- **Canonical URLs**: Correctly implemented on all pages to prevent duplicate content issues
+- **Open Graph & Twitter Cards**: Social media meta tags for rich sharing experiences
+- **Breadcrumbs**: SEO-friendly navigation with structured data
+- **Mobile-Friendly**: Fully responsive design for all devices
+
+### How to Complete the Setup
+
+1. **Google Search Console**:
+   - Register at https://search.google.com/search-console
+   - Verify ownership using the included HTML file at `/public/googlec24c69b4ec6c8c9c.html`
+   - Submit your sitemap at `https://yourdomain.com/sitemap.xml`
+
+2. **Environment Variables**:
+   - Update the `.env` file with your actual domain:
+     ```
+     NEXT_PUBLIC_SITE_URL=https://your-actual-domain.com
+     NEXT_PUBLIC_SITE_NAME=Embabi Store
+     ```
+
+3. **Google Analytics** (recommended):
+   - Create a Google Analytics 4 property
+   - Add the measurement ID to your site using the GA script tag
+
+4. **Meta Verification**:
+   - Update the Google verification code in `app/layout.tsx`:
+     ```typescript
+     verification: {
+       google: 'your-actual-google-verification-code',
+     },
+     ```
+
+5. **Social Media URLs**:
+   - Update the social media URLs in `components/seo/structured-data.tsx` with your actual profiles:
+     ```typescript
+     sameAs: [
+       'https://facebook.com/your-actual-page',
+       'https://instagram.com/your-actual-account',
+       'https://twitter.com/your-actual-handle'
+     ],
+     ```
+
+### Best Practices for Content
+
+1. **Product Descriptions**:
+   - Write unique, detailed descriptions (150+ words)
+   - Include relevant keywords naturally
+   - Add specifications and benefits
+
+2. **Category Pages**:
+   - Add intro text explaining the category (200+ words)
+   - Include relevant keywords for that category
+
+3. **Image Optimization**:
+   - Use descriptive file names (e.g., "blue-cotton-t-shirt.jpg")
+   - Always include alt text
+   - Use NextJS Image component for automatic WebP optimization
+
+4. **URLs**:
+   - Already implemented with clean, keyword-rich slugs
+   - Category-based hierarchy for products
+
+### Monitoring SEO Performance
+
+1. Track your rankings with Google Search Console
+2. Monitor web vitals scores (Next.js has built-in web vitals reporting)
+3. Check your sitemap is properly indexed
+4. Use tools like Lighthouse to audit performance regularly

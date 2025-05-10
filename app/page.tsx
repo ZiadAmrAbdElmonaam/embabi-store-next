@@ -43,11 +43,12 @@ export default async function HomePage() {
     }))
   }));
 
-  // Fetch categories with at least one in-stock product
+  // Fetch categories with at least one product
   const categories = await prisma.category.findMany({
     where: {
       products: {
         some: {
+          // Only include categories with at least one product
           stock: {
             gt: 0
           }
@@ -74,13 +75,15 @@ export default async function HomePage() {
   });
 
   // Format categories to include product count
-  const formattedCategories = categories.map(category => ({
-    id: category.id,
-    name: category.name,
-    slug: category.slug,
-    image: category.image,
-    productCount: category.products.length
-  }));
+  const formattedCategories = categories
+    .filter(category => category.products.length > 0) // Extra filter to ensure no empty categories
+    .map(category => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      image: category.image,
+      productCount: category.products.length
+    }));
 
   return (
     <div className="min-h-screen">

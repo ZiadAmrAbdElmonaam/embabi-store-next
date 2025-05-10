@@ -20,7 +20,6 @@ prismaClient.$use(async (params, next) => {
       
       // First, find products with expired sales
       const now = new Date();
-      console.log('Current server time:', now.toISOString());
       
       const expiredProducts = await prismaClient.product.findMany({
         where: {
@@ -38,15 +37,8 @@ prismaClient.$use(async (params, next) => {
         }
       });
       
-      // Log expired products with date details
+      // Update expired products if any found
       if (expiredProducts.length > 0) {
-        console.log('Found expired sales for products:');
-        expiredProducts.forEach(product => {
-          const endDate = new Date(product.saleEndDate);
-          console.log(`- ${product.name}: End date ${endDate.toISOString()} < Current time ${now.toISOString()}`);
-          console.log(`  Timestamp comparison: ${endDate.getTime()} < ${now.getTime()} = ${endDate.getTime() < now.getTime()}`);
-        });
-        
         // Update expired products to remove sale information
         await prismaClient.product.updateMany({
           where: {
@@ -60,10 +52,6 @@ prismaClient.$use(async (params, next) => {
             saleEndDate: null
           }
         });
-        
-        console.log(`Updated ${expiredProducts.length} products with expired sales`);
-      } else {
-        console.log('No expired sales found');
       }
     }
   }

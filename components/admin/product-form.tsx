@@ -101,12 +101,6 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       const endDate = new Date(formData.saleEndDate);
       const today = new Date();
       
-      // Log dates with full date-time details
-      console.log('Sale End Date:', endDate.toISOString());
-      console.log('Today:', today.toISOString());
-      console.log('Is sale expired?', endDate < today);
-      console.log('Timestamp comparison:', endDate.getTime(), '<', today.getTime(), '=', endDate.getTime() < today.getTime());
-      
       // If sale end date is in the past, clear the sale fields
       if (endDate < today) {
         setFormData({
@@ -133,13 +127,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
       
-      console.log('Form Submission - Sale End Date:', endDate.toISOString());
-      console.log('Form Submission - Today (start of day):', today.toISOString());
-      console.log('Form Submission - Is sale expired?', endDate < today);
-      console.log('Form Submission - Timestamp comparison:', endDate.getTime(), '<', today.getTime(), '=', endDate.getTime() < today.getTime());
-      
       if (endDate < today) {
-        console.error('Sale end date validation failed - date is in the past');
         toast.error("Sale end date cannot be in the past");
         return;
       }

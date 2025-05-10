@@ -6,6 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from '@/components/layout/footer';
 import { cookies } from 'next/headers';
 import { Toaster } from "react-hot-toast";
+import { OrganizationStructuredData } from "@/components/seo/structured-data";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,8 +17,39 @@ const arabicFont = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: "Embabi Store",
-  description: "Your one-stop shop for all your needs",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://embabi-store.com'),
+  title: {
+    template: '%s | Embabi Store',
+    default: 'Embabi Store - Your One-Stop Shop for All Your Needs',
+  },
+  description: 'Discover a wide range of products at Embabi Store. From electronics to clothing, we offer quality items at competitive prices with fast delivery.',
+  keywords: ['online store', 'e-commerce', 'electronics', 'clothing', 'accessories', 'Egypt', 'shopping'],
+  authors: [{ name: 'Embabi Store', url: 'https://embabi-store.com' }],
+  creator: 'Embabi Store',
+  publisher: 'Embabi Store',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    alternateLocale: 'ar_EG',
+    siteName: 'Embabi Store',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    creator: '@embabistore',
+  },
+  verification: {
+    google: 'your-google-verification-code', // Replace with your Google verification code
+  },
 };
 
 export default async function RootLayout({
@@ -47,6 +79,7 @@ export default async function RootLayout({
             <Toaster position="bottom-right" />
           </div>
         </Providers>
+        <OrganizationStructuredData />
       </body>
     </html>
   );

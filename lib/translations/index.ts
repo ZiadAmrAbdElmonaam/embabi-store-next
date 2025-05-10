@@ -269,13 +269,17 @@ export const translations = {
       browseAll: 'Browse All',
       products: 'products',
       viewAll: 'View All',
-      noCategories: 'No categories available at the moment.'
+      noCategories: 'No categories available at the moment.',
+      noProducts: 'No products available'
     },
     mostSelling: {
       title: 'Most Popular Products',
       description: 'Discover our best-selling products loved by customers. These are the items that keep our customers coming back for more!',
+      topProductsDescription: 'Discover our top 5 best-selling products loved by customers. These are the most popular items in our store!',
       productsWithSales: 'products with sales history',
       productWithSales: 'product with sales history',
+      productsWithTopSales: 'top selling products',
+      productWithTopSales: 'top selling product',
       noSalesHistory: 'No Sales History Yet',
       checkBackLater: 'Check back later to see our most popular products!',
       browseAllProducts: 'Browse All Products'
@@ -399,6 +403,24 @@ export const translations = {
       brown: 'Brown',
       gold: 'Gold',
       silver: 'Silver'
+    },
+    breadcrumbs: {
+      home: 'Home',
+      products: 'Products',
+      categories: 'Categories',
+      deals: 'Deals',
+      mostSelling: 'Most Selling',
+      contact: 'Contact',
+      branches: 'Branches',
+      reviews: 'Reviews',
+      orders: 'Orders',
+      profile: 'Profile',
+      checkout: 'Checkout',
+      cart: 'Cart',
+      login: 'Login',
+      signup: 'Sign Up',
+      resetPassword: 'Reset Password',
+      verify: 'Verify Email'
     },
   },
   ar: {
@@ -671,13 +693,17 @@ export const translations = {
       browseAll: 'تصفح الكل',
       products: 'منتجات',
       viewAll: 'عرض الكل',
-      noCategories: 'لا توجد فئات متاحة في الوقت الحالي.'
+      noCategories: 'لا توجد فئات متاحة في الوقت الحالي.',
+      noProducts: 'لا توجد منتجات متاحة'
     },
     mostSelling: {
       title: 'المنتجات الأكثر شعبية',
       description: 'اكتشف منتجاتنا الأكثر مبيعًا والتي يحبها العملاء. هذه هي العناصر التي تجعل عملائنا يعودون للمزيد!',
+      topProductsDescription: 'اكتشف أفضل 5 منتجات مبيعًا لدينا والتي يحبها العملاء. هذه هي العناصر الأكثر شعبية في متجرنا!',
       productsWithSales: 'منتجات لها سجل مبيعات',
       productWithSales: 'منتج له سجل مبيعات',
+      productsWithTopSales: 'منتجات الأكثر مبيعًا',
+      productWithTopSales: 'منتج الأكثر مبيعًا',
       noSalesHistory: 'لا يوجد سجل مبيعات بعد',
       checkBackLater: 'تحقق لاحقًا لمشاهدة منتجاتنا الأكثر شعبية!',
       browseAllProducts: 'تصفح جميع المنتجات'
@@ -801,6 +827,24 @@ export const translations = {
       brown: 'بني',
       gold: 'ذهبي',
       silver: 'فضي'
+    },
+    breadcrumbs: {
+      home: 'الرئيسية',
+      products: 'المنتجات',
+      categories: 'الفئات',
+      deals: 'العروض',
+      mostSelling: 'الأكثر مبيعاً',
+      contact: 'اتصل بنا',
+      branches: 'الفروع',
+      reviews: 'التقييمات',
+      orders: 'الطلبات',
+      profile: 'الملف الشخصي',
+      checkout: 'الدفع',
+      cart: 'عربة التسوق',
+      login: 'تسجيل الدخول',
+      signup: 'إنشاء حساب',
+      resetPassword: 'إعادة تعيين كلمة المرور',
+      verify: 'تأكيد البريد الإلكتروني'
     },
   },
 };

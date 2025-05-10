@@ -15,22 +15,18 @@ export default function CartPage() {
     const initCart = async () => {
       try {
         if (!isInitialized) {
-          console.log("Cart not initialized, syncing with server...");
           await syncWithServer();
           
           // Only check for a coupon if there are items in the cart
           const cartItems = useCart.getState().items;
           if (cartItems.length > 0 && !appliedCoupon) {
-            console.log("Cart has items but no coupon, checking cookies...");
             await loadCouponFromCookies();
           }
         } else {
-          console.log("Cart already initialized");
           
           // Only check for a coupon if there are items in the cart
           const cartItems = useCart.getState().items;
           if (cartItems.length > 0 && !appliedCoupon) {
-            console.log("Cart has items but no coupon, checking cookies...");
             await loadCouponFromCookies();
           }
         }
@@ -48,7 +44,6 @@ export default function CartPage() {
   useEffect(() => {
     const refreshCart = async () => {
       if (!isLoading) {
-        console.log("Refreshing cart data from server...");
         await syncWithServer();
         
         // Check for coupon after sync

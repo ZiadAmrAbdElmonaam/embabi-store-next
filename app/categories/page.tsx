@@ -4,6 +4,12 @@ import { CategoriesGrid } from "@/components/categories/categories-grid";
 
 export default async function CategoriesPage() {
   const categories = await prisma.category.findMany({
+    where: {
+      // Only include categories that have at least one product
+      products: {
+        some: {}
+      }
+    },
     select: {
       id: true,
       name: true,

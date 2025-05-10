@@ -35,47 +35,43 @@ export const useWishlist = create<WishlistStore>()(
 
       syncWithServer: async () => {
         try {
-          console.log("Syncing wishlist with server...");
-          const response = await fetch('/api/wishlist', {
-            cache: 'no-store',
-            headers: {
-              'Cache-Control': 'no-cache'
-            }
-          });
+          // Attempt to fetch server wishlist
+          const response = await fetch('/api/wishlist');
+          
           if (!response.ok) {
-            // If unauthorized or any other error, try to load from localStorage
-            const storedData = localStorage.getItem('wishlist-storage');
-            if (storedData) {
-              const { state } = JSON.parse(storedData);
-              set({ items: state.items || [], isInitialized: true });
-            } else {
-              set({ isInitialized: true });
-            }
+            console.error(`Failed to sync wishlist: ${response.status}`);
+            // Still set initialized to true but keep current items
+            set({ isInitialized: true });
             return;
           }
-          const data = await response.json();
-          // Merge server items with local items
-          const localData = localStorage.getItem('wishlist-storage');
-          let localItems: WishlistItem[] = [];
-          if (localData) {
-            const { state } = JSON.parse(localData);
-            localItems = state.items || [];
-          }
-          const mergedItems = [...data.items, ...localItems.filter(localItem => 
-            !data.items.some(serverItem => serverItem.id === localItem.id)
-          )];
-          set({ items: mergedItems, isInitialized: true });
-          console.log("Wishlist synced successfully", mergedItems.length, "items");
+          
+          const { items: serverItems } = await response.json();
+          
+          // Get current local items
+          const { items: localItems } = get();
+          
+          // Create map for faster lookups
+          const localItemMap = new Map(
+            localItems.map(item => [item.id, item])
+          );
+          
+          // Merge: prefer local items, but include all server items not in local
+          const mergedItems = [
+            ...localItems,
+            ...(serverItems || []).filter(
+              serverItem => !localItemMap.has(serverItem.id)
+            )
+          ];
+          
+          // Update the store with the merged data
+          set({ 
+            items: mergedItems,
+            isInitialized: true
+          });
         } catch (error) {
           console.error('Failed to sync wishlist:', error);
-          // On error, try to load from localStorage
-          const storedData = localStorage.getItem('wishlist-storage');
-          if (storedData) {
-            const { state } = JSON.parse(storedData);
-            set({ items: state.items || [], isInitialized: true });
-          } else {
-            set({ isInitialized: true });
-          }
+          // Set initialized state on error, but keep current items
+          set({ isInitialized: true });
         }
       },
 

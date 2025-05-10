@@ -1,30 +1,35 @@
 'use client';
+import React, { useState, useEffect } from 'react';
+import { useCart } from '@/hooks/use-cart';
+import { useWishlist } from '@/hooks/use-wishlist';
 
-import { useEffect } from 'react';
-import { useCart } from './use-cart';
-import { useWishlist } from './use-wishlist';
-
+// Custom hook to initialize cart and wishlist from server
 export const useStoreInitializer = () => {
-  const cart = useCart();
-  const wishlist = useWishlist();
+  const [isInitializing, setIsInitializing] = useState(true);
+  
+  const { syncWithServer: syncCartWithServer, loadCouponFromCookies } = useCart();
+  const { syncWithServer: syncWishlistWithServer } = useWishlist();
 
   useEffect(() => {
-    // Initialize cart from server
-    if (!cart.isInitialized) {
-      console.log('Initializing cart from server...');
-      cart.syncWithServer().catch(err => {
-        console.error('Failed to initialize cart:', err);
-      });
-    }
+    const initialize = async () => {
+      try {
+        // Initialize both stores in parallel
+        await Promise.all([
+          syncCartWithServer(),
+          syncWishlistWithServer()
+        ]);
+        
+        // Load any coupon from cookies
+        await loadCouponFromCookies();
+      } catch (error) {
+        console.error('Error initializing stores:', error);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
 
-    // Initialize wishlist from server
-    if (!wishlist.isInitialized) {
-      console.log('Initializing wishlist from server...');
-      wishlist.syncWithServer().catch(err => {
-        console.error('Failed to initialize wishlist:', err);
-      });
-    }
-  }, [cart, wishlist]);
+    initialize();
+  }, [syncCartWithServer, syncWishlistWithServer, loadCouponFromCookies]);
 
-  return null;
+  return { isInitializing };
 }; 

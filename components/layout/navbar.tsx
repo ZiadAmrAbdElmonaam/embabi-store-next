@@ -37,7 +37,7 @@ export function Navbar() {
   return (
     <div className="sticky top-0 z-50">
       {/* Top Bar */}
-      <div className="bg-orange-150 text-blac text-sm">
+      <div className="bg-gray-900 text-blac text-sm">
         <div className="mx-auto px-2" style={{ maxWidth: '120rem' }}>
           <div className="flex justify-between items-center h-9">
             {/* Left Side - Social Links */}

@@ -6,25 +6,25 @@ import cloudinary from '@/lib/cloudinary';
 export async function GET() {
   try {
     // 1. Get local images from public folder
-    const categoriesDir = path.join(process.cwd(), 'public', 'images', 'categories');
+    const carouselDir = path.join(process.cwd(), 'public', 'images', 'carousel');
     let localImages: string[] = [];
     
     try {
-      const files = fs.readdirSync(categoriesDir);
+      const files = fs.readdirSync(carouselDir);
       localImages = files
         .filter(file => /\.(jpg|jpeg|png|gif|webp)$/i.test(file))
-        .map(file => `/images/categories/${file}`);
+        .map(file => `/images/carousel/${file}`);
     } catch (error) {
-      console.log('Local categories directory not found or empty');
+      console.log('Local carousel directory not found or empty');
     }
 
-    // 2. Get Cloudinary images from embabi-store/categories folder
+    // 2. Get Cloudinary images from embabi-store/carousel folder
     let cloudinaryImages: string[] = [];
     
     try {
       const cloudinaryResult = await cloudinary.api.resources({
         type: 'upload',
-        prefix: 'embabi-store/categories/',
+        prefix: 'embabi-store/carousel/',
         max_results: 100,
         resource_type: 'image'
       });

@@ -18,6 +18,7 @@ export function VerificationForm({ email, returnUrl, fromCart = false }: Verific
   const { t } = useTranslation();
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -114,10 +115,12 @@ export function VerificationForm({ email, returnUrl, fromCart = false }: Verific
 
   // Handle resend code
   const handleResendCode = async () => {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || resendLoading) return;
+    
+    setResendLoading(true);
     
     try {
-      const response = await fetch('/api/auth/resend-verification', {
+      const response = await fetch('/api/auth/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -126,6 +129,11 @@ export function VerificationForm({ email, returnUrl, fromCart = false }: Verific
       const data = await response.json();
       
       if (!response.ok) {
+        // Handle rate limiting with specific wait time
+        if (response.status === 429 && data.waitTime) {
+          setResendCooldown(data.waitTime);
+          throw new Error(data.error);
+        }
         throw new Error(data.error || t('auth.resendFailed'));
       }
       
@@ -134,6 +142,8 @@ export function VerificationForm({ email, returnUrl, fromCart = false }: Verific
     } catch (error: any) {
       console.error('Resend error:', error);
       toast.error(error.message || t('auth.somethingWentWrong'));
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -174,20 +184,50 @@ export function VerificationForm({ email, returnUrl, fromCart = false }: Verific
       </form>
 
       <div className="text-center">
-        <p className="text-sm text-gray-600 mb-2">
+        <p className="text-sm text-gray-600 mb-4">
           <TranslatedContent translationKey="auth.didntReceiveCode" />
         </p>
-        <button
-          onClick={handleResendCode}
-          disabled={resendCooldown > 0}
-          className="text-sm font-medium text-orange-600 hover:text-orange-500 focus:outline-none"
-        >
-          {resendCooldown > 0 ? (
-            `${t('auth.resendCodeIn')} ${resendCooldown}s`
-          ) : (
-            <TranslatedContent translationKey="auth.resendCode" />
-          )}
-        </button>
+        
+        {resendCooldown > 0 ? (
+          <div className="flex flex-col items-center space-y-3">
+            {/* Countdown Timer Display */}
+            <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full">
+              <span className="text-2xl font-bold text-gray-600">{resendCooldown}</span>
+            </div>
+            <div className="text-center">
+              <p className="text-sm text-gray-500 mb-1">
+                {t('auth.resendCodeIn')}
+              </p>
+              <div className="w-48 bg-gray-200 rounded-full h-2 mx-auto">
+                <div 
+                  className="bg-orange-500 h-2 rounded-full transition-all duration-1000 ease-linear"
+                  style={{ width: `${((60 - resendCooldown) / 60) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <button
+              disabled={true}
+              className="px-6 py-2 text-sm font-medium text-gray-400 bg-gray-100 rounded-md cursor-not-allowed"
+            >
+              <TranslatedContent translationKey="auth.resendCode" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleResendCode}
+            disabled={resendLoading}
+            className="px-6 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            {resendLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Sending...
+              </>
+            ) : (
+              <TranslatedContent translationKey="auth.resendCode" />
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

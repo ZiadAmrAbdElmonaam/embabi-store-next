@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -11,6 +11,8 @@ import { TranslatedContent } from "@/components/ui/translated-content";
 export function ResetPasswordForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [email, setEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +20,45 @@ export function ResetPasswordForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<"request" | "verify" | "reset">("request");
   const { t, lang } = useTranslation();
+
+  // Set up cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Resend code function
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || resendLoading) return;
+    
+    setResendLoading(true);
+    
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email,
+          step: "request" 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || t('auth.failedToReset'));
+      }
+
+      toast.success(t('auth.codeSent'));
+      setResendCooldown(60); // 60 seconds cooldown
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('auth.somethingWentWrong'));
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   // Request password reset
   const handleRequestReset = async (e: React.FormEvent) => {
@@ -41,6 +82,7 @@ export function ResetPasswordForm() {
       }
 
       toast.success(t('auth.codeSent'));
+      setResendCooldown(60); // 60 seconds cooldown
       setStep("verify");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('auth.somethingWentWrong'));
@@ -208,13 +250,53 @@ export function ResetPasswordForm() {
           >
             <TranslatedContent translationKey="auth.changeEmail" />
           </button>
-          <button
-            type="button"
-            onClick={handleRequestReset}
-            className="text-orange-600 hover:text-orange-500 font-medium"
-          >
-            <TranslatedContent translationKey="auth.resendVerificationCode" />
-          </button>
+        </div>
+
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-600 mb-4">
+            <TranslatedContent translationKey="auth.didntReceiveCode" />
+          </p>
+          
+          {resendCooldown > 0 ? (
+            <div className="flex flex-col items-center space-y-3">
+              {/* Countdown Timer Display */}
+              <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full">
+                <span className="text-2xl font-bold text-gray-600">{resendCooldown}</span>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-500 mb-1">
+                  {t('auth.resendCodeIn')}
+                </p>
+                <div className="w-48 bg-gray-200 rounded-full h-2 mx-auto">
+                  <div 
+                    className="bg-orange-500 h-2 rounded-full transition-all duration-1000 ease-linear"
+                    style={{ width: `${((60 - resendCooldown) / 60) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+              <button
+                disabled={true}
+                className="px-6 py-2 text-sm font-medium text-gray-400 bg-gray-100 rounded-md cursor-not-allowed"
+              >
+                <TranslatedContent translationKey="auth.resendVerificationCode" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleResendCode}
+              disabled={resendLoading}
+              className="px-6 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {resendLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Sending...
+                </>
+              ) : (
+                <TranslatedContent translationKey="auth.resendVerificationCode" />
+              )}
+            </button>
+          )}
         </div>
       </form>
     );

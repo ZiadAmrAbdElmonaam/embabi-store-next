@@ -119,9 +119,9 @@ export function HomeCarousel() {
   // If we're still loading, show a placeholder
   if (isLoading) {
     return (
-      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-lg">
+      <div className="relative w-full max-w-none lg:max-w-screen-2xl xl:max-w-full mx-auto h-[200px] xs:h-[250px] sm:h-[350px] md:h-[450px] lg:h-[550px] xl:h-[650px] 2xl:h-[700px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-xl shadow-lg">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-400 dark:text-gray-600">Loading carousel...</div>
+          <div className="text-gray-400 dark:text-gray-600 text-sm md:text-base">Loading carousel...</div>
         </div>
       </div>
     );
@@ -129,9 +129,9 @@ export function HomeCarousel() {
 
   if (error) {
     return (
-      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg">
+      <div className="relative w-full max-w-none lg:max-w-screen-2xl xl:max-w-full mx-auto h-[200px] xs:h-[250px] sm:h-[350px] md:h-[450px] lg:h-[550px] xl:h-[650px] 2xl:h-[700px] bg-gray-100 dark:bg-gray-900 rounded-xl shadow-lg">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-500 dark:text-gray-400">{error}</div>
+          <div className="text-gray-500 dark:text-gray-400 text-sm md:text-base text-center px-4">{error}</div>
         </div>
       </div>
     );
@@ -140,9 +140,9 @@ export function HomeCarousel() {
   // If there are no images, show a placeholder
   if (images.length === 0) {
     return (
-      <div className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg">
+      <div className="relative w-full max-w-none lg:max-w-screen-2xl xl:max-w-full mx-auto h-[200px] xs:h-[250px] sm:h-[350px] md:h-[450px] lg:h-[550px] xl:h-[650px] 2xl:h-[700px] bg-gray-100 dark:bg-gray-900 rounded-xl shadow-lg">
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-gray-500 dark:text-gray-400">No carousel images available</div>
+          <div className="text-gray-500 dark:text-gray-400 text-sm md:text-base text-center px-4">No carousel images available</div>
         </div>
       </div>
     );
@@ -150,7 +150,7 @@ export function HomeCarousel() {
 
   return (
     <div 
-      className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden rounded-lg bg-white dark:bg-gray-900"
+      className="relative w-full max-w-none lg:max-w-screen-2xl xl:max-w-full mx-auto h-[200px] xs:h-[250px] sm:h-[350px] md:h-[450px] lg:h-[550px] xl:h-[650px] 2xl:h-[700px] overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-lg hover:shadow-xl transition-shadow duration-300"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -169,44 +169,46 @@ export function HomeCarousel() {
               alt={`Carousel image ${index + 1}`}
               fill
               priority={index === currentIndex}
-              className="object-cover object-center"
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, 1280px"
+              className="object-contain object-center transition-all duration-300"
+              sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, (max-width: 1280px) 100vw, 1400px"
+              placeholder="blur"
+              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyb5bt69OuuIyn0lcgezo9vFJs/1pSMicp6lSNRV4+0Ob/7fZvP3wZqBw=="
             />
           </div>
         ))}
       </div>
 
-      {/* Navigation Arrows - Hide on mobile */}
+      {/* Navigation Arrows - Responsive sizing */}
       {images.length > 1 && (
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 focus:outline-none transition-colors hidden sm:block"
+            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 md:p-2 focus:outline-none transition-all duration-200 hidden sm:flex items-center justify-center backdrop-blur-sm"
             aria-label="Previous slide"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-4 w-4 md:h-6 md:w-6" />
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full p-2 focus:outline-none transition-colors hidden sm:block"
+            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white rounded-full p-1.5 md:p-2 focus:outline-none transition-all duration-200 hidden sm:flex items-center justify-center backdrop-blur-sm"
             aria-label="Next slide"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-4 w-4 md:h-6 md:w-6" />
           </button>
         </>
       )}
 
-      {/* Indicator Dots */}
+      {/* Indicator Dots - Responsive sizing and positioning */}
       {images.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+        <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex space-x-1.5 md:space-x-2 bg-black/20 backdrop-blur-sm rounded-full px-2 py-1">
           {images.map((_, index) => (
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-colors ${
+              className={`w-2 h-2 md:w-2.5 md:h-2.5 lg:w-3 lg:h-3 rounded-full transition-all duration-200 ${
                 index === currentIndex 
-                  ? 'bg-white' 
-                  : 'bg-white/50 hover:bg-white/70'
+                  ? 'bg-white scale-110' 
+                  : 'bg-white/60 hover:bg-white/80 hover:scale-105'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />

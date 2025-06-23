@@ -66,13 +66,6 @@ export function Footer() {
               <li className={cn(
                 isRtl ? "text-right" : "text-left"
               )}>
-                <Link href="/about" className="text-gray-400 hover:text-white">
-                  <TranslatedContent translationKey="footer.aboutUs" />
-                </Link>
-              </li>
-              <li className={cn(
-                isRtl ? "text-right" : "text-left"
-              )}>
                 <Link href="/contact" className="text-gray-400 hover:text-white">
                   <TranslatedContent translationKey="footer.contact" />
                 </Link>

@@ -99,16 +99,6 @@ export default function CarouselManagementPage() {
   };
 
   const handleReorderImage = async (id: string, direction: 'up' | 'down') => {
-    const currentIndex = images.findIndex(img => img.id === id);
-    if (
-      (direction === 'up' && currentIndex === 0) || 
-      (direction === 'down' && currentIndex === images.length - 1)
-    ) {
-      return; // Already at the limit
-    }
-
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    
     try {
       const response = await fetch(`/api/admin/carousel/reorder`, {
         method: 'PUT',
@@ -117,21 +107,16 @@ export default function CarouselManagementPage() {
         },
         body: JSON.stringify({
           id,
-          newOrder: images[newIndex].order,
+          direction,
         }),
       });
 
       if (!response.ok) throw new Error('Failed to reorder images');
       
-      // Update local state by swapping positions
-      const newImages = [...images];
-      const temp = newImages[newIndex].order;
-      newImages[newIndex].order = newImages[currentIndex].order;
-      newImages[currentIndex].order = temp;
+      const result = await response.json();
       
-      // Sort by order
-      newImages.sort((a, b) => a.order - b.order);
-      setImages(newImages);
+      // Update local state with the new order from the server
+      setImages(result.images);
       
       toast.success('Carousel order updated');
     } catch (error) {
@@ -237,8 +222,8 @@ export default function CarouselManagementPage() {
         
         {availableImages.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">No images available in the public/images/carousel folder.</p>
-            <p className="text-gray-400 text-sm mt-1">Upload images to that folder to make them available here.</p>
+            <p className="text-gray-500">No carousel images available.</p>
+            <p className="text-gray-400 text-sm mt-1">Upload images using the "Images" section in the admin panel with the "carousel" folder.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">

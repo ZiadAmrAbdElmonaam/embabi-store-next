@@ -1,31 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/auth-options";
-import fs from 'fs';
-import path from 'path';
+import { prisma } from "@/lib/prisma";
 
-// Path to the JSON file that stores carousel information
-const carouselConfigPath = path.join(process.cwd(), 'public', 'carousel-config.json');
-
-// Get carousel configuration
-const getCarouselConfig = () => {
-  if (!fs.existsSync(carouselConfigPath)) {
-    return { images: [] };
-  }
-  const configData = fs.readFileSync(carouselConfigPath, 'utf-8');
-  return JSON.parse(configData);
-};
-
-// Save carousel configuration
-const saveCarouselConfig = (config) => {
-  fs.writeFileSync(
-    carouselConfigPath,
-    JSON.stringify(config, null, 2),
-    'utf-8'
-  );
-};
-
-// PUT endpoint to reorder carousel images
+// PUT endpoint to reorder carousel images (simplified version)
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,57 +12,71 @@ export async function PUT(request: Request) {
     }
 
     const data = await request.json();
-    const { id, newOrder } = data;
+    const { id, direction } = data;
 
-    if (!id || newOrder === undefined) {
+    if (!id || !direction || !['up', 'down'].includes(direction)) {
       return NextResponse.json(
-        { error: 'Image ID and new order are required' },
+        { error: 'Image ID and direction (up/down) are required' },
         { status: 400 }
       );
     }
 
-    // Get the current carousel config
-    const carouselConfig = getCarouselConfig();
+    // Get the current image
+    const currentImage = await prisma.carouselImage.findUnique({
+      where: { id }
+    });
 
-    // Find the image to reorder
-    const imageIndex = carouselConfig.images.findIndex(img => img.id === id);
-    if (imageIndex === -1) {
+    if (!currentImage) {
       return NextResponse.json(
         { error: 'Image not found' },
         { status: 404 }
       );
     }
 
-    // Get the current order
-    const currentOrder = carouselConfig.images[imageIndex].order;
-
-    // Update orders for all affected images
-    carouselConfig.images.forEach(img => {
-      if (img.id === id) {
-        // Set the new order for the target image
-        img.order = newOrder;
-      } 
-      else if (
-        // If moving up, decrement images in between
-        (currentOrder > newOrder && img.order >= newOrder && img.order < currentOrder) ||
-        // If moving down, increment images in between
-        (currentOrder < newOrder && img.order <= newOrder && img.order > currentOrder)
-      ) {
-        img.order = currentOrder > newOrder 
-          ? img.order + 1  // Moving up
-          : img.order - 1; // Moving down
-      }
+    // Get all images ordered by order
+    const allImages = await prisma.carouselImage.findMany({
+      where: { isActive: true },
+      orderBy: { order: 'asc' }
     });
 
-    // Sort images by order
-    carouselConfig.images.sort((a, b) => a.order - b.order);
+    const currentIndex = allImages.findIndex(img => img.id === id);
+    
+    // Check if move is possible
+    if (
+      (direction === 'up' && currentIndex === 0) || 
+      (direction === 'down' && currentIndex === allImages.length - 1)
+    ) {
+      return NextResponse.json({ 
+        message: 'Cannot move image further in that direction',
+        images: allImages
+      });
+    }
 
-    // Save the updated config
-    saveCarouselConfig(carouselConfig);
+    // Simple swap with adjacent image
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    const swapImage = allImages[swapIndex];
+
+    // Swap the order values
+    await prisma.$transaction([
+      prisma.carouselImage.update({
+        where: { id: currentImage.id },
+        data: { order: swapImage.order }
+      }),
+      prisma.carouselImage.update({
+        where: { id: swapImage.id },
+        data: { order: currentImage.order }
+      })
+    ]);
+
+    // Get updated images
+    const updatedImages = await prisma.carouselImage.findMany({
+      where: { isActive: true },
+      orderBy: { order: 'asc' }
+    });
 
     return NextResponse.json({ 
       message: 'Image order updated successfully',
-      images: carouselConfig.images
+      images: updatedImages
     });
   } catch (error) {
     console.error('Error reordering carousel image:', error);

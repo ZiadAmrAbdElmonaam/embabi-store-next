@@ -109,7 +109,9 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Password reset error:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Password reset error:", error);
+    }
     return NextResponse.json(
       { error: "Failed to process password reset" },
       { status: 500 }

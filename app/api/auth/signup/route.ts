@@ -44,7 +44,9 @@ export async function POST(request: Request) {
         try {
           await sendVerificationEmail(data.email, verificationCode, data.name);
         } catch (emailError) {
-          console.error('Failed to send verification email:', emailError);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Failed to send verification email:', emailError);
+          }
           // Continue even if email fails, user can request a new code
         }
 
@@ -87,7 +89,9 @@ export async function POST(request: Request) {
     try {
       await sendVerificationEmail(data.email, verificationCode, data.name);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to send verification email:', emailError);
+      }
       // Continue even if email fails, user can request a new code
     }
 
@@ -97,7 +101,9 @@ export async function POST(request: Request) {
       message: 'User created. Please verify your email.'
     });
   } catch (error) {
-    console.error('Error creating user:', error instanceof Error ? error.message : 'Unknown error');
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error creating user:', error instanceof Error ? error.message : 'Unknown error');
+    }
     
     return NextResponse.json(
       { error: 'Failed to create user. Please try again later.' },

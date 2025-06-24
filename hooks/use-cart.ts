@@ -105,6 +105,8 @@ export const useCart = create<CartStore>()((set, get) => ({
       if (data.coupon) {
         // Set the coupon in the store
         set({ appliedCoupon: data.coupon });
+        // Recalculate discount after setting the coupon
+        get().recalculateDiscount();
         return data.coupon;
       }
       
@@ -393,14 +395,11 @@ export const useCart = create<CartStore>()((set, get) => ({
       const previousDiscount = get().discountAmount;
       
       set({ 
-        appliedCoupon: coupon,
-        discountAmount: coupon ? get().discountAmount : 0
+        appliedCoupon: coupon
       });
       
-      // If setting to null, just remove the coupon
-      if (!coupon) {
-        get().recalculateDiscount();
-      }
+      // Recalculate discount after setting coupon
+      get().recalculateDiscount();
       
       // Make server request to add/update coupon
       if (coupon) {
@@ -422,7 +421,6 @@ export const useCart = create<CartStore>()((set, get) => ({
             appliedCoupon: previousCoupon,
             discountAmount: previousDiscount
           });
-          toast.error('Failed to apply coupon');
           return;
         }
         
@@ -434,8 +432,6 @@ export const useCart = create<CartStore>()((set, get) => ({
           discountAmount: data.discountAmount || 0,
           items: data.items || get().items
         });
-        
-        toast.success('Coupon applied successfully');
       } else {
         // If coupon is null, remove it
         const response = await fetch('/api/cart', {
@@ -455,16 +451,11 @@ export const useCart = create<CartStore>()((set, get) => ({
             appliedCoupon: previousCoupon,
             discountAmount: previousDiscount
           });
-          
-          toast.error('Failed to remove coupon');
           return;
         }
-        
-        toast.success('Coupon removed successfully');
       }
     } catch (error) {
       console.error('Failed to update coupon:', error);
-      toast.error('Failed to update coupon');
     }
   },
 

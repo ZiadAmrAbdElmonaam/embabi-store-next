@@ -71,9 +71,14 @@ export function SignUpForm() {
       
       router.push(verifyRoute);
     } catch (error: any) {
-      console.error('Signup error:', error);
-      setError(error.message || t('auth.somethingWentWrong'));
-      toast.error(error.message || t('auth.somethingWentWrong'));
+      // Log error only in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Signup error:', error);
+      }
+      
+      const errorMessage = error.message || t('auth.somethingWentWrong');
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

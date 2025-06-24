@@ -20,7 +20,7 @@
     "@prisma/client": "^6.4.1",
     "@radix-ui/react-slider": "^1.2.2",
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.5.1",
+    "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "csv-stringify": "^6.5.2",
     "date-fns": "^4.1.0",

@@ -44,13 +44,11 @@ export default function CartCouponForm() {
         return;
       }
 
-      // Success - get the coupon from cookies and update cart state
+      // Success - apply the coupon
       toast.success(t('cart.couponApplied'));
       
-      // Use the new loadCouponFromCookies method to load the coupon
-      // This pulls the coupon data from the server cookies and updates the cart state
-      const { loadCouponFromCookies } = useCart.getState();
-      await loadCouponFromCookies();
+      // Set the coupon (this will also handle database update)
+      setCoupon(data.coupon);
       
       // Reset the form
       setCouponCode('');

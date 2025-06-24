@@ -38,7 +38,7 @@ interface ProductDetail {
 export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [availableImages, setAvailableImages] = useState<string[]>([]);
+  const [availableImages, setAvailableImages] = useState<Array<{url: string, source: string}>>([]);
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [thumbnails, setThumbnails] = useState<string[]>(initialData?.thumbnails || []);
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>(
@@ -58,7 +58,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
   });
 
   useEffect(() => {
-    // Fetch available images from the API
+    // Fetch available images from the API (now includes both local and Cloudinary)
     const fetchImages = async () => {
       try {
         const response = await fetch('/api/images/products');
@@ -74,11 +74,31 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
     fetchImages();
   }, []);
 
-  // Function to get image name from path
+  // Function to get image name from path (works for both local and Cloudinary URLs)
   const getImageName = (imagePath: string) => {
     const parts = imagePath.split('/');
     const fileName = parts[parts.length - 1];
     return fileName.split('.')[0].replace(/[-_]/g, ' ');
+  };
+
+  // Function to get image source badge color
+  const getSourceBadgeColor = (source: string) => {
+    return source === 'local' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+  };
+
+  // Refresh available images
+  const refreshImages = async () => {
+    try {
+      const response = await fetch('/api/images/products');
+      if (response.ok) {
+        const images = await response.json();
+        setAvailableImages(images);
+        toast.success('Image list refreshed');
+      }
+    } catch (error) {
+      console.error('Error refreshing images:', error);
+      toast.error('Failed to refresh images');
+    }
   };
 
   // Calculate sale price
@@ -431,122 +451,180 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       </div>
 
       {/* Main Product Images */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Main Product Images (Max 3)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Image Selection Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Image</label>
-            <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleImageSelection(e.target.value, 'main');
-                }
-              }}
-              value=""
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Main Product Images (Max 3)</h2>
+          <button
+            type="button"
+            onClick={refreshImages}
+            className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+          >
+            🔄 Refresh Images
+          </button>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-700">
+            💡 <strong>Need to upload new images?</strong> Go to{' '}
+            <a 
+              href="/admin/images" 
+              target="_blank"
+              className="font-medium underline hover:text-blue-800"
             >
-              <option value="">Select an image...</option>
-              {availableImages
-                .filter(img => !images.includes(img))
-                .map((imagePath) => (
-                  <option key={imagePath} value={imagePath}>
-                    {getImageName(imagePath)}
-                  </option>
-                ))}
-            </select>
+              Image Management
+            </a>{' '}
+            to upload new product images, then come back and refresh this list.
+          </p>
+        </div>
+        
+        {/* Image Selection */}
+        <div>
+          <h3 className="text-lg font-medium mb-4">Select from Available Images</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Image Selection Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Image</label>
+              <select
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleImageSelection(e.target.value, 'main');
+                  }
+                }}
+                value=""
+              >
+                <option value="">Select an image...</option>
+                {availableImages
+                  .filter(img => !images.includes(img.url))
+                  .map((image) => (
+                    <option key={image.url} value={image.url}>
+                      📁 {image.source === 'local' ? 'Local' : 'Cloud'} • {getImageName(image.url)}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            
+            {/* Selected Images Display */}
+            {images.length > 0 ? (
+              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {images.map((imagePath) => {
+                  const imageSource = availableImages.find(img => img.url === imagePath)?.source || 'unknown';
+                  return (
+                    <div key={imagePath} className="relative aspect-square rounded-lg overflow-hidden border-2 border-orange-500">
+                      <Image
+                        src={imagePath}
+                        alt={getImageName(imagePath)}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setImages(images.filter(img => img !== imagePath))}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                      >
+                        <X size={16} />
+                      </button>
+                      <div className="absolute top-2 left-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${getSourceBadgeColor(imageSource)}`}>
+                          {imageSource === 'local' ? 'Local' : 'Cloud'}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs py-1 px-2 truncate">
+                        {getImageName(imagePath)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="col-span-1 md:col-span-2 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6">
+                <p className="text-gray-500">No main images selected yet. Upload new images or select from existing ones.</p>
+              </div>
+            )}
           </div>
-          
-          {/* Selected Images Display */}
-          {images.length > 0 ? (
-            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {images.map((imagePath) => (
-                <div key={imagePath} className="relative aspect-square rounded-lg overflow-hidden border-2 border-orange-500">
-                  <Image
-                    src={imagePath}
-                    alt={getImageName(imagePath)}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 25vw"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setImages(images.filter(img => img !== imagePath))}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                  >
-                    <X size={16} />
-                  </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs py-1 px-2 truncate">
-                    {getImageName(imagePath)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="col-span-1 md:col-span-2 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6">
-              <p className="text-gray-500">No main images selected yet. Please select up to 3 images.</p>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Product Thumbnails */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Product Thumbnails (Max 5)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Thumbnail Selection Dropdown */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Thumbnail</label>
-            <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleImageSelection(e.target.value, 'thumbnail');
-                }
-              }}
-              value=""
-            >
-              <option value="">Select a thumbnail...</option>
-              {availableImages
-                .filter(img => !thumbnails.includes(img))
-                .map((imagePath) => (
-                  <option key={imagePath} value={imagePath}>
-                    {getImageName(imagePath)}
-                  </option>
-                ))}
-            </select>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Product Thumbnails (Max 5)</h2>
+          <button
+            type="button"
+            onClick={refreshImages}
+            className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+          >
+            🔄 Refresh Images
+          </button>
+        </div>
+        
+        {/* Image Selection */}
+        <div>
+          <h3 className="text-lg font-medium mb-4">Select from Available Images</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Image Selection Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Thumbnail</label>
+              <select
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    handleImageSelection(e.target.value, 'thumbnail');
+                  }
+                }}
+                value=""
+              >
+                <option value="">Select a thumbnail...</option>
+                {availableImages
+                  .filter(img => !thumbnails.includes(img.url))
+                  .map((image) => (
+                    <option key={image.url} value={image.url}>
+                      📁 {image.source === 'local' ? 'Local' : 'Cloud'} • {getImageName(image.url)}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            
+            {/* Selected Images Display */}
+            {thumbnails.length > 0 ? (
+              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {thumbnails.map((imagePath) => {
+                  const imageSource = availableImages.find(img => img.url === imagePath)?.source || 'unknown';
+                  return (
+                    <div key={imagePath} className="relative aspect-square rounded-lg overflow-hidden border-2 border-orange-500">
+                      <Image
+                        src={imagePath}
+                        alt={getImageName(imagePath)}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setThumbnails(thumbnails.filter(img => img !== imagePath))}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                      >
+                        <X size={16} />
+                      </button>
+                      <div className="absolute top-2 left-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${getSourceBadgeColor(imageSource)}`}>
+                          {imageSource === 'local' ? 'Local' : 'Cloud'}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs py-1 px-2 truncate">
+                        {getImageName(imagePath)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="col-span-1 md:col-span-2 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6">
+                <p className="text-gray-500">No thumbnails selected yet. Upload new images or select from existing ones.</p>
+              </div>
+            )}
           </div>
-          
-          {/* Selected Thumbnails Display */}
-          {thumbnails.length > 0 ? (
-            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {thumbnails.map((imagePath) => (
-                <div key={imagePath} className="relative aspect-square rounded-lg overflow-hidden border-2 border-orange-500">
-                  <Image
-                    src={imagePath}
-                    alt={getImageName(imagePath)}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 25vw"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setThumbnails(thumbnails.filter(img => img !== imagePath))}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                  >
-                    <X size={16} />
-                  </button>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs py-1 px-2 truncate">
-                    {getImageName(imagePath)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="col-span-1 md:col-span-2 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6">
-              <p className="text-gray-500">No thumbnails selected yet. Please select up to 5 thumbnails.</p>
-            </div>
-          )}
         </div>
       </div>
 

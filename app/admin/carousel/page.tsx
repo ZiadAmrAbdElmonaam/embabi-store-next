@@ -30,11 +30,13 @@ export default function CarouselManagementPage() {
         // Ensure images array exists even if API returns incomplete data
         setImages(carouselData.images || []);
         
-        // Fetch available images from public folder
-        const availableResponse = await fetch('/api/admin/carousel/available');
+        // Fetch available images from both local and Cloudinary
+        const availableResponse = await fetch('/api/images/carousel');
         if (!availableResponse.ok) throw new Error('Failed to fetch available images');
         const availableData = await availableResponse.json();
-        setAvailableImages(availableData.images || []);
+        // Extract URLs from the {url, source} format
+        const imageUrls = availableData.map((img: any) => img.url);
+        setAvailableImages(imageUrls || []);
       } catch (error) {
         console.error('Failed to fetch carousel data:', error);
         toast.error('Failed to load carousel data');

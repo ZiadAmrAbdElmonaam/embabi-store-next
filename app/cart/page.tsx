@@ -16,19 +16,13 @@ export default function CartPage() {
       try {
         if (!isInitialized) {
           await syncWithServer();
-          
-          // Only check for a coupon if there are items in the cart
-          const cartItems = useCart.getState().items;
-          if (cartItems.length > 0 && !appliedCoupon) {
-            await loadCouponFromCookies();
-          }
-        } else {
-          
-          // Only check for a coupon if there are items in the cart
-          const cartItems = useCart.getState().items;
-          if (cartItems.length > 0 && !appliedCoupon) {
-            await loadCouponFromCookies();
-          }
+        }
+        
+        // Only check for a coupon if there are items in the cart and no coupon is applied
+        const cartItems = useCart.getState().items;
+        const currentCoupon = useCart.getState().appliedCoupon;
+        if (cartItems.length > 0 && !currentCoupon) {
+          await loadCouponFromCookies();
         }
       } catch (error) {
         console.error("Error initializing cart:", error);
@@ -38,24 +32,7 @@ export default function CartPage() {
     };
 
     initCart();
-  }, [syncWithServer, isInitialized, appliedCoupon, loadCouponFromCookies]);
-
-  // Always sync with server when cart page is loaded (similar to wishlist)
-  useEffect(() => {
-    const refreshCart = async () => {
-      if (!isLoading) {
-        await syncWithServer();
-        
-        // Check for coupon after sync
-        const cartItems = useCart.getState().items;
-        if (cartItems.length > 0 && !appliedCoupon) {
-          await loadCouponFromCookies();
-        }
-      }
-    };
-    
-    refreshCart();
-  }, [syncWithServer, isLoading, appliedCoupon, loadCouponFromCookies]);
+  }, [syncWithServer, isInitialized]); // Removed appliedCoupon and loadCouponFromCookies from dependencies
 
   if (isLoading) {
     return (

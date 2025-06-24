@@ -1,29 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/auth-options";
-import fs from 'fs';
-import path from 'path';
-
-// Path to the JSON file that stores carousel information
-const carouselConfigPath = path.join(process.cwd(), 'public', 'carousel-config.json');
-
-// Get carousel configuration
-const getCarouselConfig = () => {
-  if (!fs.existsSync(carouselConfigPath)) {
-    return { images: [] };
-  }
-  const configData = fs.readFileSync(carouselConfigPath, 'utf-8');
-  return JSON.parse(configData);
-};
-
-// Save carousel configuration
-const saveCarouselConfig = (config) => {
-  fs.writeFileSync(
-    carouselConfigPath,
-    JSON.stringify(config, null, 2),
-    'utf-8'
-  );
-};
+import { prisma } from "@/lib/prisma";
 
 // DELETE endpoint to remove a carousel image
 export async function DELETE(
@@ -44,28 +22,22 @@ export async function DELETE(
       );
     }
 
-    // Get the current carousel config
-    const carouselConfig = getCarouselConfig();
+    // Check if image exists
+    const existingImage = await prisma.carouselImage.findUnique({
+      where: { id }
+    });
 
-    // Find the image to delete
-    const imageIndex = carouselConfig.images.findIndex(img => img.id === id);
-    if (imageIndex === -1) {
+    if (!existingImage) {
       return NextResponse.json(
         { error: 'Image not found' },
         { status: 404 }
       );
     }
 
-    // Remove the image
-    carouselConfig.images.splice(imageIndex, 1);
-
-    // Reassign order numbers sequentially
-    carouselConfig.images.forEach((img, index) => {
-      img.order = index + 1;
+    // Delete the image
+    await prisma.carouselImage.delete({
+      where: { id }
     });
-
-    // Save the updated config
-    saveCarouselConfig(carouselConfig);
 
     return NextResponse.json({ 
       message: 'Image removed successfully'

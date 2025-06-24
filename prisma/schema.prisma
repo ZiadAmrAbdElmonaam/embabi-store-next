@@ -8,22 +8,22 @@ datasource db {
 }
 
 model User {
-  id                    String    @id @default(cuid())
-  name                  String?
-  email                 String    @unique
-  password              String
-  role                  Role      @default(USER)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  emailVerified         Boolean   @default(false)
-  verificationCode      String?
+  id                     String    @id @default(cuid())
+  name                   String?
+  email                  String    @unique
+  password               String
+  role                   Role      @default(USER)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  emailVerified          Boolean   @default(false)
+  lastVerificationSent   DateTime?
+  verificationAttempts   Int       @default(0)
+  verificationCode       String?
   verificationCodeExpiry DateTime?
-  verificationAttempts  Int       @default(0)
-  lastVerificationSent  DateTime?
-  orders                Order[]
-  reviews               Review[]
-  wishlist              Wishlist?
-  cart                  Cart?
+  cart                   Cart?
+  orders                 Order[]
+  reviews                Review[]
+  wishlist               Wishlist?
 }
 
 model Category {
@@ -31,38 +31,38 @@ model Category {
   name        String
   slug        String    @unique
   description String?
-  image       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  image       String?
   products    Product[]
 }
 
 model Product {
-  id            String      @id @default(cuid())
-  name          String
-  slug          String      @unique
-  description   String
-  price         Decimal     @db.Decimal(10, 2)
-  stock         Int
-  images        String[]    @default([])
-  thumbnails    String[]    @default([])
-  categoryId    String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  discountPrice Decimal?    @db.Decimal(10, 2)
-  featured      Boolean     @default(false)
-  orderItems    OrderItem[]
-  category      Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  reviews       Review[]
-  sale          Float?
-  saleEndDate   DateTime?
-  salePrice     Float?
-  details       ProductDetail[]
-  variants      ProductVariant[]
-  wishlistItems WishlistItem[]
-  cartItems     CartItem[]
-  anonymousCartItems AnonymousCartItem[]
+  id                     String                  @id @default(cuid())
+  name                   String
+  slug                   String                  @unique
+  description            String
+  price                  Decimal                 @db.Decimal(10, 2)
+  stock                  Int
+  images                 String[]                @default([])
+  categoryId             String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  discountPrice          Decimal?                @db.Decimal(10, 2)
+  featured               Boolean                 @default(false)
+  sale                   Float?
+  saleEndDate            DateTime?
+  salePrice              Float?
+  thumbnails             String[]                @default([])
+  anonymousCartItems     AnonymousCartItem[]
   anonymousWishlistItems AnonymousWishlistItem[]
+  cartItems              CartItem[]
+  orderItems             OrderItem[]
+  category               Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  details                ProductDetail[]
+  variants               ProductVariant[]
+  reviews                Review[]
+  wishlistItems          WishlistItem[]
 
   @@index([categoryId])
 }
@@ -78,11 +78,11 @@ model Order {
   shippingCity    String
   shippingNotes   String?
   paymentProof    String?
-  couponId        String?
-  coupon          Coupon?        @relation(fields: [couponId], references: [id])
-  discountAmount  Decimal?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  couponId        String?
+  discountAmount  Decimal?
+  coupon          Coupon?        @relation(fields: [couponId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
   items           OrderItem[]
   statusHistory   StatusUpdate[]
@@ -91,15 +91,15 @@ model Order {
 }
 
 model OrderItem {
-  id        String       @id @default(cuid())
+  id        String           @id @default(cuid())
   orderId   String
   productId String
   quantity  Int
   price     Decimal
   color     String?
   status    OrderItemStatus? @default(ACTIVE)
-  order     Order        @relation(fields: [orderId], references: [id])
-  product   Product      @relation(fields: [productId], references: [id])
+  order     Order            @relation(fields: [orderId], references: [id])
+  product   Product          @relation(fields: [productId], references: [id])
 }
 
 model Review {
@@ -110,71 +110,65 @@ model Review {
   updatedAt DateTime @updatedAt
   productId String?
   userId    String?
+  type      String   @default("site")
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String   @default("site") // "site" or "product"
 }
 
-// Updated Wishlist model without direct product relation - now using through table
 model Wishlist {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String         @id @default(cuid())
+  userId    String         @unique
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     WishlistItem[]
 }
 
-// Through table for wishlist items
 model WishlistItem {
-  id          String   @id @default(cuid())
-  wishlistId  String
-  productId   String
-  createdAt   DateTime @default(now())
-  wishlist    Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  wishlistId String
+  productId  String
+  createdAt  DateTime @default(now())
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
 
   @@unique([wishlistId, productId])
   @@index([productId])
 }
 
-// Anonymous Wishlist for non-authenticated users
 model AnonymousWishlist {
-  id        String    @id @default(cuid())
-  sessionId String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String                  @id @default(cuid())
+  sessionId String                  @unique
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
   items     AnonymousWishlistItem[]
 }
 
-// Through table for anonymous wishlist items
 model AnonymousWishlistItem {
-  id          String           @id @default(cuid())
-  wishlistId  String
-  productId   String
-  createdAt   DateTime         @default(now())
-  wishlist    AnonymousWishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id         String            @id @default(cuid())
+  wishlistId String
+  productId  String
+  createdAt  DateTime          @default(now())
+  product    Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  wishlist   AnonymousWishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
 
   @@unique([wishlistId, productId])
   @@index([productId])
 }
 
-// Cart model for authenticated users
 model Cart {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   couponId  String?
-  coupon    Coupon?   @relation(fields: [couponId], references: [id])
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon    Coupon?    @relation(fields: [couponId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
 
   @@index([couponId])
 }
 
-// Cart item model
 model CartItem {
   id            String   @id @default(cuid())
   cartId        String
@@ -190,20 +184,18 @@ model CartItem {
   @@index([productId])
 }
 
-// Anonymous Cart for non-authenticated users
 model AnonymousCart {
-  id        String    @id @default(cuid())
-  sessionId String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String              @id @default(cuid())
+  sessionId String              @unique
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
   couponId  String?
-  coupon    Coupon?   @relation(fields: [couponId], references: [id])
+  coupon    Coupon?             @relation(fields: [couponId], references: [id])
   items     AnonymousCartItem[]
 
   @@index([couponId])
 }
 
-// Anonymous Cart Item
 model AnonymousCartItem {
   id            String        @id @default(cuid())
   cartId        String
@@ -229,19 +221,55 @@ model StatusUpdate {
 }
 
 model ProductDetail {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   label       String
   description String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model ProductVariant {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   color     String
   quantity  Int
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Coupon {
+  id             String          @id @default(cuid())
+  code           String          @unique
+  endDate        DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  isEnabled      Boolean         @default(true)
+  name           String
+  type           CouponType
+  usedBy         String[]        @default([])
+  usedCount      Int             @default(0)
+  userLimit      Int?
+  value          Float
+  anonymousCarts AnonymousCart[]
+  carts          Cart[]
+  orders         Order[]
+}
+
+model SiteSettings {
+  id                 String   @id @default("site-settings")
+  maintenanceMode    Boolean  @default(false)
+  maintenanceMessage String   @default("Site is under maintenance. Please try again later.")
+  updatedAt          DateTime @default(now()) @updatedAt
+}
+
+model CarouselImage {
+  id        String   @id @default(cuid())
+  url       String
+  order     Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
 }
 
 enum Role {
@@ -265,29 +293,4 @@ enum OrderItemStatus {
 enum CouponType {
   PERCENTAGE
   FIXED
-}
-
-model Coupon {
-  id          String       @id @default(cuid())
-  name        String
-  code        String       @unique
-  type        CouponType
-  value       Float
-  endDate     DateTime?
-  userLimit   Int?
-  isEnabled   Boolean      @default(true)
-  usedCount   Int          @default(0)
-  usedBy      String[]     @default([])
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  orders      Order[]
-  carts       Cart[]
-  anonymousCarts AnonymousCart[]
-}
-
-model SiteSettings {
-  id                String   @id @default("site-settings")
-  maintenanceMode   Boolean  @default(false)
-  maintenanceMessage String  @default("Site is under maintenance. Please try again later.")
-  updatedAt         DateTime @updatedAt @default(now())
 }

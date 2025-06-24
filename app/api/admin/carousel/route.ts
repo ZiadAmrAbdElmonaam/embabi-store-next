@@ -1,53 +1,54 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/auth-options";
-import fs from 'fs';
-import path from 'path';
-
-// Path to the JSON file that stores carousel information
-const carouselConfigPath = path.join(process.cwd(), 'public', 'carousel-config.json');
-
-// Initialize the carousel config file if it doesn't exist
-const initCarouselConfig = () => {
-  if (!fs.existsSync(carouselConfigPath)) {
-    fs.writeFileSync(
-      carouselConfigPath, 
-      JSON.stringify({ images: [] }, null, 2),
-      'utf-8'
-    );
-  }
-};
-
-// Get carousel configuration
-const getCarouselConfig = () => {
-  initCarouselConfig();
-  const configData = fs.readFileSync(carouselConfigPath, 'utf-8');
-  return JSON.parse(configData);
-};
-
-// Save carousel configuration
-const saveCarouselConfig = (config) => {
-  fs.writeFileSync(
-    carouselConfigPath,
-    JSON.stringify(config, null, 2),
-    'utf-8'
-  );
-};
+import { prisma } from "@/lib/prisma";
 
 // GET endpoint to retrieve carousel images
 export async function GET() {
   try {
+    console.log('🔍 Admin carousel GET endpoint called');
+    
     const session = await getServerSession(authOptions);
+    console.log('👤 Session:', session?.user?.role);
+    
     if (session?.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const carouselConfig = getCarouselConfig();
-    return NextResponse.json(carouselConfig);
+    console.log('🗄️ Attempting to query CarouselImage table...');
+    
+    // Try with Prisma model first, fallback to raw SQL if needed
+    let images;
+    try {
+      images = await prisma.carouselImage.findMany({
+        where: { isActive: true },
+        orderBy: { order: 'asc' }
+      });
+    } catch (prismaError) {
+      console.log('⚠️ Prisma model failed, trying raw SQL...', prismaError.message);
+      // Fallback to raw SQL query
+      images = await prisma.$queryRaw`
+        SELECT id, url, "order", "isActive", "createdAt", "updatedAt" 
+        FROM "CarouselImage" 
+        WHERE "isActive" = true 
+        ORDER BY "order" ASC
+      `;
+    }
+
+    console.log('✅ Successfully fetched carousel images:', images.length);
+    return NextResponse.json({ images });
   } catch (error) {
-    console.error('Error fetching carousel images:', error);
+    console.error('❌ Error fetching carousel images:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return NextResponse.json(
-      { error: 'Failed to fetch carousel images' },
+      { 
+        error: 'Failed to fetch carousel images',
+        details: error.message 
+      },
       { status: 500 }
     );
   }
@@ -71,19 +72,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate a unique ID for the new image
-    const id = `img_${Date.now()}`;
+    // Get the highest order number and add 1, or use provided order
+    const maxOrder = await prisma.carouselImage.aggregate({
+      _max: { order: true }
+    });
     
-    // Add the new image to the carousel config
-    const carouselConfig = getCarouselConfig();
-    const newImage = { id, url, order: order || carouselConfig.images.length + 1 };
-    carouselConfig.images.push(newImage);
-    
-    // Sort images by order
-    carouselConfig.images.sort((a, b) => a.order - b.order);
-    
-    // Save the updated config
-    saveCarouselConfig(carouselConfig);
+    const newOrder = order || (maxOrder._max.order || 0) + 1;
+
+    // Create the new carousel image
+    const newImage = await prisma.carouselImage.create({
+      data: {
+        url,
+        order: newOrder,
+        isActive: true
+      }
+    });
 
     return NextResponse.json({ 
       message: 'Image added successfully',

@@ -23,14 +23,11 @@ import Image from "next/image";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { useTranslation } from "@/hooks/use-translation";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 
 export function Navbar() {
   const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isFacebookOpen, setIsFacebookOpen] = useState(false);
   const { items } = useCart();
   const { lang } = useTranslation();
 
@@ -45,55 +42,18 @@ export function Navbar() {
           <div className="flex justify-between items-center h-9">
             {/* Left Side - Social Links */}
             <div className="flex items-center gap-3 ml-1">
-              {/* Facebook Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setIsFacebookOpen(!isFacebookOpen)}
-                  className="hover:text-orange-400"
-                >
-                  <Facebook size={16} />
-                </button>
-                
-                {/* Facebook Dropdown */}
-                {isFacebookOpen && (
-                  <div 
-                    className="absolute start-0 mt-2 w-40 bg-white rounded-lg shadow-lg overflow-hidden z-50"
-                    onMouseLeave={() => setIsFacebookOpen(false)}
-                  >
-                    <div className="py-1">
-                      <a
-                        href="https://www.facebook.com/share/1AXtFxMs45/?mibextid=wwXIfr"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
-                        onClick={() => setIsFacebookOpen(false)}
-                      >
-                        <Facebook className="h-4 w-4 me-2 text-blue-600" />
-                        Oxgen Store
-                      </a>
-                      <a
-                        href="https://www.facebook.com/share/16h96QExuc/?mibextid=wwXIfr"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
-                        onClick={() => setIsFacebookOpen(false)}
-                      >
-                        <Facebook className="h-4 w-4 me-2 text-blue-600" />
-                        Embabi Store
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
+              <a href="https://www.facebook.com/embabistore" target="_blank" rel="noopener noreferrer" 
+                className="hover:text-orange-400">
+                <Facebook size={16} />
+              </a>
               <a href="https://www.instagram.com/muhamed_embabi/" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
                 <Instagram size={16} />
               </a>
-                              <a href="https://wa.me/201200390583" target="_blank" rel="noopener noreferrer"
-                  className="hover:text-orange-400">
-                  <FontAwesomeIcon icon={faWhatsapp} className="w-4 h-4 text-white hover:text-orange-400" />
-                </a>
+              <a href="https://wa.me/201200390583" target="_blank" rel="noopener noreferrer"
+                className="hover:text-orange-400">
+                <Phone size={16} />
+              </a>
             </div>
 
             {/* Right Side - Contact & Language */}
@@ -234,7 +194,7 @@ export function Navbar() {
                 {isMenuOpen ? (
                   <X className="h-6 w-6 text-gray-700" />
                 ) : (
-                  <FontAwesomeIcon icon={faWhatsapp} className="h-6 w-6 text-green-600 hover:text-green-700" />
+                  <Menu className="h-6 w-6 text-gray-700" />
                 )}
               </button>
             </div>

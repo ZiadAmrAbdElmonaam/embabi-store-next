@@ -29,15 +29,37 @@ export async function GET() {
         resource_type: 'image'
       });
 
-      cloudinaryImages = cloudinaryResult.resources.map((resource: any) => resource.secure_url);
+      cloudinaryImages = cloudinaryResult.resources.map((resource: any) => {
+        // Extract filename from public_id (last part after the last slash)
+        const publicIdParts = resource.public_id.split('/');
+        const filename = publicIdParts[publicIdParts.length - 1];
+        
+        // Make filename more readable: convert underscores to spaces and capitalize
+        const readableFilename = filename.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        
+        return {
+          url: resource.secure_url,
+          originalFilename: resource.original_filename || readableFilename,
+          publicId: resource.public_id
+        };
+      });
     } catch (error) {
       console.log('Error fetching Cloudinary images or no images found:', error);
     }
 
     // 3. Combine both sources
     const allImages = [
-      ...localImages.map(url => ({ url, source: 'local' })),
-      ...cloudinaryImages.map(url => ({ url, source: 'cloudinary' }))
+      ...localImages.map(url => ({ 
+        url, 
+        source: 'local',
+        originalFilename: url.split('/').pop()?.split('.')[0] || 'unknown'
+      })),
+      ...cloudinaryImages.map(item => ({ 
+        url: item.url, 
+        source: 'cloudinary',
+        originalFilename: item.originalFilename,
+        publicId: item.publicId
+      }))
     ];
 
     return NextResponse.json(allImages);

@@ -8,6 +8,8 @@ import { toast } from 'react-hot-toast';
 interface ImageItem {
   url: string;
   source: 'local' | 'cloudinary';
+  originalFilename?: string;
+  publicId?: string;
 }
 
 export default function ImageManagementPage() {
@@ -197,6 +199,13 @@ export default function ImageManagementPage() {
                         {image.source === 'cloudinary' ? 'Cloud' : 'Local'}
                       </span>
                     </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 truncate">
+                      {image.originalFilename ? image.originalFilename.replace(/[-_]/g, ' ') : (() => {
+                        const parts = image.url.split('/');
+                        const fileName = parts[parts.length - 1];
+                        return fileName.split('.')[0].replace(/[-_]/g, ' ');
+                      })()}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -262,6 +271,13 @@ export default function ImageManagementPage() {
                         {image.source === 'cloudinary' ? 'Cloud' : 'Local'}
                       </span>
                     </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 truncate">
+                      {image.originalFilename ? image.originalFilename.replace(/[-_]/g, ' ') : (() => {
+                        const parts = image.url.split('/');
+                        const fileName = parts[parts.length - 1];
+                        return fileName.split('.')[0].replace(/[-_]/g, ' ');
+                      })()}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -326,6 +342,13 @@ export default function ImageManagementPage() {
                       }`}>
                         {image.source === 'cloudinary' ? 'Cloud' : 'Local'}
                       </span>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 truncate">
+                      {image.originalFilename ? image.originalFilename.replace(/[-_]/g, ' ') : (() => {
+                        const parts = image.url.split('/');
+                        const fileName = parts[parts.length - 1];
+                        return fileName.split('.')[0].replace(/[-_]/g, ' ');
+                      })()}
                     </div>
                   </div>
                 ))}

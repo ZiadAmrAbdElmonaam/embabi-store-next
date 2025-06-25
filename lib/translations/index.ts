@@ -116,8 +116,11 @@ export const translations = {
       email: 'Email',
       phone: 'Phone',
       address: 'Address',
-      allRightsReserved: 'All rights reserved',
-      safeHands: 'You are in safe hands'
+      allRightsReserved: 'Oxgen Embabi Store. All rights reserved',
+      safeHands: 'Oxgen Embabi Store. You are in safe hands',
+      mobile: '+20 100 298 8606',
+      addressText: 'Al-Serag Mall, Nasr City, Cairo',
+      addressText2: 'Tech Store, Nasr City, Cairo'
     },
     auth: {
       signIn: 'Sign In',
@@ -545,8 +548,11 @@ export const translations = {
       email: 'البريد الإلكتروني',
       phone: 'الهاتف',
       address: 'العنوان',
-      allRightsReserved: 'جميع الحقوق محفوظة',
-      safeHands: 'أنت في أيدٍ أمينة'
+      allRightsReserved: 'أوكسجن إمبابي ستور. جميع الحقوق محفوظة',
+      safeHands: 'أوكسجن إمبابي ستور أنت في أيدٍ أمينة',
+      mobile: '8606 298 100 20+',
+      addressText: 'مول السراج، مدينة نصر، القاهرة',
+      addressText2: 'متجر التقنية، مدينة نصر، القاهرة'
     },
     auth: {
       signIn: 'تسجيل الدخول',

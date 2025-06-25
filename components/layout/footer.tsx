@@ -20,13 +20,13 @@ export function Footer() {
           )}>
             <div className="mb-6">
               <img 
-                src="/images/logo/logo-onepiece.png" 
+                src="/images/logo/footer-logo.PNG" 
                 alt="Embabi Store Logo" 
                 className="h-40 w-auto" 
               />
             </div>
             <p className="text-gray-400 text-center">
-              Embabi Store. <TranslatedContent translationKey="footer.safeHands" />
+              <TranslatedContent translationKey="footer.safeHands" />
             </p>
           </div>
 
@@ -90,22 +90,27 @@ export function Footer() {
             )}>
               <li className="flex items-center gap-2 justify-start">
                 <span><TranslatedContent translationKey="footer.email" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}>firedateto@gmail.com</span>
+                <span className={isRtl ? "mr-auto" : "ml-auto"}>oxygenembabi@gmail.com</span>
               </li>
               <li className="flex items-center gap-2 justify-start">
                 <span><TranslatedContent translationKey="footer.phone" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}>+20 10 90202577</span>
+                <span className={isRtl ? "mr-auto" : "ml-auto"}> <TranslatedContent translationKey="footer.mobile" /></span>
               </li>
               <li className="flex items-center gap-2 justify-start">
                 <span><TranslatedContent translationKey="footer.address" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}>Al-Serag Mall, Nasr City, Cairo, Egypt</span>
+                <span className={isRtl ? "mr-auto" : "ml-auto"}><TranslatedContent translationKey="footer.addressText" /></span>
+                
+              </li>
+              <li className="flex items-center gap-2 justify-start">
+                <span className={isRtl ? "mr-auto" : "ml-auto"}><TranslatedContent translationKey="footer.addressText2" /></span>
+                
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} Embabi Store. <TranslatedContent translationKey="footer.allRightsReserved" /></p>
+          <p>&copy; {new Date().getFullYear()} <TranslatedContent translationKey="footer.allRightsReserved" /></p>
         </div>
       </div>
     </footer>

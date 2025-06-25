@@ -38,7 +38,7 @@ interface ProductDetail {
 export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [availableImages, setAvailableImages] = useState<Array<{url: string, source: string}>>([]);
+  const [availableImages, setAvailableImages] = useState<Array<{url: string, source: string, originalFilename?: string, publicId?: string}>>([]);
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [thumbnails, setThumbnails] = useState<string[]>(initialData?.thumbnails || []);
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>(
@@ -74,8 +74,13 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
     fetchImages();
   }, []);
 
-  // Function to get image name from path (works for both local and Cloudinary URLs)
+  // Function to get image name from path or originalFilename
   const getImageName = (imagePath: string) => {
+    const imageData = availableImages.find(img => img.url === imagePath);
+    if (imageData && imageData.originalFilename) {
+      return imageData.originalFilename.replace(/[-_]/g, ' ');
+    }
+    // Fallback to URL parsing for backward compatibility
     const parts = imagePath.split('/');
     const fileName = parts[parts.length - 1];
     return fileName.split('.')[0].replace(/[-_]/g, ' ');
@@ -498,7 +503,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
                   .filter(img => !images.includes(img.url))
                   .map((image) => (
                     <option key={image.url} value={image.url}>
-                      📁 {image.source === 'local' ? 'Local' : 'Cloud'} • {getImageName(image.url)}
+                      📁 {image.source === 'local' ? 'Local' : 'Cloud'} • {image.originalFilename ? image.originalFilename.replace(/[-_]/g, ' ') : getImageName(image.url)}
                     </option>
                   ))}
               </select>
@@ -580,7 +585,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
                   .filter(img => !thumbnails.includes(img.url))
                   .map((image) => (
                     <option key={image.url} value={image.url}>
-                      📁 {image.source === 'local' ? 'Local' : 'Cloud'} • {getImageName(image.url)}
+                      📁 {image.source === 'local' ? 'Local' : 'Cloud'} • {image.originalFilename ? image.originalFilename.replace(/[-_]/g, ' ') : getImageName(image.url)}
                     </option>
                   ))}
               </select>

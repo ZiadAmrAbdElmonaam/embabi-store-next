@@ -34,7 +34,7 @@ export default function CarouselManagementPage() {
         const availableResponse = await fetch('/api/images/carousel');
         if (!availableResponse.ok) throw new Error('Failed to fetch available images');
         const availableData = await availableResponse.json();
-        // Extract URLs from the {url, source} format
+        // Extract URLs from the {url, source, originalFilename} format
         const imageUrls = availableData.map((img: any) => img.url);
         setAvailableImages(imageUrls || []);
       } catch (error) {
@@ -125,6 +125,38 @@ export default function CarouselManagementPage() {
     }
   };
 
+  const refreshImages = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch current carousel images
+      const imagesResponse = await fetch('/api/admin/carousel');
+      if (!imagesResponse.ok) throw new Error('Failed to fetch carousel images');
+      const carouselData = await imagesResponse.json();
+      
+      // Ensure images array exists even if API returns incomplete data
+      setImages(carouselData.images || []);
+      
+      // Fetch available images from both local and Cloudinary
+      const availableResponse = await fetch('/api/images/carousel');
+      if (!availableResponse.ok) throw new Error('Failed to fetch available images');
+      const availableData = await availableResponse.json();
+              // Extract URLs from the {url, source, originalFilename} format  
+        const imageUrls = availableData.map((img: any) => img.url);
+        setAvailableImages(imageUrls || []);
+      
+      toast.success('Images refreshed');
+    } catch (error) {
+      console.error('Failed to refresh carousel data:', error);
+      toast.error('Failed to refresh carousel data');
+      // Set empty arrays to prevent undefined errors
+      setImages([]);
+      setAvailableImages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full py-20">
@@ -139,7 +171,15 @@ export default function CarouselManagementPage() {
       
       {/* Current Carousel Images */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">Current Carousel Images</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Current Carousel Images</h2>
+          <button
+            onClick={refreshImages}
+            className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+          >
+            🔄 Refresh Images
+          </button>
+        </div>
         
         {images.length === 0 ? (
           <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -162,6 +202,13 @@ export default function CarouselManagementPage() {
                 <div className="p-3 flex justify-between items-center">
                   <div>
                     <span className="text-sm font-medium">Position: {index + 1}</span>
+                    <div className="text-xs text-gray-500 truncate max-w-24">
+                      {(() => {
+                        const parts = image.url.split('/');
+                        const fileName = parts[parts.length - 1];
+                        return fileName.split('.')[0].replace(/[-_]/g, ' ');
+                      })()}
+                    </div>
                   </div>
                   <div className="flex space-x-2">
                     <button
@@ -194,7 +241,38 @@ export default function CarouselManagementPage() {
       
       {/* Available Images */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">Available Images</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Available Images</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={refreshImages}
+              className="text-sm px-3 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+            >
+              🔄 Refresh
+            </button>
+            <a
+              href="/admin/images"
+              target="_blank"
+              className="text-sm px-3 py-1 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors"
+            >
+              📁 Upload New
+            </a>
+          </div>
+        </div>
+        
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-purple-700">
+            💡 <strong>Need to upload new images?</strong> Go to{' '}
+            <a 
+              href="/admin/images" 
+              target="_blank"
+              className="font-medium underline hover:text-purple-800"
+            >
+              Image Management
+            </a>{' '}
+            to upload new carousel images, then come back and refresh this list.
+          </p>
+        </div>
         
         {/* Selected image */}
         {selectedImage && (
@@ -241,6 +319,13 @@ export default function CarouselManagementPage() {
                     fill
                     className="object-contain"
                   />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 truncate">
+                  {(() => {
+                    const parts = image.split('/');
+                    const fileName = parts[parts.length - 1];
+                    return fileName.split('.')[0].replace(/[-_]/g, ' ');
+                  })()}
                 </div>
               </div>
             ))}

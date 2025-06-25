@@ -16,12 +16,20 @@ export async function uploadImage(file: File, folder: string = 'embabi-store') {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    // Create a clean filename for the public ID (remove extension and special chars)
+    const cleanFilename = file.name
+      .replace(/\.[^/.]+$/, '') // Remove extension
+      .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace special chars with underscores
+      .toLowerCase();
+
     // Upload to Cloudinary
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
           resource_type: 'image',
           folder: folder,
+          public_id: cleanFilename, // Use original filename as public ID
+          overwrite: true, // Allow overwriting if same name exists
           transformation: [
             { width: 800, height: 800, crop: 'limit' }, // Limit max size
             { quality: 'auto' }, // Auto quality optimization

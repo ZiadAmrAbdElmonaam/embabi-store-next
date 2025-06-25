@@ -154,7 +154,23 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
           {/* Thumbnails or Additional Images */}
           {(product.thumbnails && product.thumbnails.length > 0) ? (
             <div className="grid grid-cols-5 gap-4">
-              {product.thumbnails.slice(0, 5).map((thumbnail, index) => (
+              {/* Main image as first thumbnail */}
+              <div
+                className={cn(
+                  "aspect-square relative overflow-hidden rounded-xl border hover:border-orange-500 transition-colors duration-200 cursor-pointer",
+                  selectedImage === product.images[0] ? "border-orange-500 ring-2 ring-orange-500 ring-opacity-50" : "border-gray-200 dark:border-gray-700"
+                )}
+                onClick={() => handleImageSelect(product.images[0])}
+              >
+                <Image
+                  src={product.images[0]}
+                  alt={`${product.name} main image`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              {/* Additional thumbnails */}
+              {product.thumbnails.slice(0, 4).map((thumbnail, index) => (
                 <div
                   key={index}
                   className={cn(

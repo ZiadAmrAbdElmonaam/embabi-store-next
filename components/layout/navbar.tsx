@@ -50,7 +50,7 @@ export function Navbar() {
                 className="hover:text-orange-400">
                 <Instagram size={16} />
               </a>
-              <a href="https://wa.me/201090202577" target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/201200390583" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
                 <Phone size={16} />
               </a>

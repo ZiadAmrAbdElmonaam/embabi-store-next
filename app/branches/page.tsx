@@ -3,43 +3,57 @@ import { cookies } from "next/headers";
 import { translations } from "@/lib/translations";
 
 // You can move this to a separate data file or fetch from an API
-const branches = [
-  // {
-  //   id: 1,
-  //   name: 'Main Store',
-  //   address: '123 Main Street, Downtown',
-  //   city: 'Cairo',
-  //   phone: '+20 123 456 7890',
-  //   hours: 'Mon-Sat: 10:00 AM - 10:00 PM',
-  //   mapUrl: 'https://www.google.com/maps/embed?pb=...', // Add your Google Maps embed URL
-  //   image: '/images/branches/main-store.jpg'
-  // },
+const getBranches = (lang: 'en' | 'ar') => [
   {
     id: 1,
-    name: 'Embabi Store',
-    address: 'Nagati Serag, Al Manteqah Ath Thamenah, Nasr City, Cairo Governorate 4441553',
-    city: 'Cairo',
-    phone: '+20 109 020 2577',
-    hours: 'Mon-Sun: 10:00 AM - 11:00 PM',
+    name: lang === 'ar' ? 'أوكسجن إمبابي ستور' : 'OXGEN EMBABI Tech',
+    address: lang === 'ar' 
+      ? 'ناجاتي سراج، المنطقة الثامنة، مدينة نصر، محافظة القاهرة 4441553'
+      : 'Nagati Serag, Al Manteqah Ath Thamenah, Nasr City, Cairo Governorate 4441553',
+    city: lang === 'ar' ? 'القاهرة' : 'Cairo',
+    phone: lang === 'ar' 
+    ? '8606 892 100 20+'
+    : '+20 100 298 8606',
+    hours: lang === 'ar' 
+      ? 'الاثنين - الأحد: 12:00 ص - 12:00 م'
+      : 'Mon-Sun: 12:00 AM - 12:00 PM',
     mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d887.0603714069835!2d31.348438600000003!3d30.050434!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14583fdf6dbf2d0d%3A0x6b9fd9dd440580d2!2sOxygen%20Os%20Store!5e0!3m2!1sen!2seg!4v1716304000000!5m2!1sen!2seg',
     image: '/images/branches/mall-branch.jpg'
+  },
+  {
+    id: 2,
+    name: lang === 'ar' ? 'أوكسجن إمبابي ستور' : 'OXGEN EMBABI Tech',
+    address: lang === 'ar' 
+      ? 'مدينة نصر، محافظة القاهرة، مصر'
+      : 'Nasr City, Cairo Governorate, Egypt',
+    city: lang === 'ar' ? 'القاهرة' : 'Cairo',
+    phone: lang === 'ar' 
+      ? '8606 892 100 20+'
+      : '+20 100 298 8606',
+    hours: lang === 'ar' 
+      ? 'الاثنين - الأحد: 10:00 ص - 11:00 م'
+      : 'Mon-Sun: 10:00 AM - 11:00 PM',
+    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3454.0!2d31.3470423!3d30.0481916!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14583f5733ae08a3:0x960b49ed36ae3925!2sOXGEN+EMBABI+Tech!5e0!3m2!1sen!2seg!4v1716304000000!5m2!1sen!2seg',
+    image: '/images/branches/tech-branch.jpg'
   },
   // Add more branches as needed
 ];
 
-export default function BranchesPage() {
+export default async function BranchesPage() {
   // Get language from cookies for server component
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const lang = (cookieStore.get('lang')?.value || 'en') as 'en' | 'ar';
-  const t = (key: string) => {
+  const t = (key: string): string => {
     const keys = key.split('.');
-    let result = translations[lang];
+    let result: any = translations[lang];
     for (const k of keys) {
       if (result[k] === undefined) return key;
       result = result[k];
     }
-    return result;
+    return typeof result === 'string' ? result : key;
   };
+
+  const branches = getBranches(lang);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">

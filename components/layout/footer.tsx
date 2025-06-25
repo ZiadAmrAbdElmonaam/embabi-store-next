@@ -20,7 +20,7 @@ export function Footer() {
           )}>
             <div className="mb-6">
               <img 
-                src="/images/logo/footer-logo.PNG" 
+                src="/images/logo/footer-logo.png" 
                 alt="Embabi Store Logo" 
                 className="h-40 w-auto" 
               />
@@ -98,13 +98,10 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 justify-start">
                 <span><TranslatedContent translationKey="footer.address" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}><TranslatedContent translationKey="footer.addressText" /></span>
-                
-              </li>
-              <li className="flex items-center gap-2 justify-start">
                 <span className={isRtl ? "mr-auto" : "ml-auto"}><TranslatedContent translationKey="footer.addressText2" /></span>
                 
               </li>
+             
             </ul>
           </div>
         </div>

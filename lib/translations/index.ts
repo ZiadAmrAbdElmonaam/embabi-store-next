@@ -120,7 +120,7 @@ export const translations = {
       safeHands: 'Oxgen Embabi Store. You are in safe hands',
       mobile: '+20 100 298 8606',
       addressText: 'Al-Serag Mall, Nasr City, Cairo',
-      addressText2: 'Tech Store, Nasr City, Cairo'
+      addressText2: 'AlAndalus Mall, Makram Ebeid, Nasr City'
     },
     auth: {
       signIn: 'Sign In',
@@ -552,7 +552,7 @@ export const translations = {
       safeHands: 'أوكسجن إمبابي ستور أنت في أيدٍ أمينة',
       mobile: '8606 298 100 20+',
       addressText: 'مول السراج، مدينة نصر، القاهرة',
-      addressText2: 'متجر التقنية، مدينة نصر، القاهرة'
+      addressText2: 'مول الأندلس، اخر مكرم عبيد، مدينة نصر'
     },
     auth: {
       signIn: 'تسجيل الدخول',

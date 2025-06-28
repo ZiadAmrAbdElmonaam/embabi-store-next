@@ -98,13 +98,10 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2 justify-start">
                 <span><TranslatedContent translationKey="footer.address" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}><TranslatedContent translationKey="footer.addressText" /></span>
-                
-              </li>
-              <li className="flex items-center gap-2 justify-start">
                 <span className={isRtl ? "mr-auto" : "ml-auto"}><TranslatedContent translationKey="footer.addressText2" /></span>
                 
               </li>
+             
             </ul>
           </div>
         </div>

@@ -4,37 +4,22 @@ import { translations } from "@/lib/translations";
 
 // You can move this to a separate data file or fetch from an API
 const getBranches = (lang: 'en' | 'ar') => [
+ 
   {
     id: 1,
-    name: lang === 'ar' ? 'أوكسجن إمبابي ستور' : 'OXGEN EMBABI Tech',
+    name: lang === 'ar' ? 'أوكسجن إمبابي ستور' : 'OXGEN EMBABI Store',
     address: lang === 'ar' 
-      ? 'ناجاتي سراج، المنطقة الثامنة، مدينة نصر، محافظة القاهرة 4441553'
-      : 'Nagati Serag, Al Manteqah Ath Thamenah, Nasr City, Cairo Governorate 4441553',
-    city: lang === 'ar' ? 'القاهرة' : 'Cairo',
-    phone: lang === 'ar' 
-    ? '8606 892 100 20+'
-    : '+20 100 298 8606',
-    hours: lang === 'ar' 
-      ? 'الاثنين - الأحد: 12:00 ص - 12:00 م'
-      : 'Mon-Sun: 12:00 AM - 12:00 PM',
-    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d887.0603714069835!2d31.348438600000003!3d30.050434!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14583fdf6dbf2d0d%3A0x6b9fd9dd440580d2!2sOxygen%20Os%20Store!5e0!3m2!1sen!2seg!4v1716304000000!5m2!1sen!2seg',
-    image: '/images/branches/mall-branch.jpg'
-  },
-  {
-    id: 2,
-    name: lang === 'ar' ? 'أوكسجن إمبابي ستور' : 'OXGEN EMBABI Tech',
-    address: lang === 'ar' 
-      ? 'مدينة نصر، محافظة القاهرة، مصر'
-      : 'Nasr City, Cairo Governorate, Egypt',
+      ? 'مول الألسن، اخر مكرم عبيد، مدينة نصر'
+      : 'Al-alSon Mall, Makram Ebeid, Nasr City',
     city: lang === 'ar' ? 'القاهرة' : 'Cairo',
     phone: lang === 'ar' 
       ? '8606 892 100 20+'
       : '+20 100 298 8606',
     hours: lang === 'ar' 
-      ? 'الاثنين - الأحد: 10:00 ص - 11:00 م'
-      : 'Mon-Sun: 10:00 AM - 11:00 PM',
-    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3454.0!2d31.3470423!3d30.0481916!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14583f5733ae08a3:0x960b49ed36ae3925!2sOXGEN+EMBABI+Tech!5e0!3m2!1sen!2seg!4v1716304000000!5m2!1sen!2seg',
-    image: '/images/branches/tech-branch.jpg'
+      ? 'طول أيام الأسبوع: 10:00 ص - 10:00 م'
+      : 'All week days: 10:00 AM - 10:00 PM',
+    mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d431.45!2d31.347167665190817!3d30.048149688357753!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14583f5733ae08a3:0x960b49ed36ae3925!2sOxygen+Store!5e0!3m2!1sen!2seg!4v1716304000000!5m2!1sen!2seg',
+    coordinates: { lat: 30.048149688357753, lng: 31.347167665190817 }
   },
   // Add more branches as needed
 ];
@@ -121,9 +106,7 @@ export default async function BranchesPage() {
 
                   {/* Get Directions Button */}
                   <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                      `${branch.address}, ${branch.city}`
-                    )}`}
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${branch.coordinates.lat},${branch.coordinates.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-6 inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors w-full md:w-auto"

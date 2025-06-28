@@ -7,7 +7,6 @@ import {
   User, 
   Menu, 
   X, 
-  Facebook, 
   Instagram, 
   Phone, 
   MapPin, 
@@ -15,8 +14,11 @@ import {
   Flame,
   LogOut,
   UserCircle,
-  LayoutDashboard
+  LayoutDashboard,
+  ChevronDown
 } from "lucide-react";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faWhatsapp, faFacebook } from '@fortawesome/free-brands-svg-icons';
 import { useState } from "react";
 import { useCart } from "@/hooks/use-cart";
 import Image from "next/image";
@@ -28,6 +30,7 @@ export function Navbar() {
   const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isFacebookOpen, setIsFacebookOpen] = useState(false);
   const { items } = useCart();
   const { lang } = useTranslation();
 
@@ -42,22 +45,53 @@ export function Navbar() {
           <div className="flex justify-between items-center h-9">
             {/* Left Side - Social Links */}
             <div className="flex items-center gap-3 ml-1">
-              <a href="https://www.facebook.com/embabistore" target="_blank" rel="noopener noreferrer" 
-                className="hover:text-orange-400">
-                <Facebook size={16} />
-              </a>
+              {/* Facebook Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsFacebookOpen(!isFacebookOpen)}
+                  className="hover:text-orange-400"
+                >
+                  <FontAwesomeIcon icon={faFacebook} className="w-4 h-4" />
+                </button>
+                
+                {/* Facebook Dropdown Menu */}
+                {isFacebookOpen && (
+                  <div 
+                    className="absolute top-full left-0 mt-1 bg-white text-gray-900 rounded-md shadow-lg overflow-hidden z-50 whitespace-nowrap"
+                    onMouseLeave={() => setIsFacebookOpen(false)}
+                  >
+                    <a 
+                      href="https://www.facebook.com/share/1AXtFxMs45/?mibextid=wwXIfr" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block px-3 py-2 text-sm hover:bg-orange-50 hover:text-orange-600"
+                    >
+                      Oxygen Store
+                    </a>
+                    <a 
+                      href="https://www.facebook.com/share/16h96QExuc/?mibextid=wwXIfr" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block px-3 py-2 text-sm hover:bg-orange-50 hover:text-orange-600"
+                    >
+                      Embabi Store
+                    </a>
+                  </div>
+                )}
+              </div>
+              
               <a href="https://www.instagram.com/muhamed_embabi/" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
                 <Instagram size={16} />
               </a>
               <a href="https://wa.me/201200390583" target="_blank" rel="noopener noreferrer"
                 className="hover:text-orange-400">
-                <Phone size={16} />
+                <FontAwesomeIcon icon={faWhatsapp} className="w-4 h-4" />
               </a>
             </div>
 
             {/* Right Side - Contact & Language */}
-            <div className="flex items-center gap-3 mr-1">
+            <div className="flex items-center gap-3 mr-1 text-xs sm:text-sm">
               <Link href="/contact" className="hover:text-orange-400 text-xs sm:text-sm whitespace-nowrap">
                 <span className="hidden sm:inline"><TranslatedContent translationKey="navbar.contactUs" /></span>
                 <span className="sm:hidden flex items-center">

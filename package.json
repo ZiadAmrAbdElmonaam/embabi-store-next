@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "create-admin": "ts-node -T scripts/create-admin.ts",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && prisma db push --accept-data-loss",
     "seed": "ts-node -T prisma/seed.ts",
     "check-admin": "ts-node -T scripts/check-admin.ts",
     "delete-dummy-products": "ts-node -T scripts/delete-dummy-products.ts",

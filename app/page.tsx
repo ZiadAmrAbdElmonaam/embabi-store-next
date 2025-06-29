@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeCarousel } from "@/components/home/carousel";
+import { CategoriesCarousel } from "@/components/home/categories-carousel";
 import { ProductCard } from "@/components/products/product-card";
 import { TranslatedContent } from "@/components/ui/translated-content";
 
@@ -55,7 +56,6 @@ export default async function HomePage() {
         }
       }
     },
-    take: 4,
     select: {
       id: true,
       name: true,
@@ -98,38 +98,7 @@ export default async function HomePage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
             <TranslatedContent translationKey="home.shopByCategory" />
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {formattedCategories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/categories/${category.slug}`}
-                className="group bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition"
-              >
-                <div className="aspect-square relative">
-                  {category.image && (
-                    <Image
-                      src={category.image}
-                      alt={category.name}
-                      fill
-                      className="object-cover transition duration-300 group-hover:scale-110"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-black/40 transition-opacity duration-300 group-hover:opacity-0" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <h3 className="text-4xl font-bold text-white px-4 py-2 transition-opacity duration-300 group-hover:opacity-0">
-                        {category.name}
-                      </h3>
-                      <p className="text-sm text-white/80">
-                        {category.productCount} <TranslatedContent translationKey="home.products" />
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <CategoriesCarousel categories={formattedCategories} />
         </div>
       </section>
 

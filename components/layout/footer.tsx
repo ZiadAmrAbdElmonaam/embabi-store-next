@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { TranslatedContent } from '@/components/ui/translated-content';
 import { useTranslation } from '@/hooks/use-translation';
 import { cn } from '@/lib/utils';
@@ -19,10 +20,13 @@ export function Footer() {
             isRtl && "md:order-3"
           )}>
             <div className="mb-6">
-              <img 
-                src="/images/logo/footer-logo.PNG" 
+              <Image 
+                src="/images/logo/footer-logo.png" 
                 alt="Embabi Store Logo" 
+                width={200}
+                height={160}
                 className="h-40 w-auto" 
+                priority
               />
             </div>
             <p className="text-gray-400 text-center">

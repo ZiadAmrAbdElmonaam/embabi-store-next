@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { translations } from "@/lib/translations";
 import type { Language } from "@/lib/translations";
+import { getProductDisplayPrice } from "@/lib/utils";
 
 // Changed to fixed 5 products instead of paginated results
 const TOP_PRODUCTS_COUNT = 5;
@@ -62,7 +63,12 @@ export default async function MostSellingPage() {
         select: {
           rating: true
         }
-      }
+      },
+      storages: {
+        include: {
+          variants: true,
+        },
+      },
     }
   });
 
@@ -75,13 +81,40 @@ export default async function MostSellingPage() {
   );
 
   // Serialize the products and add the total sold quantity
-  const serializedProducts = products.map(product => ({
-    ...product,
-    price: Number(product.price),
-    salePrice: product.salePrice ? Number(product.salePrice) : null,
-    totalSold: quantityMap.get(product.id) || 0,
-    variants: product.variants || []
-  }));
+  const serializedProducts = products.map(product => {
+    // Get display pricing (prioritizes storage with stock)
+    const displayPrice = getProductDisplayPrice({
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      saleEndDate: product.saleEndDate?.toISOString() || null,
+      storages: product.storages?.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        stock: storage.stock,
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      })) || []
+    });
+
+    return {
+      ...product,
+      price: displayPrice.price,
+      salePrice: displayPrice.salePrice,
+      totalSold: quantityMap.get(product.id) || 0,
+      variants: product.variants || [],
+      storages: product.storages?.map(storage => ({
+        ...storage,
+        price: Number(storage.price),
+        createdAt: storage.createdAt.toISOString(),
+        updatedAt: storage.updatedAt.toISOString(),
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      })) || [],
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+      saleEndDate: product.saleEndDate?.toISOString() || null,
+    };
+  });
 
   // Sort products by total sold quantity (maintaining the same order as mostSoldProducts)
   serializedProducts.sort((a, b) => (b.totalSold || 0) - (a.totalSold || 0));

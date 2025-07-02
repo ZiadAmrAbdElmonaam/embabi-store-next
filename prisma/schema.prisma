@@ -61,6 +61,7 @@ model Product {
   category               Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   details                ProductDetail[]
   variants               ProductVariant[]
+  storages               ProductStorage[]
   reviews                Review[]
   wishlistItems          WishlistItem[]
 
@@ -97,6 +98,7 @@ model OrderItem {
   quantity  Int
   price     Decimal
   color     String?
+  storageId String?
   status    OrderItemStatus? @default(ACTIVE)
   order     Order            @relation(fields: [orderId], references: [id])
   product   Product          @relation(fields: [productId], references: [id])
@@ -175,6 +177,7 @@ model CartItem {
   productId     String
   quantity      Int      @default(1)
   selectedColor String?
+  storageId     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -202,6 +205,7 @@ model AnonymousCartItem {
   productId     String
   quantity      Int           @default(1)
   selectedColor String?
+  storageId     String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   cart          AnonymousCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -234,6 +238,34 @@ model ProductVariant {
   quantity  Int
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductStorage {
+  id             String                    @id @default(cuid())
+  productId      String
+  size           String                    // "128GB", "256GB", etc.
+  price          Decimal                   @db.Decimal(10, 2)
+  stock          Int
+  salePercentage Float?                    // Optional sale percentage
+  saleEndDate    DateTime?                 // Optional sale end date
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  
+  product        Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variants       ProductStorageVariant[]   // Color variants for this specific storage
+  
+  @@index([productId])
+}
+
+model ProductStorageVariant {
+  id        String         @id @default(cuid())
+  storageId String
+  color     String
+  quantity  Int
+  
+  storage   ProductStorage @relation(fields: [storageId], references: [id], onDelete: Cascade)
+  
+  @@index([storageId])
 }
 
 model Coupon {

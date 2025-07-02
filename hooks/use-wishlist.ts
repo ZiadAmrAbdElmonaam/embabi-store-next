@@ -15,6 +15,19 @@ interface WishlistItem {
     color: string;
     quantity: number;
   }>;
+  storages?: Array<{
+    id: string;
+    size: string;
+    price: number;
+    stock: number;
+    salePercentage?: number | null;
+    saleEndDate?: string | null;
+    variants: Array<{
+      id: string;
+      color: string;
+      quantity: number;
+    }>;
+  }>;
 }
 
 interface WishlistStore {

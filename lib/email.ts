@@ -88,6 +88,7 @@ export async function sendOrderConfirmationEmail(
     total: number;
     items: Array<{ name: string; quantity: number; price: number }>;
     shippingName: string;
+    shippingPhone: string;
     shippingAddress: string;
     shippingCity: string;
   }
@@ -138,6 +139,7 @@ export async function sendOrderConfirmationEmail(
       <div style="background-color: #f7fafc; padding: 20px; border-radius: 8px;">
         <h3 style="color: #2d3748; margin-top: 0;">Shipping Details</h3>
         <p style="margin: 0;">${orderDetails.shippingName}</p>
+        <p style="margin: 0;">${orderDetails.shippingPhone}</p>
         <p style="margin: 0;">${orderDetails.shippingAddress}</p>
         <p style="margin: 0;">${orderDetails.shippingCity}</p>
       </div>

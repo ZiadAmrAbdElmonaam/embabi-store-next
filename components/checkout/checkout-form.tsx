@@ -56,6 +56,9 @@ interface CheckoutFormProps {
     images: string[];
     quantity: number;
     selectedColor: string | null;
+    storageId: string | null;
+    storageSize: string | null;
+    uniqueId: string;
     availableColors?: { color: string; quantity: number }[];
   }[];
   subtotal: number;
@@ -198,7 +201,8 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         id: item.id,
         quantity: item.quantity,
         price: item.salePrice || item.price,
-        selectedColor: item.selectedColor
+        selectedColor: item.selectedColor,
+        storageId: item.storageId
       }));
       formDataToSend.append('items', JSON.stringify(itemsData));
 
@@ -474,7 +478,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
           <div className="space-y-4">
             <div className="max-h-60 overflow-y-auto pr-2">
               {items.map((item) => (
-                <div key={item.id} className="flex gap-3 py-3 border-b border-gray-100">
+                <div key={item.uniqueId} className="flex gap-3 py-3 border-b border-gray-100">
                   <div className="w-16 h-16 bg-gray-50 rounded-md overflow-hidden relative flex-shrink-0">
                     <Image
                       src={item.images[0]}
@@ -493,6 +497,12 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
                         EGP {((item.salePrice || item.price) * item.quantity).toLocaleString()}
                       </p>
                     </div>
+                    {/* Storage Display */}
+                    {item.storageSize && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        <TranslatedContent translationKey="productDetail.storage" />: {item.storageSize}
+                      </p>
+                    )}
                     {item.selectedColor && (
                       <p className="text-xs text-gray-500 mt-1">
                         <TranslatedContent translationKey="cart.color" />: {getColorName(item.selectedColor, lang)}

@@ -1,17 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { ProductForm } from "@/components/admin/product-form";
 import { notFound } from "next/navigation";
-import { Product, ProductVariant, ProductDetail, Category } from "@prisma/client";
+import { Product, ProductVariant, ProductDetail, Category, ProductStorage, ProductStorageVariant } from "@prisma/client";
 
 type ProductWithRelations = Product & {
   variants: ProductVariant[];
   details: ProductDetail[];
+  storages: (ProductStorage & {
+    variants: ProductStorageVariant[];
+  })[];
 };
 
 interface EditProductPageProps {
-  params: {
+  params: Promise<{
     productId: string;
-  };
+  }>;
 }
 
 const serializeProduct = (product: ProductWithRelations) => {
@@ -24,12 +27,21 @@ const serializeProduct = (product: ProductWithRelations) => {
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
     saleEndDate: product.saleEndDate?.toISOString() || null,
+    storages: product.storages.map(storage => ({
+      ...storage,
+      price: storage.price.toString(),
+      salePercentage: storage.salePercentage?.toString() || null,
+      saleEndDate: storage.saleEndDate?.toISOString() || null,
+      createdAt: storage.createdAt.toISOString(),
+      updatedAt: storage.updatedAt.toISOString(),
+    })),
   };
 };
 
 export default async function EditProductPage({
-  params: { productId },
+  params,
 }: EditProductPageProps) {
+  const { productId } = await params;
   if (!productId) notFound();
 
   const [product, categories] = await Promise.all([
@@ -40,6 +52,11 @@ export default async function EditProductPage({
       include: {
         variants: true,
         details: true,
+        storages: {
+          include: {
+            variants: true,
+          },
+        },
       },
     }),
     prisma.category.findMany({

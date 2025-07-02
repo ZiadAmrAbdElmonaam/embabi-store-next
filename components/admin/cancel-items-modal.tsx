@@ -9,9 +9,14 @@ interface OrderItem {
   quantity: number;
   price: number;
   color?: string | null;
+  storageId?: string | null;
   product: {
     id: string;
     name: string;
+    storages: Array<{
+      id: string;
+      size: string;
+    }>;
   };
 }
 
@@ -26,34 +31,51 @@ interface CancelItemsModalProps {
   onItemsCancelled: () => void;
 }
 
+interface CancelItemData {
+  itemId: string;
+  quantityToCancel: number;
+}
+
 export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelItemsModalProps) {
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [cancelItems, setCancelItems] = useState<Map<string, number>>(new Map());
   const [comment, setComment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Ensure order.items exists
   const items = order?.items || [];
 
-  const handleItemToggle = (itemId: string) => {
-    if (selectedItems.includes(itemId)) {
-      setSelectedItems(selectedItems.filter(id => id !== itemId));
+  const handleQuantityChange = (itemId: string, quantity: number) => {
+    const newCancelItems = new Map(cancelItems);
+    if (quantity > 0) {
+      newCancelItems.set(itemId, quantity);
     } else {
-      setSelectedItems([...selectedItems, itemId]);
+      newCancelItems.delete(itemId);
     }
+    setCancelItems(newCancelItems);
   };
 
   const handleSelectAll = () => {
-    if (selectedItems.length === items.length) {
-      setSelectedItems([]);
+    const newCancelItems = new Map<string, number>();
+    if (cancelItems.size === items.length) {
+      // If all items are selected, clear all
+      setCancelItems(newCancelItems);
     } else {
-      setSelectedItems(items.map(item => item.id));
+      // Select all items with their full quantities
+      items.forEach(item => {
+        newCancelItems.set(item.id, item.quantity);
+      });
+      setCancelItems(newCancelItems);
     }
+  };
+
+  const getTotalSelectedItems = () => {
+    return Array.from(cancelItems.values()).reduce((sum, qty) => sum + qty, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (selectedItems.length === 0) {
+    if (cancelItems.size === 0) {
       toast.error('Please select at least one item to cancel');
       return;
     }
@@ -61,11 +83,16 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
     setIsLoading(true);
 
     try {
+      const itemsToCancel: CancelItemData[] = Array.from(cancelItems.entries()).map(([itemId, quantity]) => ({
+        itemId,
+        quantityToCancel: quantity
+      }));
+
       const response = await fetch(`/api/orders/${order.id}/cancel-items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          itemIds: selectedItems,
+          items: itemsToCancel,
           comment 
         }),
       });
@@ -97,22 +124,22 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+      <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-medium mb-4">Cancel Order Items</h2>
         <p className="text-sm text-gray-600 mb-4">
-          Select the items you want to cancel. This will return the products to stock.
+          Specify the quantity to cancel for each item. Cancelled items will be returned to stock.
         </p>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium">Order Items</h3>
+              <h3 className="font-medium">Order Items ({getTotalSelectedItems()} items selected to cancel)</h3>
               <button
                 type="button"
                 onClick={handleSelectAll}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                {selectedItems.length === items.length ? 'Deselect All' : 'Select All'}
+                {cancelItems.size === items.length ? 'Deselect All' : 'Select All'}
               </button>
             </div>
             
@@ -120,36 +147,43 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
-                      Select
-                    </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Product
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quantity
+                      Storage
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Color
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Ordered Qty
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cancel Qty
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item) => (
-                    <tr key={item.id} className={selectedItems.includes(item.id) ? 'bg-blue-50' : ''}>
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.includes(item.id)}
-                          onChange={() => handleItemToggle(item.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </td>
+                  {items.map((item) => {
+                    // Find storage information if storageId exists
+                    const selectedStorage = item.storageId 
+                      ? item.product.storages?.find(s => s.id === item.storageId)
+                      : null;
+                    
+                    const cancelQty = cancelItems.get(item.id) || 0;
+                    
+                    return (
+                    <tr key={item.id} className={cancelQty > 0 ? 'bg-blue-50' : ''}>
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {item.product.name}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
-                        {item.quantity}
+                        {selectedStorage ? (
+                          <span>{selectedStorage.size}</span>
+                        ) : (
+                          <span className="text-gray-500">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900">
                         {item.color ? (
@@ -164,11 +198,53 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
                           <span className="text-gray-500">-</span>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                        {item.quantity}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            max={item.quantity}
+                            value={cancelQty}
+                            onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 0)}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="0"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(item.id, item.quantity)}
+                            className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 border border-blue-200 rounded hover:bg-blue-50"
+                          >
+                            All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(item.id, 0)}
+                            className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                        {cancelQty > item.quantity && (
+                          <p className="text-xs text-red-500 mt-1">Cannot exceed ordered quantity</p>
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {getTotalSelectedItems() > 0 && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Summary:</strong> You are cancelling {getTotalSelectedItems()} item(s) total from this order.
+                </p>
+              </div>
+            )}
           </div>
           
           <div className="mb-4">
@@ -180,7 +256,7 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
               onChange={(e) => setComment(e.target.value)}
               className="w-full border rounded-md px-3 py-2"
               rows={3}
-              placeholder="Reason for cancellation"
+              placeholder="Reason for cancellation (e.g., customer return, damaged goods, etc.)"
             />
           </div>
           
@@ -194,10 +270,10 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
             </button>
             <button
               type="submit"
-              disabled={isLoading || selectedItems.length === 0}
+              disabled={isLoading || cancelItems.size === 0 || Array.from(cancelItems.values()).some((qty, index) => qty > items[Array.from(cancelItems.keys()).indexOf(Array.from(cancelItems.keys())[index])].quantity)}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
             >
-              {isLoading ? 'Processing...' : 'Cancel Selected Items'}
+              {isLoading ? 'Processing...' : `Cancel ${getTotalSelectedItems()} Item(s)`}
             </button>
           </div>
         </form>

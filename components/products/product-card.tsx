@@ -10,6 +10,7 @@ import { useCart } from "@/hooks/use-cart";
 import { useState, useRef, useEffect } from "react";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { useTranslation } from "@/hooks/use-translation";
+import { ProductSelectionModal } from "./product-selection-modal";
 
 interface ProductCardProps {
   product: {
@@ -27,6 +28,19 @@ interface ProductCardProps {
       color: string;
       quantity: number;
     }>;
+    storages?: Array<{
+      id: string;
+      size: string;
+      price: number;
+      stock: number;
+      salePercentage?: number | null;
+      saleEndDate?: string | null;
+      variants: Array<{
+        id: string;
+        color: string;
+        quantity: number;
+      }>;
+    }>;
   };
 }
 
@@ -35,15 +49,14 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem: addToCart } = useCart();
   const { t } = useTranslation();
   const isInWishlist = items.some(item => item.id === product.id);
-  const [showColorModal, setShowColorModal] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   
   // Close modal when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowColorModal(false);
+        setShowSelectionModal(false);
       }
     }
     
@@ -134,6 +147,9 @@ export function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     
+    // Check if the product has storages
+    const hasStorages = product.storages && product.storages.length > 0;
+    
     // Check if the product has colors or variants
     const hasColors = product.colors && product.colors.length > 0;
     const hasVariants = product.variants && product.variants.length > 0;
@@ -142,57 +158,25 @@ export function ProductCard({ product }: ProductCardProps) {
     const hasAvailableVariants = product.variants && 
       product.variants.some(variant => variant.quantity > 0);
     
-    if ((hasColors || hasVariants) && hasAvailableVariants) {
-      // Show color selection modal
-      setShowColorModal(true);
+    // Show modal if product has storages, colors, or variants that require selection
+    if (hasStorages || ((hasColors || hasVariants) && hasAvailableVariants)) {
+      setShowSelectionModal(true);
       return;
     }
     
-    // For products without colors or with no available variants, add directly to cart
-    addToCart({
+    // For products without storages, colors or variants, add directly to cart
+    addItem({
       id: product.id,
       name: product.name,
       price: product.price,
       salePrice: product.salePrice || null,
       images: product.images,
+      slug: product.slug,
       variants: []
     });
   };
   
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-  };
-  
-  const handleAddWithColor = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!selectedColor) {
-      toast.error(t('products.selectColor'));
-      return;
-    }
-    
-    // Create variants array with proper structure if we have colors but not variants
-    const itemVariants = product.variants || 
-      (product.colors ? product.colors.map(color => ({
-        id: `${product.id}-${color}`,
-        color: color,
-        quantity: 10 // Default quantity if only colors are provided
-      })) : []);
-    
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      salePrice: product.salePrice || null,
-      images: product.images,
-      selectedColor: selectedColor,
-      variants: itemVariants
-    });
-    
-    setShowColorModal(false);
-    setSelectedColor(null);
-  };
+
 
   return (
     <>
@@ -299,111 +283,12 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       </Link>
       
-      {/* Color Selection Modal */}
-      {showColorModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div 
-            ref={modalRef}
-            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-black-900">
-                <TranslatedContent translationKey="products.selectColorFor" /> {product.name}
-              </h3>
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowColorModal(false);
-                }}
-                className="p-1 text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-center gap-3 mb-2">
-                {/* Display colors from variants if available */}
-                {product.variants && product.variants
-                  .filter(variant => variant.quantity > 0) // Filter out variants with zero quantity
-                  .map((variant) => (
-                  <div
-                    key={variant.id}
-                    className="group relative flex flex-col items-center gap-2"
-                  >
-                    <div
-                      className={cn(
-                        "h-12 w-12 rounded-full border-2 cursor-pointer transition-colors duration-200 shadow-sm flex items-center justify-center",
-                        selectedColor === variant.color 
-                          ? "border-blue-600 ring-2 ring-blue-600 ring-opacity-50" 
-                          : "border-gray-200 hover:border-blue-400"
-                      )}
-                      style={{ 
-                        backgroundColor: getColorValue(variant.color),
-                        boxShadow: variant.color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined 
-                      }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleColorSelect(variant.color);
-                      }}
-                    >
-                      {/* Quantity indicator removed */}
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">
-                      {getColorName(variant.color)}
-                    </span>
-                  </div>
-                ))}
-                
-                {/* Display colors from the colors array if no variants */}
-                {!product.variants && product.colors && product.colors.map((color, index) => (
-                  <div
-                    key={index}
-                    className="group relative flex flex-col items-center gap-2"
-                  >
-                    <div
-                      className={cn(
-                        "h-12 w-12 rounded-full border-2 cursor-pointer transition-colors duration-200 shadow-sm flex items-center justify-center",
-                        selectedColor === color 
-                          ? "border-blue-600 ring-2 ring-blue-600 ring-opacity-50" 
-                          : "border-gray-200 hover:border-blue-400"
-                      )}
-                      style={{ 
-                        backgroundColor: getColorValue(color),
-                        boxShadow: color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined 
-                      }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleColorSelect(color);
-                      }}
-                    >
-                      {/* Quantity indicator removed */}
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">
-                      {getColorName(color)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              {selectedColor && (
-                <p className="text-sm text-center text-gray-600">
-                  <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(selectedColor)}</span>
-                </p>
-              )}
-              
-              <button
-                onClick={handleAddWithColor}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-                disabled={!selectedColor}
-              >
-                <TranslatedContent translationKey="products.addToCart" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Product Selection Modal */}
+      <ProductSelectionModal
+        isOpen={showSelectionModal}
+        onClose={() => setShowSelectionModal(false)}
+        product={product}
+      />
     </>
   );
 } 

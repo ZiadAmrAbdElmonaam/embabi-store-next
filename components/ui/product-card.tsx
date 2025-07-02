@@ -6,11 +6,11 @@ import Image from 'next/image';
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "react-hot-toast";
 import { WishlistButton } from "./wishlist-button";
-import { ShoppingCart, X } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useTranslation } from '@/hooks/use-translation';
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { TranslatedContent } from "@/components/ui/translated-content";
+import { ProductSelectionModal } from "@/components/products/product-selection-modal";
 
 interface ProductCardProps {
   product: {
@@ -37,83 +37,73 @@ interface ProductCardProps {
       quantity: number;
     }>;
     colors?: string[];
+    storages?: Array<{
+      id: string;
+      size: string;
+      price: number;
+      stock: number;
+      salePercentage?: number | null;
+      saleEndDate?: string | null;
+      variants: Array<{
+        id: string;
+        color: string;
+        quantity: number;
+      }>;
+    }>;
   };
   showDescription?: boolean;
 }
 
 export function ProductCard({ product, showDescription = false }: ProductCardProps) {
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const { addItem } = useCart();
   const { t } = useTranslation();
-  const [isHovered, setIsHovered] = useState(false);
-  const [showColorModal, setShowColorModal] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-  
-  // Close modal when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowColorModal(false);
-      }
-    }
-    
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+
+  // Helper function to check stock status
+  const checkStockStatus = () => {
+    const hasMainStock = product.stock > 0;
+    const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+    return {
+      hasStock: hasMainStock || hasStorageStock,
+      hasMainStock,
+      hasStorageStock
     };
-  }, [modalRef]);
+  };
+
+  const stockStatus = checkStockStatus();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // For products with variants, show color selection modal
-    if (product.variants && product.variants.length > 0) {
-      // Check if there are any variants with quantity > 0
-      const hasAvailableVariants = product.variants.some(variant => variant.quantity > 0);
-      
-      if (hasAvailableVariants) {
-        setShowColorModal(true);
-        return;
-      }
-    }
+    // Check if the product has storages
+    const hasStorages = product.storages && product.storages.length > 0;
     
-    // For products without variants or with no available variants, add directly to cart
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      salePrice: product.salePrice || null,
-      images: product.images,
-      variants: []
-    });
-  };
-  
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-  };
-  
-  const handleAddWithColor = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    // Check if the product has colors or variants
+    const hasColors = product.colors && product.colors.length > 0;
+    const hasVariants = product.variants && product.variants.length > 0;
     
-    if (!selectedColor) {
-      toast.error('Please select a color');
+    // Check if there are any variants with quantity > 0
+    const hasAvailableVariants = product.variants && 
+      product.variants.some(variant => variant.quantity > 0);
+    
+    // Show modal if product has storages, colors, or variants that require selection
+    if (hasStorages || ((hasColors || hasVariants) && hasAvailableVariants)) {
+      setShowSelectionModal(true);
       return;
     }
     
+    // For products without storages, colors or variants, add directly to cart
     addItem({
       id: product.id,
       name: product.name,
       price: product.price,
       salePrice: product.salePrice || null,
       images: product.images,
-      selectedColor: selectedColor,
-      variants: product.variants
+      slug: product.slug,
+      variants: []
     });
-    
-    setShowColorModal(false);
-    setSelectedColor(null);
   };
 
   // Color name mapping
@@ -133,7 +123,6 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
       'navy': 'Navy Blue',
       'gold': 'Gold',
       'silver': 'Silver',
-      // Add more color mappings as needed
     };
     return colorMap[colorCode.toLowerCase()] || colorCode;
   };
@@ -182,14 +171,14 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
       />
       
       {/* Sale Badge */}
-      {product.sale && product.stock > 0 && (
+      {product.sale && stockStatus.hasStock && (
         <div className="absolute top-2 left-2 z-10 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-medium">
           {Math.round(product.sale)}% OFF
         </div>
       )}
 
       {/* Out of Stock Badge */}
-      {product.stock === 0 && (
+      {!stockStatus.hasStock && (
         <div className="absolute top-2 left-2 z-10 bg-gray-800 text-white px-2 py-1 rounded-full text-sm font-medium">
           Out of Stock
         </div>
@@ -203,10 +192,10 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
               alt={product.name}
               fill
               className={`object-cover group-hover:scale-105 transition-transform duration-200 ${
-                product.stock === 0 ? 'opacity-75' : ''
+                stockStatus.hasStock ? '' : 'opacity-75'
               }`}
             />
-            {product.stock === 0 && (
+            {!stockStatus.hasStock && (
               <div className="absolute inset-0 bg-black/10" />
             )}
 
@@ -267,7 +256,7 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
               {product.description}
             </p>
           </div>
-          {product.stock > 0 ? (
+          {stockStatus.hasStock ? (
             <button
               onClick={handleAddToCart}
               title={t('products.addToCart')}
@@ -287,7 +276,7 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
         </div>
 
         <div className="mt-2 flex items-center gap-2">
-          {product.salePrice && product.salePrice < product.price && product.stock > 0 ? (
+          {product.salePrice && product.salePrice < product.price && stockStatus.hasStock ? (
             <>
               <p className="font-bold text-orange-600">
                 {formatPrice(product.salePrice)}
@@ -297,117 +286,19 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
               </p>
             </>
           ) : (
-            <p className={`font-bold ${product.stock === 0 ? 'text-gray-500' : 'text-gray-900'}`}>
+            <p className={`font-bold ${stockStatus.hasStock ? 'text-gray-900' : 'text-gray-500'}`}>
               {formatPrice(product.price)}
             </p>
           )}
         </div>
       </div>
 
-      {/* Color Selection Modal */}
-      {showColorModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div 
-            ref={modalRef}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                <TranslatedContent translationKey="products.selectColorFor" /> {product.name}
-              </h3>
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  setShowColorModal(false);
-                }}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-center gap-3 mb-2">
-                {/* Display colors from variants if available */}
-                {product.variants && product.variants
-                  .filter(variant => variant.quantity > 0) // Filter out variants with zero quantity
-                  .map((variant) => (
-                  <div
-                    key={variant.id}
-                    className="group relative flex flex-col items-center gap-2"
-                  >
-                    <div
-                      className={cn(
-                        "h-12 w-12 rounded-full border-2 cursor-pointer transition-colors duration-200 shadow-sm flex items-center justify-center",
-                        selectedColor === variant.color 
-                          ? "border-blue-600 ring-2 ring-blue-600 ring-opacity-50" 
-                          : "border-gray-200 hover:border-blue-400"
-                      )}
-                      style={{ 
-                        backgroundColor: getColorValue(variant.color),
-                        boxShadow: variant.color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined 
-                      }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleColorSelect(variant.color);
-                      }}
-                    >
-                      {/* Quantity indicator removed */}
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">
-                      {getColorName(variant.color)}
-                    </span>
-                  </div>
-                ))}
-                
-                {/* Display colors from the colors array if no variants */}
-                {!product.variants && product.colors && product.colors.map((color, index) => (
-                  <div
-                    key={index}
-                    className="group relative flex flex-col items-center gap-2"
-                  >
-                    <div
-                      className={cn(
-                        "h-12 w-12 rounded-full border-2 cursor-pointer transition-colors duration-200 shadow-sm flex items-center justify-center",
-                        selectedColor === color 
-                          ? "border-blue-600 ring-2 ring-blue-600 ring-opacity-50" 
-                          : "border-gray-200 hover:border-blue-400"
-                      )}
-                      style={{ 
-                        backgroundColor: getColorValue(color),
-                        boxShadow: color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined 
-                      }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleColorSelect(color);
-                      }}
-                    >
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">
-                      {getColorName(color)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              {selectedColor && (
-                <p className="text-sm text-center text-gray-600">
-                  Selected: <span className="font-medium">{getColorName(selectedColor)}</span>
-                </p>
-              )}
-              
-              <button
-                onClick={handleAddWithColor}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-                disabled={!selectedColor}
-              >
-                Add to Cart
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Product Selection Modal */}
+      <ProductSelectionModal
+        isOpen={showSelectionModal}
+        onClose={() => setShowSelectionModal(false)}
+        product={product}
+      />
     </div>
   );
 } 

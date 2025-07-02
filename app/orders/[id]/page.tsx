@@ -60,7 +60,17 @@ export default async function OrderPage({
     include: {
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              storages: {
+                select: {
+                  id: true,
+                  size: true,
+                  price: true,
+                },
+              },
+            },
+          },
         },
       },
       coupon: true,
@@ -159,7 +169,13 @@ export default async function OrderPage({
         <div className="p-8 border-b">
           <h2 className="text-lg font-semibold mb-6">{t('order.items')}</h2>
           <div className="space-y-6">
-                {order.items.map((item) => (
+                {order.items.map((item) => {
+                  // Find storage information if storageId exists
+                  const selectedStorage = item.storageId 
+                    ? item.product.storages.find(s => s.id === item.storageId)
+                    : null;
+                  
+                  return (
               <div key={item.id} className="flex gap-6 p-4 bg-gray-50 rounded-lg">
                 <div className="w-24 h-24 bg-white rounded-lg overflow-hidden relative flex-shrink-0 border border-gray-100">
                   <Image
@@ -173,6 +189,9 @@ export default async function OrderPage({
                   <h3 className="font-medium text-lg">{item.product.name}</h3>
                   <div className="flex flex-wrap gap-x-6 mt-2 text-sm text-gray-500">
                     <p>{t('order.quantity')}: {item.quantity}</p>
+                          {selectedStorage && (
+                            <p>{t('productDetail.storage')}: {selectedStorage.size}</p>
+                          )}
                     {item.color && (
                       <p>{t('order.color')}: {getColorName(item.color, lang)}</p>
                     )}
@@ -182,7 +201,8 @@ export default async function OrderPage({
                       </p>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

@@ -72,15 +72,54 @@ export async function POST(request: Request) {
             description: detail.description,
           })) || [],
         },
+        // Create storage options
+        storages: {
+          create: data.storages?.map((storage: any) => ({
+            size: storage.size,
+            price: parseFloat(storage.price),
+            stock: parseInt(storage.stock),
+            salePercentage: storage.salePercentage ? parseFloat(storage.salePercentage) : null,
+            saleEndDate: storage.saleEndDate ? new Date(storage.saleEndDate) : null,
+            variants: {
+              create: storage.variants?.map((variant: any) => ({
+                color: variant.color,
+                quantity: parseInt(variant.quantity),
+              })) || [],
+            },
+          })) || [],
+        },
       },
       // Include relations in response
       include: {
         variants: true,
         details: true,
+        storages: {
+          include: {
+            variants: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(product);
+    // Convert Decimal to number for serialization  
+    const serializedProduct = {
+      ...product,
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+      saleEndDate: product.saleEndDate?.toISOString() || null,
+      storages: product.storages.map(storage => ({
+        ...storage,
+        price: Number(storage.price),
+        createdAt: storage.createdAt.toISOString(),
+        updatedAt: storage.updatedAt.toISOString(),
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      })),
+    };
+
+    return NextResponse.json(serializedProduct);
   } catch (error) {
     console.error('Error creating product:', error);
     return NextResponse.json(
@@ -97,9 +136,33 @@ export async function GET() {
         category: true,
         variants: true,
         details: true,
+        storages: {
+          include: {
+            variants: true,
+          },
+        },
       },
     });
-    return NextResponse.json(products);
+
+    // Convert Decimal to number for serialization
+    const serializedProducts = products.map(product => ({
+      ...product,
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+      saleEndDate: product.saleEndDate?.toISOString() || null,
+      storages: product.storages.map(storage => ({
+        ...storage,
+        price: Number(storage.price),
+        createdAt: storage.createdAt.toISOString(),
+        updatedAt: storage.updatedAt.toISOString(),
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      })),
+    }));
+
+    return NextResponse.json(serializedProducts);
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json(

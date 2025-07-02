@@ -5,7 +5,7 @@ import { authOptions } from "@/app/api/auth/auth-options";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,7 +13,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { productId } = params;
+    const { productId } = await params;
 
     if (!productId) {
       return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
@@ -42,27 +42,25 @@ export async function DELETE(
         where: { productId },
       });
 
-      // Remove product from all wishlists - find wishlists containing this product
-      const wishlistsWithProduct = await tx.wishlist.findMany({
-        where: {
-          products: {
-            some: { id: productId }
-          }
-        },
-        select: { id: true }
+      // Remove product from all wishlists - delete wishlist items
+      await tx.wishlistItem.deleteMany({
+        where: { productId }
       });
 
-      // For each wishlist, disconnect the product
-      for (const wishlist of wishlistsWithProduct) {
-        await tx.wishlist.update({
-          where: { id: wishlist.id },
-          data: {
-            products: {
-              disconnect: { id: productId }
-            }
-          }
-        });
-      }
+      // Also remove from anonymous wishlists
+      await tx.anonymousWishlistItem.deleteMany({
+        where: { productId }
+      });
+
+      // Remove product from all carts
+      await tx.cartItem.deleteMany({
+        where: { productId }
+      });
+
+      // Also remove from anonymous carts
+      await tx.anonymousCartItem.deleteMany({
+        where: { productId }
+      });
 
       // Delete reviews
       await tx.review.deleteMany({

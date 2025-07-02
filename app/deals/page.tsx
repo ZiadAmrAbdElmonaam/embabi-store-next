@@ -3,6 +3,7 @@ import { ProductGrid } from "@/components/products/product-grid";
 import { Percent, ArrowRight } from "lucide-react";
 import { cookies } from "next/headers";
 import { translations } from "@/lib/translations";
+import { getProductDisplayPrice } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -27,33 +28,75 @@ export default async function DealsPage({
     return result;
   };
 
-  // Get total count for pagination
+  // Get total count for pagination - include products with main sales OR storage sales
   const totalProducts = await prisma.product.count({
     where: {
-      AND: [
-        { sale: { not: null } },
-        { salePrice: { not: null } },
+      OR: [
+        // Products with main product sales
         {
-          OR: [
-            { saleEndDate: null },
-            { saleEndDate: { gt: now } },
+          AND: [
+            { sale: { not: null } },
+            { salePrice: { not: null } },
+            {
+              OR: [
+                { saleEndDate: null },
+                { saleEndDate: { gt: now } },
+              ]
+            }
           ]
+        },
+        // Products with storage sales
+        {
+          storages: {
+            some: {
+              AND: [
+                { salePercentage: { not: null } },
+                {
+                  OR: [
+                    { saleEndDate: null },
+                    { saleEndDate: { gt: now } },
+                  ]
+                }
+              ]
+            }
+          }
         }
       ]
     },
   });
 
-  // Fetch products with pagination
+  // Fetch products with pagination - include products with main sales OR storage sales
   const products = await prisma.product.findMany({
     where: {
-      AND: [
-        { sale: { not: null } },
-        { salePrice: { not: null } },
+      OR: [
+        // Products with main product sales
         {
-          OR: [
-            { saleEndDate: null },
-            { saleEndDate: { gt: now } },
+          AND: [
+            { sale: { not: null } },
+            { salePrice: { not: null } },
+            {
+              OR: [
+                { saleEndDate: null },
+                { saleEndDate: { gt: now } },
+              ]
+            }
           ]
+        },
+        // Products with storage sales
+        {
+          storages: {
+            some: {
+              AND: [
+                { salePercentage: { not: null } },
+                {
+                  OR: [
+                    { saleEndDate: null },
+                    { saleEndDate: { gt: now } },
+                  ]
+                }
+              ]
+            }
+          }
         }
       ]
     },
@@ -75,17 +118,39 @@ export default async function DealsPage({
           rating: true,
         },
       },
+      storages: {
+        include: {
+          variants: true,
+        },
+      },
     },
   });
 
   // Convert Decimal to number for prices
-  const serializedProducts = products.map(product => ({
-    ...product,
-    price: Number(product.price),
-    salePrice: product.salePrice ? Number(product.salePrice) : null,
-    variants: product.variants || [],
-    reviews: product.reviews || []
-  }));
+  const serializedProducts = products.map(product => {
+    // Get display pricing (prioritizes storage with stock and active sales)
+    const displayPrice = getProductDisplayPrice({
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+      storages: product.storages.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        stock: storage.stock,
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      }))
+    });
+
+    return {
+      ...product,
+      price: displayPrice.price,
+      salePrice: displayPrice.salePrice,
+      variants: product.variants || [],
+      reviews: product.reviews || []
+    };
+  });
 
   const totalPages = Math.ceil(totalProducts / ITEMS_PER_PAGE);
 

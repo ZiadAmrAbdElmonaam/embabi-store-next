@@ -97,6 +97,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
       category: true,
       variants: true,
       details: true,
+      storages: {
+        include: {
+          variants: true,
+        },
+      },
       reviews: {
         include: {
           user: {
@@ -139,6 +144,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
       id: detail.id,
       label: detail.label,
       description: detail.description,
+    })),
+    storages: product.storages.map(storage => ({
+      id: storage.id,
+      size: storage.size,
+      price: Number(storage.price),
+      stock: storage.stock,
+      salePercentage: storage.salePercentage,
+      saleEndDate: storage.saleEndDate?.toISOString() || null,
+      variants: storage.variants.map(variant => ({
+        id: variant.id,
+        color: variant.color,
+        quantity: variant.quantity,
+      })),
     })),
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),

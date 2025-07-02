@@ -53,6 +53,11 @@ export async function GET() {
                   slug: true,
                   description: true,
                   variants: true,
+                  storages: {
+                    include: {
+                      variants: true,
+                    },
+                  },
                   category: {
                     select: {
                       id: true,
@@ -77,6 +82,19 @@ export async function GET() {
           slug: item.product.slug,
           description: item.product.description,
           variants: item.product.variants,
+          storages: item.product.storages?.map(storage => ({
+            id: storage.id,
+            size: storage.size,
+            price: Number(storage.price),
+            stock: storage.stock,
+            salePercentage: storage.salePercentage,
+            saleEndDate: storage.saleEndDate?.toISOString() || null,
+            variants: storage.variants.map(variant => ({
+              id: variant.id,
+              color: variant.color,
+              quantity: variant.quantity
+            }))
+          })) || [],
           category: item.product.category
         }));
       }
@@ -97,6 +115,11 @@ export async function GET() {
                   slug: true,
                   description: true,
                   variants: true,
+                  storages: {
+                    include: {
+                      variants: true,
+                    },
+                  },
                   category: {
                     select: {
                       id: true,
@@ -121,6 +144,19 @@ export async function GET() {
           slug: item.product.slug,
           description: item.product.description,
           variants: item.product.variants,
+          storages: item.product.storages?.map(storage => ({
+            id: storage.id,
+            size: storage.size,
+            price: Number(storage.price),
+            stock: storage.stock,
+            salePercentage: storage.salePercentage,
+            saleEndDate: storage.saleEndDate?.toISOString() || null,
+            variants: storage.variants.map(variant => ({
+              id: variant.id,
+              color: variant.color,
+              quantity: variant.quantity
+            }))
+          })) || [],
           category: item.product.category
         }));
       }

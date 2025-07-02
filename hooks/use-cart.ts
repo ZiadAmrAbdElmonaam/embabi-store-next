@@ -8,8 +8,11 @@ interface CartItem {
   price: number;
   salePrice: number | null;
   images: string[];
+  slug: string;
   quantity: number;
   selectedColor: string | null;
+  storageId: string | null;
+  storageSize: string | null;
   availableColors: { color: string; quantity: number }[];
   uniqueId?: string;
 }
@@ -26,12 +29,14 @@ interface CartStore {
   isInitialized: boolean;
   appliedCoupon: Coupon | null;
   discountAmount: number;
-  addItem: (item: Omit<CartItem, 'quantity' | 'selectedColor' | 'availableColors'> & {
+  addItem: (item: Omit<CartItem, 'quantity' | 'selectedColor' | 'storageId' | 'storageSize' | 'availableColors'> & {
     selectedColor?: string | null;
+    storageId?: string | null;
+    storageSize?: string | null;
     variants?: Array<{ color: string; quantity: number }>;
   }) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  removeItem: (uniqueId: string) => void;
+  updateQuantity: (uniqueId: string, quantity: number) => void;
   updateColor: (id: string, color: string) => void;
   clearCart: () => void;
   initializeCart: (items: CartItem[]) => void;
@@ -156,16 +161,33 @@ export const useCart = create<CartStore>()((set, get) => ({
             price: item.price,
             salePrice: item.salePrice,
             images: item.images,
+            slug: item.slug,
             selectedColor: item.selectedColor || null,
+              storageId: item.storageId || null,
+              storageSize: item.storageSize || null,
             variants: item.variants || []
           }
         })
       });
       
       if (!response.ok) {
-        console.error(`Failed to add item: ${response.status}`);
-        // If server fails, still show success to user but log error
-        toast.success(`Added ${item.name}${item.selectedColor ? ` (${item.selectedColor})` : ''} to cart`);
+        // Try to get the error message from the response
+        let errorMessage = 'Failed to add item to cart';
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If we can't parse the error, use the status code
+          errorMessage = `Failed to add item (Error ${response.status})`;
+        }
+        
+        console.error(`Failed to add item: ${response.status}`, errorMessage);
+        
+        // Show the actual error message to the user
+        toast.error(errorMessage);
         return;
       }
       
@@ -179,38 +201,27 @@ export const useCart = create<CartStore>()((set, get) => ({
       });
       
       // Show success notification
-      toast.success(`Added ${item.name}${item.selectedColor ? ` (${item.selectedColor})` : ''} to cart`);
+      const displayName = item.name + 
+        (item.storageSize ? ` (${item.storageSize})` : '') + 
+        (item.selectedColor ? ` - ${item.selectedColor}` : '');
+      toast.success(`Added ${displayName} to cart`);
     } catch (error) {
       console.error('Failed to add item to cart:', error);
       
-      // Still show success for better UX, but log the error
-      toast.success(`Added ${item.name}${item.selectedColor ? ` (${item.selectedColor})` : ''} to cart`);
-      
-      // Add the item to local state so it appears to work
-      set((state) => ({
-        items: [
-          ...state.items,
-          {
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            salePrice: item.salePrice,
-            images: item.images,
-            quantity: 1,
-            selectedColor: item.selectedColor || null,
-            availableColors: item.variants?.map(v => ({ color: v.color, quantity: v.quantity })) || []
-          }
-        ]
-      }));
+      // Show error message to user
+      toast.error('Failed to add item to cart');
     }
+    
+    // Recalculate discount whenever items are added
+    get().recalculateDiscount();
   },
 
-  removeItem: async (id) => {
+  removeItem: async (uniqueId) => {
     try {
       // Optimistically remove item from UI
       const currentItems = [...get().items];
         set((state) => ({
-        items: state.items.filter(item => item.id !== id)
+        items: state.items.filter(item => item.uniqueId !== uniqueId)
       }));
       
       // Make server request to remove item
@@ -221,7 +232,7 @@ export const useCart = create<CartStore>()((set, get) => ({
         },
         body: JSON.stringify({
           action: 'REMOVE_ITEM',
-          item: { id }
+          item: { uniqueId }
         })
       });
       
@@ -250,7 +261,7 @@ export const useCart = create<CartStore>()((set, get) => ({
     }
   },
 
-  updateQuantity: async (id, quantity) => {
+  updateQuantity: async (uniqueId, quantity) => {
     try {
       if (quantity < 1) return;
       
@@ -260,7 +271,7 @@ export const useCart = create<CartStore>()((set, get) => ({
       // Optimistically update the UI
       set((state) => ({
         items: state.items.map(item => 
-          item.id === id ? { ...item, quantity } : item
+          item.uniqueId === uniqueId ? { ...item, quantity } : item
         )
       }));
       
@@ -272,13 +283,32 @@ export const useCart = create<CartStore>()((set, get) => ({
         },
         body: JSON.stringify({
           action: 'UPDATE_QUANTITY',
-          item: { id },
+          item: { uniqueId },
           quantity
         })
       });
       
       if (!response.ok) {
-        console.error(`Failed to update quantity: ${response.status}`);
+        // Try to get the error message from the response
+        let errorMessage = 'Failed to update quantity';
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // If we can't parse the error, use the status code
+          errorMessage = `Failed to update quantity (Error ${response.status})`;
+        }
+        
+        console.error(`Failed to update quantity: ${response.status}`, errorMessage);
+        
+        // Rollback the optimistic update
+        set({ items: currentItems });
+        
+        // Show the actual error message to the user
+        toast.error(errorMessage);
         return;
       }
       
@@ -292,7 +322,12 @@ export const useCart = create<CartStore>()((set, get) => ({
       });
     } catch (error) {
       console.error('Failed to update quantity:', error);
-      // For quantity updates, we can silently fail
+      
+      // Rollback the optimistic update
+      set({ items: currentItems });
+      
+      // Show error to user
+      toast.error('Failed to update quantity');
     }
   },
 

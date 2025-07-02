@@ -3,6 +3,7 @@ import { ProductCard } from "@/components/ui/product-card";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { translations } from "@/lib/translations";
+import { getProductDisplayPrice } from "@/lib/utils";
 
 interface CategoryPageProps {
   params: {
@@ -34,7 +35,12 @@ export default async function CategoryPage({
       products: {
         include: {
           category: true,
-          variants: true
+          variants: true,
+          storages: {
+            include: {
+              variants: true,
+            },
+          },
         }
       },
     },
@@ -58,13 +64,43 @@ export default async function CategoryPage({
   }
 
   // Convert Decimal prices to numbers
-  const products = category.products.map(product => ({
-    ...product,
-    price: Number(product.price),
-    salePrice: product.salePrice ? Number(product.salePrice) : null,
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString(),
-  }));
+  const products = category.products.map(product => {
+    // Get display pricing (prioritizes storage with stock)
+    const displayPrice = getProductDisplayPrice({
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+      storages: product.storages?.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        stock: storage.stock,
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      })) || []
+    });
+
+    return {
+      ...product,
+      price: displayPrice.price,
+      salePrice: displayPrice.salePrice,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+      storages: product.storages?.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        stock: storage.stock,
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+        variants: storage.variants.map(variant => ({
+          id: variant.id,
+          color: variant.color,
+          quantity: variant.quantity
+        }))
+      })) || []
+    };
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -240,6 +240,7 @@ export const translations = {
       addToCart: 'Add to Cart',
       outOfStock: 'Product is out of stock',
       selectColor: 'Please select a color',
+      selectStorage: 'Please select a storage option',
       itemAdded: 'Item added to cart',
       itemRemoved: 'Item removed from cart',
       cartCleared: 'Cart cleared',
@@ -258,7 +259,9 @@ export const translations = {
       pleaseEnterCoupon: 'Please enter a coupon code',
       invalidCoupon: 'Invalid coupon code',
       errorOccurred: 'An error occurred. Please try again.',
-      couponApplied: 'Coupon applied successfully!'
+      couponApplied: 'Coupon applied successfully!',
+      exceedsStock: 'Exceeds available stock',
+      maxStock: 'Maximum stock reached'
     },
     wishlist: {
       title: 'My Wishlist',
@@ -332,6 +335,12 @@ export const translations = {
     productDetail: {
       reviews: 'reviews',
       availableColors: 'Available Colors',
+      availableColorsForStorage: 'Available Colors for Selected Storage',
+      selectStorage: 'Select Storage',
+      selectedStorage: 'Selected Storage',
+      color: 'Color',
+      storage: 'Storage',
+      available: 'available',
       selected: 'Selected',
       inStock: 'in stock',
       outOfStock: 'Out of stock',
@@ -672,6 +681,7 @@ export const translations = {
       addToCart: 'أضف إلى العربة',
       outOfStock: 'المنتج غير متوفر',
       selectColor: 'الرجاء اختيار لون',
+      selectStorage: 'الرجاء اختيار خيار تخزين',
       itemAdded: 'تمت إضافة العنصر إلى العربة',
       itemRemoved: 'تمت إزالة العنصر من العربة',
       cartCleared: 'تم تفريغ العربة',
@@ -690,7 +700,9 @@ export const translations = {
       pleaseEnterCoupon: 'الرجاء إدخال رمز الكوبون',
       invalidCoupon: 'رمز الكوبون غير صالح',
       errorOccurred: 'حدث خطأ. يرجى المحاولة مرة أخرى.',
-      couponApplied: 'تم تطبيق الكوبون بنجاح!'
+      couponApplied: 'تم تطبيق الكوبون بنجاح!',
+      exceedsStock: 'يتجاوز المخزون المتاح',
+      maxStock: 'تم الوصول للحد الأقصى من المخزون'
     },
     wishlist: {
       title: 'قائمة المفضلة',
@@ -764,7 +776,13 @@ export const translations = {
     productDetail: {
       reviews: 'تقييمات',
       availableColors: 'الألوان المتاحة',
-      selected: 'المحدد',
+      availableColorsForStorage: 'الألوان المتاحة للتخزين المحدد',
+      selectStorage: 'اختر التخزين',
+      selectedStorage: 'التخزين المحدد',
+      color: 'اللون',
+      storage: 'التخزين',
+      available: 'متاح',
+      selected: 'محدد',
       inStock: 'متوفر',
       outOfStock: 'غير متوفر',
       freeShipping: 'شحن مجاني للطلبات التي تزيد عن 100 دولار',

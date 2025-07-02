@@ -37,49 +37,12 @@ export default function CartItems() {
   const handleUpdateQuantity = async (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
     
-    const item = items.find(i => i.id === id);
-    if (!item) return;
-
-    // If color is selected, check its available quantity
-    if (item.availableColors && item.availableColors.length > 0) {
-      if (!item.selectedColor) {
-        toast.error(t('products.selectColor'));
-        return;
-      }
-
-      const selectedColorOption = item.availableColors.find(c => c.color === item.selectedColor);
-      if (!selectedColorOption) {
-        toast.error('Selected color not available');
-        return;
-      }
-
-      if (newQuantity > selectedColorOption.quantity) {
-        toast.error(`Only ${selectedColorOption.quantity} items available in ${getColorName(item.selectedColor, lang)}`);
-        return;
-      }
-    }
-
     setIsUpdating(true);
     await updateQuantity(id, newQuantity);
     setIsUpdating(false);
   };
 
-  const handleColorSelect = (id: string, color: string) => {
-    const item = items.find(i => i.id === id);
-    if (!item) return;
 
-    // Find the selected color's available quantity
-    const colorOption = item.availableColors.find(c => c.color === color);
-    if (!colorOption) return;
-
-    // If current quantity exceeds the new color's available quantity, adjust it
-    if (item.quantity > colorOption.quantity) {
-      updateQuantity(id, colorOption.quantity);
-      toast.success(`Quantity adjusted to ${colorOption.quantity} (maximum available for ${getColorName(color, lang)})`);
-    }
-
-    updateColor(id, color);
-  };
 
   const handleRemoveCoupon = async () => {
     try {
@@ -106,12 +69,6 @@ export default function CartItems() {
   };
 
   const handleCheckout = () => {
-    // Check if all required colors are selected
-    if (items.some(item => item.availableColors?.length > 0 && !item.selectedColor)) {
-      toast.error(t('products.selectColor'));
-      return;
-    }
-
     // Check authentication status
     if (status === 'loading') {
       // Wait for authentication check to complete
@@ -171,7 +128,7 @@ export default function CartItems() {
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="divide-y divide-gray-200">
             {items.map((item) => (
-              <div key={`${item.id}-${item.selectedColor || 'default'}`} className="bg-white rounded-2xl p-6 shadow-sm">
+              <div key={item.uniqueId} className="bg-white rounded-2xl p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row gap-6">
                   {/* Product Image */}
                   <div className="w-full sm:w-28 h-28 bg-gray-50 rounded-xl overflow-hidden relative">
@@ -189,11 +146,11 @@ export default function CartItems() {
                   {/* Product Details */}
                   <div className="flex-1">
                     <div className="flex justify-between">
-                      <Link href={`/products/${item.id}`} className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                      <Link href={`/products/${item.slug}`} className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors">
                         {item.name}
                       </Link>
                       <button
-                        onClick={() => handleRemoveItem(item.id)}
+                        onClick={() => handleRemoveItem(item.uniqueId)}
                         className="text-gray-400 hover:text-red-500 transition-colors"
                         disabled={isUpdating}
                       >
@@ -213,40 +170,34 @@ export default function CartItems() {
                       )}
                     </div>
                     
-                    {/* Color Selection - Show error if colors available but none selected */}
-                    {item.availableColors && item.availableColors.length > 0 && (
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between">
+                    {/* Storage Display */}
+                    {item.storageSize && (
+                      <div className="mt-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          <TranslatedContent translationKey="productDetail.storage" />: 
+                        </span>
+                        <span className="ml-1 text-sm text-gray-600">{item.storageSize}</span>
+                      </div>
+                    )}
+                    
+                    {/* Color Display - Read Only */}
+                    {item.selectedColor && (
+                      <div className="mt-2">
+                        <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-gray-700">
                             <TranslatedContent translationKey="cart.color" />:
                           </span>
-                          {!item.selectedColor && (
-                            <span className="text-xs text-red-600 font-medium">* <TranslatedContent translationKey="products.selectColor" /></span>
-                          )}
-                        </div>
-                        <div className="flex gap-2 mt-2 flex-wrap">
-                          {item.availableColors.map((colorOption) => (
+                          <div className="flex items-center gap-2">
                             <div
-                              key={colorOption.color}
-                              onClick={() => handleColorSelect(item.id, colorOption.color)}
-                              className={`w-8 h-8 rounded-full border-2 cursor-pointer transition-all ${
-                                item.selectedColor === colorOption.color
-                                  ? 'border-blue-600 ring-2 ring-blue-600 ring-opacity-50 scale-110'
-                                  : 'border-gray-200 hover:border-blue-400'
-                              }`}
+                              className="w-5 h-5 rounded-full border border-gray-300"
                               style={{
-                                backgroundColor: colorOption.color,
-                                boxShadow: colorOption.color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined
+                                backgroundColor: item.selectedColor,
+                                boxShadow: item.selectedColor.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined
                               }}
-                              title={getColorName(colorOption.color, lang)}
                             />
-                          ))}
+                            <span className="text-sm text-gray-600">{getColorName(item.selectedColor, lang)}</span>
+                          </div>
                         </div>
-                        {item.selectedColor && (
-                          <p className="text-xs text-gray-600 mt-1">
-                            <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(item.selectedColor, lang)}</span>
-                          </p>
-                        )}
                       </div>
                     )}
                     
@@ -254,7 +205,7 @@ export default function CartItems() {
                     <div className="flex items-center gap-4 mt-4">
                       <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg">
                         <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => handleUpdateQuantity(item.uniqueId, item.quantity - 1)}
                           disabled={item.quantity <= 1 || isUpdating}
                           className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
@@ -262,13 +213,44 @@ export default function CartItems() {
                         </button>
                         <span className="w-10 text-center text-gray-900 dark:text-white">{item.quantity}</span>
                         <button
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                          disabled={isUpdating}
+                          onClick={() => handleUpdateQuantity(item.uniqueId, item.quantity + 1)}
+                          disabled={isUpdating || (() => {
+                            // Check available stock based on selected color
+                            const availableStock = item.selectedColor 
+                              ? item.availableColors.find(c => c.color === item.selectedColor)?.quantity || 0
+                              : item.availableColors.reduce((total, color) => total + color.quantity, 0);
+                            return item.quantity >= availableStock;
+                          })()}
                           className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
                       </div>
+                      
+                      {/* Stock warning */}
+                      {(() => {
+                        const availableStock = item.selectedColor 
+                          ? item.availableColors.find(c => c.color === item.selectedColor)?.quantity || 0
+                          : item.availableColors.reduce((total, color) => total + color.quantity, 0);
+                        
+                        if (item.quantity > availableStock) {
+                          return (
+                            <div className="text-red-600 dark:text-red-400 text-xs">
+                              <TranslatedContent translationKey="cart.exceedsStock" />: {availableStock}
+                            </div>
+                          );
+                        }
+                        
+                        if (item.quantity === availableStock) {
+                          return (
+                            <div className="text-amber-600 dark:text-amber-400 text-xs">
+                              <TranslatedContent translationKey="cart.maxStock" />
+                            </div>
+                          );
+                        }
+                        
+                        return null;
+                      })()}
                       
                       <div className="text-gray-600 dark:text-gray-400 text-sm">
                         <TranslatedContent translationKey="cart.total" />: <span className="font-medium text-gray-900 dark:text-white">

@@ -32,11 +32,20 @@ export async function GET() {
             quantity: true,
             price: true,
             color: true,
+            storageId: true,
             product: {
               select: {
                 id: true,
                 name: true,
                 variants: true,
+                storages: {
+                  select: {
+                    id: true,
+                    size: true,
+                    price: true,
+                    variants: true,
+                  },
+                },
               },
             },
           },
@@ -47,7 +56,27 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(orders);
+    // Serialize the orders to convert Decimal objects to numbers
+    const serializedOrders = orders.map(order => ({
+      ...order,
+      total: Number(order.total),
+      discountAmount: order.discountAmount ? Number(order.discountAmount) : null,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+      items: order.items.map(item => ({
+        ...item,
+        price: Number(item.price),
+        product: {
+          ...item.product,
+          storages: item.product.storages.map(storage => ({
+            ...storage,
+            price: Number(storage.price),
+          })),
+        },
+      })),
+    }));
+
+    return NextResponse.json(serializedOrders);
   } catch (error) {
     console.error('Error fetching orders:', error);
     return NextResponse.json(

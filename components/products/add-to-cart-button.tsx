@@ -149,10 +149,12 @@ export function AddToCartButton({ product, selectedColor: initialColor, selected
       <button
         onClick={handleAddToCart}
         disabled={(currentStorage ? currentStorage.stock : product.stock) === 0}
-        className="w-full flex items-center justify-center gap-2 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-2 bg-orange-600 text-white py-4 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-base font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
       >
-        <ShoppingCart className="h-5 w-5" />
-        {(currentStorage ? currentStorage.stock : product.stock) === 0 ? t('productDetail.outOfStock') : t('cart.addToCart')}
+        <ShoppingCart className="h-5 w-5 flex-shrink-0" />
+        <span className="whitespace-nowrap">
+          {(currentStorage ? currentStorage.stock : product.stock) === 0 ? t('productDetail.outOfStock') : t('cart.addToCart')}
+        </span>
       </button>
     </div>
   );

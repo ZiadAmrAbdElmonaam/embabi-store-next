@@ -131,6 +131,8 @@ export function ProfileForm() {
             />
           </div>
 
+          {/* Change Password Section - Temporarily Commented Out */}
+          {/*
           <div className="pt-4 border-t-2 border-gray-100">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
               <TranslatedContent translationKey="profile.changePassword" />
@@ -138,6 +140,7 @@ export function ProfileForm() {
           </div>
 
           {/* Current Password Field */}
+          {/*
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
               <TranslatedContent translationKey="profile.currentPassword" />
@@ -165,6 +168,7 @@ export function ProfileForm() {
           </div>
 
           {/* New Password Field */}
+          {/*
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
               <TranslatedContent translationKey="profile.newPassword" />
@@ -193,6 +197,7 @@ export function ProfileForm() {
           </div>
 
           {/* Confirm Password Field */}
+          {/*
           <div className="space-y-2">
             <label className="text-lg font-medium text-gray-700">
               <TranslatedContent translationKey="profile.confirmPassword" />
@@ -211,8 +216,11 @@ export function ProfileForm() {
               <p className="text-red-500 text-sm mt-1">{passwordError}</p>
             )}
           </div>
+          */}
         </div>
 
+        {/* Update Password Button - Temporarily Commented Out */}
+        {/*
         <button
           type="submit"
           disabled={loading}
@@ -221,6 +229,7 @@ export function ProfileForm() {
           {loading && <Loader2 className="h-5 w-5 animate-spin" />}
           {loading ? t('profile.updating') : t('profile.updatePassword')}
         </button>
+        */}
       </form>
 
       <WarningModal

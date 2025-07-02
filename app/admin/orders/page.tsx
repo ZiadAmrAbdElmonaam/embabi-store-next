@@ -101,6 +101,9 @@ export default function AdminOrdersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Phone
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Shipping Address
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                 Items
               </th>
@@ -148,6 +151,13 @@ export default function AdminOrdersPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{order.shippingPhone}</div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-900">
+                    <div className="font-medium">{order.shippingName}</div>
+                    <div className="text-gray-600">{order.shippingAddress}</div>
+                    <div className="text-gray-600">{order.shippingCity}{order.shippingNotes ? `, ${order.shippingNotes}` : ''}</div>
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 space-y-2">

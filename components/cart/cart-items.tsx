@@ -227,35 +227,37 @@ export default function CartItems() {
                         </button>
                       </div>
                       
-                      {/* Stock warning */}
-                      {(() => {
-                        const availableStock = item.selectedColor 
-                          ? item.availableColors.find(c => c.color === item.selectedColor)?.quantity || 0
-                          : item.availableColors.reduce((total, color) => total + color.quantity, 0);
+                      <div className="flex flex-col gap-2 flex-1">
+                        {/* Stock warning */}
+                        {(() => {
+                          const availableStock = item.selectedColor 
+                            ? item.availableColors.find(c => c.color === item.selectedColor)?.quantity || 0
+                            : item.availableColors.reduce((total, color) => total + color.quantity, 0);
+                          
+                          if (item.quantity > availableStock) {
+                            return (
+                              <div className="text-red-600 dark:text-red-400 text-xs">
+                                <TranslatedContent translationKey="cart.exceedsStock" />: {availableStock}
+                              </div>
+                            );
+                          }
+                          
+                          if (item.quantity === availableStock) {
+                            return (
+                              <div className="text-amber-600 dark:text-amber-400 text-xs">
+                                <TranslatedContent translationKey="cart.maxStock" />
+                              </div>
+                            );
+                          }
+                          
+                          return null;
+                        })()}
                         
-                        if (item.quantity > availableStock) {
-                          return (
-                            <div className="text-red-600 dark:text-red-400 text-xs">
-                              <TranslatedContent translationKey="cart.exceedsStock" />: {availableStock}
-                            </div>
-                          );
-                        }
-                        
-                        if (item.quantity === availableStock) {
-                          return (
-                            <div className="text-amber-600 dark:text-amber-400 text-xs">
-                              <TranslatedContent translationKey="cart.maxStock" />
-                            </div>
-                          );
-                        }
-                        
-                        return null;
-                      })()}
-                      
-                      <div className="text-gray-600 dark:text-gray-400 text-sm">
-                        <TranslatedContent translationKey="cart.total" />: <span className="font-medium text-gray-900 dark:text-white">
-                          EGP {((item.salePrice !== null ? item.salePrice : item.price) * item.quantity).toLocaleString()}
-                        </span>
+                        <div className="text-gray-600 dark:text-gray-400 text-sm">
+                          <TranslatedContent translationKey="cart.total" />: <span className="font-medium text-gray-900 dark:text-white">
+                            EGP {((item.salePrice !== null ? item.salePrice : item.price) * item.quantity).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

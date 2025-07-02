@@ -272,7 +272,9 @@ export const translations = {
       emptyMessage: 'Add items to your wishlist to keep track of products you love',
       browse: 'Browse Products',
       addToCart: 'Add to Cart',
-      remove: 'Remove'
+      remove: 'Remove',
+      addToWishlist: 'Add to Wishlist',
+      removeFromWishlist: 'Remove from Wishlist'
     },
     categories: {
       title: 'Categories',
@@ -713,7 +715,9 @@ export const translations = {
       emptyMessage: 'أضف عناصر إلى قائمة المفضلة لتتبع المنتجات التي تحبها',
       browse: 'تصفح المنتجات',
       addToCart: 'أضف إلى السلة',
-      remove: 'إزالة'
+      remove: 'إزالة',
+      addToWishlist: 'أضف إلى المفضلة',
+      removeFromWishlist: 'إزالة من المفضلة'
     },
     categories: {
       title: 'الفئات',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -22,18 +22,30 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
+  // Check scroll buttons state
   const checkScrollButtons = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      const maxScrollLeft = scrollWidth - clientWidth;
+      
+      setCanScrollLeft(scrollLeft > 5);
+      setCanScrollRight(scrollLeft < maxScrollLeft - 5);
     }
   };
 
+  // Initialize scroll state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkScrollButtons();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [categories]);
+
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
+      const scrollAmount = 300; // Adjust scroll amount
       scrollContainerRef.current.scrollBy({
-        left: -320,
+        left: -scrollAmount,
         behavior: 'smooth'
       });
     }
@@ -41,12 +53,15 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
 
   const scrollRight = () => {
     if (scrollContainerRef.current) {
+      const scrollAmount = 300; // Adjust scroll amount
       scrollContainerRef.current.scrollBy({
-        left: 320,
+        left: scrollAmount,
         behavior: 'smooth'
       });
     }
   };
+
+
 
   return (
     <div className="relative px-4">
@@ -56,7 +71,7 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
           <button
             onClick={scrollLeft}
             disabled={!canScrollLeft}
-            className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 flex items-center justify-center transition-all duration-300 hover:scale-110 ${
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 items-center justify-center transition-all duration-300 hover:scale-110 hidden md:flex ${
               canScrollLeft 
                 ? 'opacity-100 hover:bg-orange-50 hover:border-orange-200 hover:shadow-orange-100' 
                 : 'opacity-40 cursor-not-allowed'
@@ -68,7 +83,7 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
           <button
             onClick={scrollRight}
             disabled={!canScrollRight}
-            className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 flex items-center justify-center transition-all duration-300 hover:scale-110 ${
+            className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 items-center justify-center transition-all duration-300 hover:scale-110 hidden md:flex ${
               canScrollRight 
                 ? 'opacity-100 hover:bg-orange-50 hover:border-orange-200 hover:shadow-orange-100' 
                 : 'opacity-40 cursor-not-allowed'
@@ -83,17 +98,19 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
       <div
         ref={scrollContainerRef}
         onScroll={checkScrollButtons}
-        className="flex gap-6 overflow-x-auto scrollbar-hide pb-4 px-8"
+        className="flex gap-3 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 px-4 sm:px-8"
+        dir="ltr"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
+          flexDirection: 'row',
         }}
       >
         {categories.map((category) => (
           <Link
             key={category.id}
             href={`/categories/${category.slug}`}
-            className="group flex-shrink-0 w-72 relative"
+            className="group flex-shrink-0 w-48 sm:w-72 relative"
           >
             <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform group-hover:-translate-y-2 group-hover:scale-105 border border-gray-100">
               <div className="aspect-[4/3] relative overflow-hidden">
@@ -110,8 +127,8 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-all duration-500 group-hover:from-orange-900/60 group-hover:via-orange-600/10" />
                 
                 {/* Category Name */}
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl font-bold text-white drop-shadow-lg transition-all duration-500 group-hover:text-orange-100 group-hover:transform group-hover:scale-110">
+                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-6">
+                  <h3 className="text-lg sm:text-2xl font-bold text-white drop-shadow-lg transition-all duration-500 group-hover:text-orange-100 group-hover:transform group-hover:scale-110">
                     {category.name}
                   </h3>
                 </div>
@@ -127,6 +144,8 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
           </Link>
         ))}
       </div>
+
+
 
       {/* Custom scrollbar hiding styles */}
       <style jsx>{`

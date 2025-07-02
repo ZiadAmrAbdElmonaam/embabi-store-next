@@ -27,6 +27,11 @@ export const metadata: Metadata = {
   authors: [{ name: 'Embabi Store', url: 'https://embabi-store.com' }],
   creator: 'Embabi Store',
   publisher: 'Embabi Store',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
   robots: {
     index: true,
     follow: true,

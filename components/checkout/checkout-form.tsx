@@ -109,7 +109,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
     state: "",
     city: ""
   });
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
+  const [selectedPaymentMethod] = useState<PaymentMethod>('cash'); // Fixed to cash only
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const { isMaintenanceMode, maintenanceMessage } = useMaintenance();
@@ -400,68 +400,75 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
             <TranslatedContent translationKey="checkout.paymentMethod" />
           </h2>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div
-              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                selectedPaymentMethod === 'cash'
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 hover:border-orange-300'
-              }`}
-              onClick={() => setSelectedPaymentMethod('cash')}
-            >
+          {/* Active Payment Method - Cash on Delivery Only */}
+          <div className="mb-6">
+            <div className="border-2 border-orange-500 bg-orange-50 rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <BanknoteIcon className="h-6 w-6 text-orange-600" />
-                <span className="font-medium">
+                <span className="font-medium text-orange-800">
                   <TranslatedContent translationKey="checkout.cashOnDelivery" />
                 </span>
+                <div className="ml-auto">
+                  <div className="w-4 h-4 rounded-full bg-orange-600 flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div
-              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                selectedPaymentMethod === 'vodafone'
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 hover:border-orange-300'
-              }`}
-              onClick={() => setSelectedPaymentMethod('vodafone')}
-            >
-              <div className="flex items-center gap-3">
-                <Wallet className="h-6 w-6 text-orange-600" />
-                <span className="font-medium">
-                  <TranslatedContent translationKey="checkout.vodafoneCash" />
-                </span>
-              </div>
+          </div>
+
+          {/* Payment Options Hint */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="text-center mb-3">
+              <p className="text-sm font-medium text-blue-800">
+                {lang === 'ar' ? 'يمكنك الدفع بعد الطلب بالطرق التالية:' : 'You can pay after ordering using:'}
+              </p>
             </div>
             
-            <div
-              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                selectedPaymentMethod === 'instapay'
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 hover:border-orange-300'
-              }`}
-              onClick={() => setSelectedPaymentMethod('instapay')}
-            >
-              <div className="flex items-center gap-3">
-                <QrCode className="h-6 w-6 text-orange-600" />
-                <span className="font-medium">
-                  <TranslatedContent translationKey="checkout.instapay" />
-                </span>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <div className="flex flex-col items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+                  <Wallet className="h-5 w-5 text-red-600" />
+                  <span className="text-xs font-medium text-gray-700">
+                    <TranslatedContent translationKey="checkout.vodafoneCash" />
+                  </span>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <div className="flex flex-col items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+                  <QrCode className="h-5 w-5 text-blue-600" />
+                  <span className="text-xs font-medium text-gray-700">
+                    <TranslatedContent translationKey="checkout.instapay" />
+                  </span>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <div className="flex flex-col items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+                  <CreditCard className="h-5 w-5 text-blue-700" />
+                  <span className="text-xs font-medium text-gray-700">
+                    <TranslatedContent translationKey="checkout.creditCard" />
+                  </span>
+                </div>
               </div>
             </div>
-            
-            <div
-              className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                selectedPaymentMethod === 'visa'
-                  ? 'border-orange-500 bg-orange-50'
-                  : 'border-gray-200 hover:border-orange-300'
-              }`}
-              onClick={() => setSelectedPaymentMethod('visa')}
-            >
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-6 w-6 text-orange-600" />
-                <span className="font-medium">
-                  <TranslatedContent translationKey="checkout.creditCard" />
-                </span>
+          </div>
+
+          {/* Visa Installment Info */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-6 w-6 text-purple-600" />
+              <div>
+                <p className="text-sm font-semibold text-purple-800">
+                  {lang === 'ar' ? 'التقسيط متاح باستخدام فيزا' : 'Installment is available using Visa'}
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  {lang === 'ar' 
+                    ? 'يمكنك تقسيط مشترياتك على عدة أشهر باستخدام بطاقة فيزا' 
+                    : 'You can pay for your purchases in installments over several months using Visa'
+                  }
+                </p>
               </div>
             </div>
           </div>

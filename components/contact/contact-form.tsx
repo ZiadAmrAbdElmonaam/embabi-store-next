@@ -60,7 +60,7 @@ export function ContactForm() {
               <p className="mt-1 text-sm text-red-700">{error}</p>
               <p className="mt-2 text-sm text-red-700">
                 Please try again later or contact us directly at{' '}
-                <a href="mailto:embabistore110@gmail.com" className="font-medium underline">
+                <a href="mailto:oxygenembabi@gmail.com" className="font-medium underline">
                   embabistore110@gmail.com
                 </a>
               </p>

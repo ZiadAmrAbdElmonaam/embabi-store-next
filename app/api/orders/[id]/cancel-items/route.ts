@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/auth-options";
 
+interface CancelItemData {
+  itemId: string;
+  quantityToCancel: number;
+}
+
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
@@ -24,18 +29,29 @@ export async function POST(
       );
     }
     
-    // Get item IDs to cancel from request body
+    // Get items to cancel from request body
     const body = await request.json().catch(() => ({}));
-    const { itemIds, comment } = body;
+    const { items, comment } = body;
     
-    if (!Array.isArray(itemIds) || itemIds.length === 0) {
+    // Support both old format (itemIds) and new format (items with quantities)
+    let itemsToCancel: CancelItemData[] = [];
+    
+    if (body.itemIds && Array.isArray(body.itemIds)) {
+      // Old format - cancel entire items
+      itemsToCancel = body.itemIds.map(itemId => ({ itemId, quantityToCancel: 0 })); // 0 means cancel all
+    } else if (items && Array.isArray(items)) {
+      // New format - cancel specific quantities
+      itemsToCancel = items.filter(item => item.quantityToCancel > 0);
+    }
+    
+    if (itemsToCancel.length === 0) {
       return NextResponse.json(
         { error: 'No items selected for cancellation' },
         { status: 400 }
       );
     }
 
-    console.log(`Cancelling items for order ${orderId}:`, itemIds);
+    console.log(`Cancelling items for order ${orderId}:`, itemsToCancel);
 
     // Check if order exists
     const orderExists = await prisma.order.findUnique({
@@ -52,19 +68,24 @@ export async function POST(
     // Get the order items to be cancelled
     const orderItems = await prisma.orderItem.findMany({
       where: {
-        id: { in: itemIds },
+        id: { in: itemsToCancel.map(item => item.itemId) },
         orderId: orderId
       },
       include: {
         product: {
           include: {
-            variants: true
+            variants: true,
+            storages: {
+              include: {
+                variants: true
+              }
+            }
           }
         }
       }
     });
 
-    console.log(`Found ${orderItems.length} order items to cancel`);
+    console.log(`Found ${orderItems.length} order items to process`);
 
     if (orderItems.length === 0) {
       return NextResponse.json(
@@ -73,55 +94,179 @@ export async function POST(
       );
     }
 
+    // Validate quantities
+    for (const cancelItem of itemsToCancel) {
+      const orderItem = orderItems.find(item => item.id === cancelItem.itemId);
+      if (!orderItem) {
+        return NextResponse.json(
+          { error: `Order item ${cancelItem.itemId} not found` },
+          { status: 404 }
+        );
+      }
+      
+      if (cancelItem.quantityToCancel > orderItem.quantity) {
+        return NextResponse.json(
+          { error: `Cannot cancel ${cancelItem.quantityToCancel} items - only ${orderItem.quantity} ordered` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Use a transaction to ensure all updates are atomic
     const result = await prisma.$transaction(async (tx) => {
-      const updatedItems = [];
+      const processedItems = [];
+      let totalCancelledQuantity = 0;
       
-      // For each cancelled item, update product stock and color variant quantity
-      for (const item of orderItems) {
-        console.log(`Processing item ${item.id} - Product: ${item.product.name}, Quantity: ${item.quantity}, Color: ${item.color || 'None'}`);
+      // For each cancelled item, update product stock and order item quantity
+      for (const cancelItem of itemsToCancel) {
+        const orderItem = orderItems.find(item => item.id === cancelItem.itemId);
+        if (!orderItem) continue;
         
-        // Update product stock
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              increment: item.quantity
+        // Determine quantity to cancel (0 means cancel all)
+        const quantityToCancel = cancelItem.quantityToCancel === 0 ? orderItem.quantity : cancelItem.quantityToCancel;
+        
+        console.log(`Processing item ${orderItem.id} - Product: ${orderItem.product.name}, Cancel Quantity: ${quantityToCancel}/${orderItem.quantity}, Color: ${orderItem.color || 'None'}, Storage: ${orderItem.storageId || 'None'}`);
+        
+        // Restore stock based on the cancelled quantity
+        if (orderItem.storageId) {
+          // Storage-based product: Update storage stock and storage variants
+          console.log(`Restoring storage stock for storage ${orderItem.storageId}`);
+          
+          if (orderItem.color) {
+            // Storage + Color: Restore storage variant quantity, storage stock, and product stock
+            console.log(`Restoring storage variant with color ${orderItem.color}`);
+            
+            const storage = orderItem.product.storages.find(s => s.id === orderItem.storageId);
+            if (storage) {
+              const storageVariant = storage.variants.find(v => v.color === orderItem.color);
+              if (storageVariant) {
+                await tx.productStorageVariant.update({
+                  where: { id: storageVariant.id },
+                  data: {
+                    quantity: {
+                      increment: quantityToCancel
+                    }
+                  }
+                });
+                console.log(`Storage variant quantity restored by ${quantityToCancel}`);
+                
+                // Also restore the storage total stock
+                await tx.productStorage.update({
+                  where: { id: orderItem.storageId },
+                  data: {
+                    stock: {
+                      increment: quantityToCancel
+                    }
+                  }
+                });
+                console.log(`Storage total stock restored by ${quantityToCancel}`);
+                
+                // Also restore the main product stock
+                await tx.product.update({
+                  where: { id: orderItem.productId },
+                  data: {
+                    stock: {
+                      increment: quantityToCancel
+                    }
+                  }
+                });
+                console.log(`Main product stock restored by ${quantityToCancel}`);
+              } else {
+                console.log(`No storage variant found for color ${orderItem.color}`);
+              }
             }
-          }
-        });
-        console.log(`Updated stock for product ${item.productId}`);
-
-        // If the item has a color, update the corresponding variant quantity
-        if (item.color) {
-          const variant = item.product.variants.find(v => v.color === item.color);
-          if (variant) {
-            await tx.productVariant.update({
-              where: { id: variant.id },
+          } else {
+            // Storage only: Restore storage stock and product stock
+            await tx.productStorage.update({
+              where: { id: orderItem.storageId },
               data: {
-                quantity: {
-                  increment: item.quantity
+                stock: {
+                  increment: quantityToCancel
                 }
               }
             });
-            console.log(`Updated quantity for variant ${variant.id} (${item.color})`);
+            console.log(`Storage stock restored by ${quantityToCancel}`);
+            
+            // Also restore the main product stock
+            await tx.product.update({
+              where: { id: orderItem.productId },
+              data: {
+                stock: {
+                  increment: quantityToCancel
+                }
+              }
+            });
+            console.log(`Main product stock restored by ${quantityToCancel}`);
+          }
+        } else {
+          // Non-storage product (legacy): Update product and color variants
+          if (orderItem.color) {
+            // Color only: Restore product variant quantity and main product stock
+            const variant = orderItem.product.variants.find(v => v.color === orderItem.color);
+            if (variant) {
+              await tx.productVariant.update({
+                where: { id: variant.id },
+                data: {
+                  quantity: {
+                    increment: quantityToCancel
+                  }
+                }
+              });
+              console.log(`Updated quantity for variant ${variant.id} (${orderItem.color}) by ${quantityToCancel}`);
+              
+              // Also restore the main product stock
+              await tx.product.update({
+                where: { id: orderItem.productId },
+                data: {
+                  stock: {
+                    increment: quantityToCancel
+                  }
+                }
+              });
+              console.log(`Main product stock restored by ${quantityToCancel}`);
+            } else {
+              console.log(`No variant found for color ${orderItem.color}`);
+            }
           } else {
-            console.log(`No variant found for color ${item.color}`);
+            // No storage, no color: Update main product stock
+            await tx.product.update({
+              where: { id: orderItem.productId },
+              data: {
+                stock: {
+                  increment: quantityToCancel
+                }
+              }
+            });
+            console.log(`Updated stock for product ${orderItem.productId} by ${quantityToCancel}`);
           }
         }
 
-        // Mark the order item as cancelled - for now, we'll skip this step
-        // since the status field might not exist yet
-        updatedItems.push(item);
-        console.log(`Processed item ${item.id}`);
+        // Update the order item quantity or delete if fully cancelled
+        if (quantityToCancel >= orderItem.quantity) {
+          // Cancel the entire item
+          await tx.orderItem.delete({
+            where: { id: orderItem.id }
+          });
+          console.log(`Deleted order item ${orderItem.id} completely`);
+        } else {
+          // Reduce the quantity of the order item
+          const newQuantity = orderItem.quantity - quantityToCancel;
+          await tx.orderItem.update({
+            where: { id: orderItem.id },
+            data: { quantity: newQuantity }
+          });
+          console.log(`Updated order item ${orderItem.id} quantity from ${orderItem.quantity} to ${newQuantity}`);
+        }
 
-        // In a future update, we can add this back:
-        // const updatedItem = await tx.orderItem.update({
-        //   where: { id: item.id },
-        //   data: {
-        //     status: 'CANCELLED'
-        //   }
-        // });
+        processedItems.push({
+          itemId: orderItem.id,
+          productName: orderItem.product.name,
+          cancelledQuantity: quantityToCancel,
+          remainingQuantity: Math.max(0, orderItem.quantity - quantityToCancel)
+        });
+        
+        totalCancelledQuantity += quantityToCancel;
+        console.log(`Processed item ${orderItem.id} - cancelled ${quantityToCancel} items`);
       }
 
       // Add a status update to the order history
@@ -129,20 +274,21 @@ export async function POST(
         data: {
           orderId: orderId,
           status: 'CANCELLED',
-          comment: comment || 'Items cancelled by admin'
+          comment: comment || `${totalCancelledQuantity} item(s) cancelled by admin`
         }
       });
       console.log(`Added status update to order history`);
 
-      return updatedItems;
+      return { processedItems, totalCancelledQuantity };
     });
 
-    console.log(`Successfully cancelled ${result.length} items`);
+    console.log(`Successfully processed ${result.processedItems.length} items, cancelled ${result.totalCancelledQuantity} total items`);
 
     return NextResponse.json({
       success: true,
-      message: `${result.length} items cancelled successfully`,
-      cancelledItems: result
+      message: `Successfully cancelled ${result.totalCancelledQuantity} item(s) from ${result.processedItems.length} order line(s)`,
+      processedItems: result.processedItems,
+      totalCancelledQuantity: result.totalCancelledQuantity
     });
   } catch (error) {
     console.error('Error cancelling order items:', error);

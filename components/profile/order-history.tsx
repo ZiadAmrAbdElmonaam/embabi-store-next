@@ -8,6 +8,7 @@ import { OrderStatusBadge } from '../ui/order-status-badge';
 import { formatPrice } from '../../lib/utils';
 import { TranslatedContent } from '@/components/ui/translated-content';
 import { useTranslation } from '@/hooks/use-translation';
+import { getColorName } from '@/lib/colors';
 
 interface Order {
   id: string;
@@ -16,8 +17,14 @@ interface Order {
   createdAt: string;
   items: Array<{
     quantity: number;
+    color: string | null;
+    storageId: string | null;
     product: {
       name: string;
+      storages: Array<{
+        id: string;
+        size: string;
+      }>;
     };
   }>;
 }
@@ -25,7 +32,7 @@ interface Order {
 export function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
 
   useEffect(() => {
     fetch('/api/user/orders')
@@ -81,13 +88,34 @@ export function OrderHistory() {
             <div>
               <h4 className="text-sm font-medium mb-2">{t('profile.items')}</h4>
               <div className="space-y-2">
-                {order.items.map((item, index) => (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span>
+                {order.items.map((item, index) => {
+                  // Find storage information if storageId exists
+                  const selectedStorage = item.storageId 
+                    ? item.product.storages.find(s => s.id === item.storageId)
+                    : null;
+                  
+                  return (
+                    <div key={index} className="text-sm">
+                      <div className="flex justify-between">
+                        <span className="font-medium">
                       {item.quantity}x {item.product.name}
                     </span>
                   </div>
-                ))}
+                      <div className="flex flex-wrap gap-4 mt-1 text-xs text-gray-500">
+                        {selectedStorage && (
+                          <span>
+                            <TranslatedContent translationKey="productDetail.storage" />: {selectedStorage.size}
+                          </span>
+                        )}
+                        {item.color && (
+                          <span>
+                            <TranslatedContent translationKey="cart.color" />: {getColorName(item.color, lang)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

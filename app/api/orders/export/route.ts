@@ -31,6 +31,7 @@ export async function GET() {
       id: order.id,
       customerName: order.user.name,
       customerEmail: order.user.email,
+      customerPhone: order.shippingPhone,
       status: order.status,
       total: order.total,
       items: order.items
@@ -45,6 +46,7 @@ export async function GET() {
         id: 'Order ID',
         customerName: 'Customer Name',
         customerEmail: 'Customer Email',
+        customerPhone: 'Customer Phone',
         status: 'Status',
         total: 'Total',
         items: 'Items',

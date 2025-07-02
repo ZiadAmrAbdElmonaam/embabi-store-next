@@ -17,6 +17,7 @@ interface SerializedProduct extends Omit<Product, 'price' | 'salePrice' | 'disco
   saleEndDate: string | null;
   variants: ProductVariant[];
   details: ProductDetail[];
+  storages: ProductStorage[];
 }
 
 interface ProductFormProps {
@@ -34,6 +35,20 @@ interface ProductDetail {
   description: string;
 }
 
+interface ProductStorage {
+  id?: string;
+  size: string;
+  price: string;
+  stock: number;
+  salePercentage?: string;
+  saleEndDate?: string;
+  variants: StorageColorVariant[];
+}
+
+interface StorageColorVariant {
+  color: string;
+  quantity: number;
+}
 
 export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
@@ -46,6 +61,17 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
   );
   const [details, setDetails] = useState<ProductDetail[]>(
     initialData?.details.map(d => ({ label: d.label, description: d.description })) || []
+  );
+  const [storages, setStorages] = useState<ProductStorage[]>(
+    initialData?.storages?.map(s => ({
+      id: s.id,
+      size: s.size,
+      price: s.price.toString(),
+      stock: s.stock,
+      salePercentage: s.salePercentage?.toString() || "",
+      saleEndDate: s.saleEndDate ? new Date(s.saleEndDate).toISOString().split('T')[0] : "",
+      variants: s.variants?.map(v => ({ color: v.color, quantity: v.quantity })) || []
+    })) || []
   );
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
@@ -113,7 +139,61 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
 
   // Validate total quantity matches stock
   const totalQuantity = colorVariants.reduce((sum, variant) => sum + variant.quantity, 0);
-  const quantityMismatch = totalQuantity !== Number(formData.stock);
+  // Only check quantity mismatch when there are no storage options AND there are color variants
+  const quantityMismatch = storages.length === 0 && colorVariants.length > 0 && totalQuantity !== Number(formData.stock);
+
+  // Storage management functions
+  const addStorage = () => {
+    setStorages([...storages, {
+      size: '',
+      price: '',
+      stock: 0,
+      salePercentage: '',
+      saleEndDate: '',
+      variants: []
+    }]);
+  };
+
+  const removeStorage = (index: number) => {
+    setStorages(storages.filter((_, i) => i !== index));
+  };
+
+  const updateStorage = (index: number, field: keyof ProductStorage, value: any) => {
+    const newStorages = [...storages];
+    newStorages[index] = { ...newStorages[index], [field]: value };
+    setStorages(newStorages);
+  };
+
+  const addStorageVariant = (storageIndex: number) => {
+    const newStorages = [...storages];
+    newStorages[storageIndex].variants.push({ color: '', quantity: 0 });
+    setStorages(newStorages);
+  };
+
+  const removeStorageVariant = (storageIndex: number, variantIndex: number) => {
+    const newStorages = [...storages];
+    newStorages[storageIndex].variants = newStorages[storageIndex].variants.filter((_, i) => i !== variantIndex);
+    setStorages(newStorages);
+  };
+
+  const updateStorageVariant = (storageIndex: number, variantIndex: number, field: keyof StorageColorVariant, value: any) => {
+    const newStorages = [...storages];
+    newStorages[storageIndex].variants[variantIndex] = {
+      ...newStorages[storageIndex].variants[variantIndex],
+      [field]: value
+    };
+    setStorages(newStorages);
+  };
+
+  // Calculate storage sale price
+  const getStorageSalePrice = (storage: ProductStorage) => {
+    if (storage.price && storage.salePercentage) {
+      const price = parseFloat(storage.price);
+      const salePercentage = parseFloat(storage.salePercentage);
+      return price - (price * (salePercentage / 100));
+    }
+    return null;
+  };
 
   // Calculate new price based on sale percentage
   const calculateNewPrice = (price: number, salePercentage: number) => {
@@ -142,7 +222,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (quantityMismatch) {
-      toast.error(`Total color quantities (${totalQuantity}) must match stock (${formData.stock})`);
+      toast.error(`Total color quantities (${totalQuantity}) must match stock (${formData.stock}) when no storage options are defined`);
       return;
     }
 
@@ -179,7 +259,16 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         images,
         thumbnails,
         details,
-        variants: colorVariants
+        variants: colorVariants,
+        storages: storages.map(storage => ({
+          id: storage.id,
+          size: storage.size,
+          price: parseFloat(storage.price),
+          stock: storage.stock,
+          salePercentage: storage.salePercentage ? parseFloat(storage.salePercentage) : null,
+          saleEndDate: storage.saleEndDate || null,
+          variants: storage.variants
+        }))
       };
 
       const response = await fetch(url, {
@@ -259,15 +348,25 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Stock</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Stock 
+            {storages.length > 0 && (
+              <span className="text-sm text-gray-500 font-normal"> (Optional when storage options are defined)</span>
+            )}
+          </label>
           <input
             type="number"
-            required
+            required={storages.length === 0}
             min="0"
             value={formData.stock}
             onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
             className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
           />
+          {storages.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1">
+              This field is optional when storage options are defined. Stock will be managed at the storage level.
+            </p>
+          )}
         </div>
       </div>
 
@@ -347,13 +446,26 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
       {/* Color Variants */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Color Variants</h2>
-          {quantityMismatch && (
+          <h2 className="text-xl font-semibold">
+            Color Variants
+            {storages.length > 0 && (
+              <span className="text-sm text-gray-500 font-normal"> (Optional when storage options are defined)</span>
+            )}
+          </h2>
+          {quantityMismatch && storages.length === 0 && (
             <p className="text-sm text-red-600">
               Total quantities ({totalQuantity}) must match stock ({formData.stock})
             </p>
           )}
         </div>
+        
+        {storages.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <strong>Info:</strong> Color variants here are optional when storage options are defined. Colors will be managed at the storage level.
+            </p>
+          </div>
+        )}
         
         {colorVariants.map((variant, index) => (
           <div key={index} className="flex items-center gap-4">
@@ -399,6 +511,192 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         >
           <Plus className="h-4 w-4" />
           Add Color Variant
+        </button>
+      </div>
+
+      {/* Storage Options */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Storage Options (Optional)</h2>
+          <p className="text-sm text-gray-600">Define different storage variants with their own pricing and colors</p>
+        </div>
+
+        {storages.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Note:</strong> When storage options are defined, customers will select storage first, then choose from available colors for that storage option.
+            </p>
+            <p className="text-sm text-yellow-800 mt-2">
+              <strong>Stock Management:</strong> Stock is managed at the storage level. The main product stock and color variants above are optional when storage options are present.
+            </p>
+          </div>
+        )}
+
+        {storages.map((storage, storageIndex) => (
+          <div key={storageIndex} className="border border-gray-200 rounded-lg p-6 space-y-4 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Storage Option {storageIndex + 1}</h3>
+              <button
+                type="button"
+                onClick={() => removeStorage(storageIndex)}
+                className="text-red-600 hover:text-red-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Storage Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Storage Size</label>
+                <input
+                  type="text"
+                  placeholder="e.g., 128GB, 256GB, 512GB"
+                  value={storage.size}
+                  onChange={(e) => updateStorage(storageIndex, 'size', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={storage.price}
+                  onChange={(e) => updateStorage(storageIndex, 'price', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Total Stock</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={storage.stock}
+                  onChange={(e) => updateStorage(storageIndex, 'stock', parseInt(e.target.value) || 0)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+            </div>
+
+            {/* Sale Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sale Percentage (Optional)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="0"
+                  value={storage.salePercentage}
+                  onChange={(e) => updateStorage(storageIndex, 'salePercentage', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sale End Date (Optional)</label>
+                <input
+                  type="date"
+                  value={storage.saleEndDate}
+                  onChange={(e) => updateStorage(storageIndex, 'saleEndDate', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                />
+              </div>
+            </div>
+
+            {/* Price Display */}
+            {storage.price && (
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="text-sm text-gray-600">Original Price:</span>
+                    <span className="ml-2 font-medium">${parseFloat(storage.price || '0').toFixed(2)}</span>
+                  </div>
+                  {storage.salePercentage && (
+                    <div>
+                      <span className="text-sm text-gray-600">Sale Price:</span>
+                      <span className="ml-2 font-medium text-green-600">
+                        ${getStorageSalePrice(storage)?.toFixed(2)}
+                      </span>
+                      <span className="ml-2 text-sm text-green-600">
+                        ({storage.salePercentage}% off)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Color Variants for this Storage */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-md font-medium">Color Variants for {storage.size || 'this storage'}</h4>
+                <div className="text-sm text-gray-600">
+                  Total: {storage.variants.reduce((sum, v) => sum + v.quantity, 0)} / {storage.stock}
+                </div>
+              </div>
+
+              {storage.variants.map((variant, variantIndex) => (
+                <div key={variantIndex} className="flex items-center gap-4 bg-white p-3 rounded border">
+                  <input
+                    type="text"
+                    placeholder="Color (e.g., Black, White, Blue)"
+                    value={variant.color}
+                    onChange={(e) => updateStorageVariant(storageIndex, variantIndex, 'color', e.target.value)}
+                    className="flex-1 rounded-md border border-gray-300 px-3 py-2"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Qty"
+                    value={variant.quantity}
+                    onChange={(e) => updateStorageVariant(storageIndex, variantIndex, 'quantity', parseInt(e.target.value) || 0)}
+                    className="w-24 rounded-md border border-gray-300 px-3 py-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeStorageVariant(storageIndex, variantIndex)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => addStorageVariant(storageIndex)}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm"
+              >
+                <Plus className="h-3 w-3" />
+                Add Color Variant
+              </button>
+
+              {/* Validation for storage variants */}
+              {storage.variants.length > 0 && (
+                <div className="text-sm">
+                  {storage.variants.reduce((sum, v) => sum + v.quantity, 0) !== storage.stock && (
+                    <p className="text-red-600">
+                      Color quantities ({storage.variants.reduce((sum, v) => sum + v.quantity, 0)}) must match storage stock ({storage.stock})
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addStorage}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+        >
+          <Plus className="h-4 w-4" />
+          Add Storage Option
         </button>
       </div>
 

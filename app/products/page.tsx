@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../api/auth/auth-options";
 import { ProductsClient } from "@/components/products/products-client";
+import { getProductDisplayPrice } from "@/lib/utils";
 
 interface SearchParams {
   page?: string;
@@ -10,10 +11,11 @@ interface SearchParams {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
-  // Parse searchParams safely by extracting the page parameter early
-  const pageParam = searchParams?.page;
+  // Await searchParams to fix Next.js warning
+  const resolvedSearchParams = await searchParams;
+  const pageParam = resolvedSearchParams?.page;
   
   // Simple pagination only
   const ITEMS_PER_PAGE = 12;
@@ -37,6 +39,11 @@ export default async function ProductsPage({
           rating: true,
         },
       },
+      storages: {
+        include: {
+          variants: true,
+        },
+      },
     },
     orderBy: {
       createdAt: 'desc' // Default sort by newest
@@ -51,12 +58,36 @@ export default async function ProductsPage({
   });
 
   // Convert Decimal to number before passing to client components
-  const serializedProducts = products.map(product => ({
-    ...product,
-    price: Number(product.price),
-    createdAt: product.createdAt.toISOString(),
-    updatedAt: product.updatedAt.toISOString()
-  }));
+  const serializedProducts = products.map(product => {
+    // Get display pricing (prioritizes storage with stock)
+    const displayPrice = getProductDisplayPrice({
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+      storages: product.storages.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        stock: storage.stock,
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      }))
+    });
+
+    return {
+      ...product,
+      price: displayPrice.price,
+      salePrice: displayPrice.salePrice,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+      storages: product.storages.map(storage => ({
+        ...storage,
+        price: Number(storage.price),
+        createdAt: storage.createdAt.toISOString(),
+        updatedAt: storage.updatedAt.toISOString(),
+      }))
+    };
+  });
 
   // Create a simplified searchParams object with just the page info for the client
   const clientSearchParams = { page: pageParam };

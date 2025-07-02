@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from "react";
-import { Heart, Trash2, ShoppingCart, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Heart, Trash2, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { useCart } from "@/hooks/use-cart";
@@ -11,15 +11,14 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { useTranslation } from "@/hooks/use-translation";
+import { ProductSelectionModal } from "@/components/products/product-selection-modal";
 
 export default function WishlistPage() {
   const { items, removeItem, syncWithServer, isInitialized } = useWishlist();
   const { addItem: addToCart } = useCart();
   const [isLoading, setIsLoading] = useState(true);
-  const [showColorModal, setShowColorModal] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<typeof items[0] | null>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -39,19 +38,7 @@ export default function WishlistPage() {
     }
   }, [syncWithServer, isLoading]);
 
-  // Close modal when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowColorModal(false);
-      }
-    }
-    
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+
 
   const handleRemoveFromWishlist = (id: string) => {
     removeItem(id);
@@ -110,15 +97,25 @@ export default function WishlistPage() {
   };
 
   const handleAddToCart = (item: typeof items[0]) => {
-    // Check if the item has variants
-    if (item.variants && item.variants.length > 0) {
-      // Show color selection modal
+    // Check if the item has storages
+    const hasStorages = item.storages && item.storages.length > 0;
+    
+    // Check if the item has colors or variants
+    const hasColors = item.colors && item.colors.length > 0;
+    const hasVariants = item.variants && item.variants.length > 0;
+    
+    // Check if there are any variants with quantity > 0
+    const hasAvailableVariants = item.variants && 
+      item.variants.some(variant => variant.quantity > 0);
+    
+    // Show ProductSelectionModal if item has storages, colors, or variants that require selection
+    if (hasStorages || ((hasColors || hasVariants) && hasAvailableVariants)) {
       setSelectedItem(item);
-      setShowColorModal(true);
+      setShowSelectionModal(true);
       return;
     }
     
-    // For items without variants, add directly to cart
+    // For items without storages, colors or variants, add directly to cart
     addToCart({
       id: item.id,
       name: item.name,
@@ -129,34 +126,7 @@ export default function WishlistPage() {
     });
   };
 
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-  };
 
-  const handleAddWithColor = () => {
-    if (!selectedItem) return;
-    if (!selectedColor) {
-      toast.error(t('products.selectColor'));
-      return;
-    }
-    
-    // Create variants array with proper structure
-    const itemVariants = selectedItem.variants || [];
-    
-    addToCart({
-      id: selectedItem.id,
-      name: selectedItem.name,
-      price: selectedItem.price,
-      salePrice: selectedItem.salePrice,
-      images: selectedItem.images,
-      selectedColor: selectedColor,
-      variants: itemVariants
-    });
-    
-    setShowColorModal(false);
-    setSelectedColor(null);
-    setSelectedItem(null);
-  };
 
   const calculateDiscount = (price: number, salePrice: number | null) => {
     if (!salePrice) return 0;
@@ -290,74 +260,16 @@ export default function WishlistPage() {
         </div>
       </div>
 
-      {/* Color Selection Modal */}
-      {showColorModal && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div 
-            ref={modalRef}
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                <TranslatedContent translationKey="products.selectColorFor" /> {selectedItem.name}
-              </h3>
-              <button 
-                onClick={() => setShowColorModal(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-center gap-3 mb-2">
-                {/* Display colors from variants if available */}
-                {selectedItem.variants && selectedItem.variants
-                  .filter(variant => variant.quantity && variant.quantity > 0) // Filter out variants with zero quantity
-                  .map((variant, index) => (
-                  <div
-                    key={index}
-                    className="group relative flex flex-col items-center gap-2"
-                  >
-                    <div
-                      className={cn(
-                        "h-12 w-12 rounded-full border-2 cursor-pointer transition-colors duration-200 shadow-sm flex items-center justify-center",
-                        selectedColor === variant.color 
-                          ? "border-rose-600 ring-2 ring-rose-600 ring-opacity-50" 
-                          : "border-gray-200 hover:border-rose-400"
-                      )}
-                      style={{ 
-                        backgroundColor: getColorValue(variant.color),
-                        boxShadow: variant.color.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined 
-                      }}
-                      onClick={() => handleColorSelect(variant.color)}
-                    >
-                      {/* No content here */}
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {getColorName(variant.color)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              {selectedColor && (
-                <p className="text-sm text-center text-gray-600 dark:text-gray-300">
-                  <TranslatedContent translationKey="products.selected" />: <span className="font-medium">{getColorName(selectedColor)}</span>
-                </p>
-              )}
-              
-              <button
-                onClick={handleAddWithColor}
-                className="w-full bg-rose-600 text-white py-2 px-4 rounded-lg hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed mt-2 transition-colors duration-300"
-                disabled={!selectedColor}
-              >
-                <TranslatedContent translationKey="wishlist.addToCart" />
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Product Selection Modal */}
+      {selectedItem && (
+        <ProductSelectionModal
+          isOpen={showSelectionModal}
+          onClose={() => {
+            setShowSelectionModal(false);
+            setSelectedItem(null);
+          }}
+          product={selectedItem}
+        />
       )}
     </div>
   );

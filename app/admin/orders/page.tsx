@@ -98,6 +98,9 @@ export default function AdminOrdersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Customer
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Phone
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                 Items
               </th>
@@ -143,27 +146,57 @@ export default function AdminOrdersPage() {
                   <div className="text-sm text-gray-900">{order.user.name}</div>
                   <div className="text-sm text-gray-500">{order.user.email}</div>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{order.shippingPhone}</div>
+                </td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 space-y-2">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="flex items-start">
-                        <span className="font-medium mr-2">{item.quantity}x</span>
-                        <div>
-                          <span>{item.product.name}</span>
-                          {item.color && (
-                            <div className="flex items-center mt-1">
-                              <div 
-                                className="w-3 h-3 rounded-full mr-1" 
-                                style={{ backgroundColor: getColorValue(item.color) }}
-                              ></div>
-                              <span className="text-xs text-gray-500">
-                                {getColorName(item.color)}
-                              </span>
+                    {order.items && order.items.length > 0 ? order.items.map((item) => {
+                      // Find storage information if storageId exists
+                      const selectedStorage = item.storageId 
+                        ? item.product?.storages?.find(s => s.id === item.storageId)
+                        : null;
+                      
+                      return (
+                        <div key={item.id} className="flex items-start">
+                          <span className="font-medium mr-2">{item.quantity}x</span>
+                          <div>
+                            <span>{item.product?.name || 'Unknown Product'}</span>
+                            <div className="flex flex-wrap gap-x-4 mt-1">
+                              {selectedStorage && (
+                                <div className="flex items-center">
+                                  <span className="text-xs text-gray-500">
+                                    Storage: {selectedStorage.size}
+                                  </span>
+                                </div>
+                              )}
+                              {item.storageId && !selectedStorage && (
+                                <div className="flex items-center">
+                                  <span className="text-xs text-red-500">
+                                    Storage: Not found (ID: {item.storageId})
+                                  </span>
+                                </div>
+                              )}
+                              {item.color && (
+                                <div className="flex items-center">
+                                  <div 
+                                    className="w-3 h-3 rounded-full mr-1" 
+                                    style={{ backgroundColor: getColorValue(item.color) }}
+                                  ></div>
+                                  <span className="text-xs text-gray-500">
+                                    {getColorName(item.color)}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
+                      );
+                    }) : (
+                      <div className="text-sm text-gray-500 italic">
+                        No items found for this order
                       </div>
-                    ))}
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

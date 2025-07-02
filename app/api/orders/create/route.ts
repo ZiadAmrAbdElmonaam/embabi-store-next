@@ -12,6 +12,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   selectedColor?: string | null;
+  storageId?: string | null;
 }
 
 interface ShippingInfo {
@@ -123,7 +124,8 @@ export async function POST(request: Request) {
         console.log("Coupon info from form:", couponData.code);
       } else {
         // Fall back to cookie if not in form
-        const couponCookie = cookies().get('coupon')?.value;
+        const cookieStore = await cookies();
+        const couponCookie = cookieStore.get('coupon')?.value;
         if (couponCookie) {
           couponData = JSON.parse(couponCookie) as CouponInfo;
           console.log("Applied coupon from cookie:", couponData.code);
@@ -160,11 +162,16 @@ export async function POST(request: Request) {
       const productIds = items.map(item => item.id);
       console.log("Product IDs to validate:", productIds);
       
-      // Fetch products with their variants to check stock
+      // Fetch products with their variants and storages to check stock
       const products = await prisma.product.findMany({
         where: { id: { in: productIds } },
         include: {
-          variants: true
+          variants: true,
+          storages: {
+            include: {
+              variants: true
+            }
+          }
         }
       });
       console.log("Found existing products:", products.length);
@@ -180,37 +187,80 @@ export async function POST(request: Request) {
         );
       }
       
-      // Check stock availability for each product and color variant
+      // Check stock availability for each product, storage, and color variant
       for (const orderItem of items) {
         const product = products.find(p => p.id === orderItem.id);
         if (!product) continue;
         
-        // Check main product stock
-        if (product.stock < orderItem.quantity) {
-          console.error(`Insufficient stock for product ${product.name} (ID: ${product.id})`);
-          return NextResponse.json(
-            { error: `Insufficient stock for product: ${product.name}` },
-            { status: 400 }
-          );
-        }
-        
-        // If color is selected, check color variant stock
-        if (orderItem.selectedColor) {
-          const colorVariant = product.variants.find(v => v.color === orderItem.selectedColor);
-          if (!colorVariant) {
-            console.error(`Color variant ${orderItem.selectedColor} not found for product ${product.id}`);
+        // Check stock based on storage selection
+        if (orderItem.storageId) {
+          // Storage-based product
+          const selectedStorage = product.storages.find(s => s.id === orderItem.storageId);
+          if (!selectedStorage) {
+            console.error(`Storage ${orderItem.storageId} not found for product ${product.id}`);
             return NextResponse.json(
-              { error: `Color ${orderItem.selectedColor} not available for product: ${product.name}` },
+              { error: `Selected storage not available for product: ${product.name}` },
               { status: 400 }
             );
           }
           
-          if (colorVariant.quantity < orderItem.quantity) {
-            console.error(`Insufficient stock for color ${orderItem.selectedColor} of product ${product.name}`);
-            return NextResponse.json(
-              { error: `Insufficient stock for color ${orderItem.selectedColor} of product: ${product.name}` },
-              { status: 400 }
-            );
+          if (orderItem.selectedColor) {
+            // Storage + Color: Check storage variant stock
+            const storageVariant = selectedStorage.variants.find(v => v.color === orderItem.selectedColor);
+            if (!storageVariant) {
+              console.error(`Storage color variant ${orderItem.selectedColor} not found for storage ${orderItem.storageId}`);
+              return NextResponse.json(
+                { error: `Color ${orderItem.selectedColor} not available for selected storage` },
+                { status: 400 }
+              );
+            }
+            
+            if (storageVariant.quantity < orderItem.quantity) {
+              console.error(`Insufficient storage variant stock for product ${product.name}`);
+              return NextResponse.json(
+                { error: `Insufficient stock for ${product.name} - ${orderItem.selectedColor}` },
+                { status: 400 }
+              );
+            }
+          } else {
+            // Storage only: Check storage stock
+            if (selectedStorage.stock < orderItem.quantity) {
+              console.error(`Insufficient storage stock for product ${product.name}`);
+              return NextResponse.json(
+                { error: `Insufficient stock for ${product.name}` },
+                { status: 400 }
+              );
+            }
+          }
+        } else {
+          // Non-storage product (legacy)
+          if (orderItem.selectedColor) {
+            // Color only: Check product variant stock
+            const colorVariant = product.variants.find(v => v.color === orderItem.selectedColor);
+            if (!colorVariant) {
+              console.error(`Color variant ${orderItem.selectedColor} not found for product ${product.id}`);
+              return NextResponse.json(
+                { error: `Color ${orderItem.selectedColor} not available for product: ${product.name}` },
+                { status: 400 }
+              );
+            }
+            
+            if (colorVariant.quantity < orderItem.quantity) {
+              console.error(`Insufficient color variant stock for product ${product.name}`);
+              return NextResponse.json(
+                { error: `Insufficient stock for ${product.name} - ${orderItem.selectedColor}` },
+                { status: 400 }
+              );
+            }
+          } else {
+            // No storage, no color: Check main product stock
+            if (product.stock < orderItem.quantity) {
+              console.error(`Insufficient stock for product ${product.name} (ID: ${product.id})`);
+              return NextResponse.json(
+                { error: `Insufficient stock for product: ${product.name}` },
+                { status: 400 }
+              );
+            }
           }
         }
       }
@@ -264,7 +314,7 @@ export async function POST(request: Request) {
     console.log("Creating order in database...");
     let order;
     
-    // Use a transaction to ensure all updates are atomic
+    // Use a transaction to ensure all updates are atomic with timeout
     try {
       order = await prisma.$transaction(async (prisma) => {
         // 1. Create the order with order items
@@ -273,6 +323,7 @@ export async function POST(request: Request) {
           quantity: item.quantity,
           price: item.price,
           color: item.selectedColor || null, // Store the selected color
+          storageId: item.storageId || null, // Store the selected storage
         }));
         
         console.log("Creating order with items count:", orderItems.length);
@@ -309,52 +360,134 @@ export async function POST(request: Request) {
         
         console.log("Order created with ID:", newOrder.id);
 
-        // 2. Update product stock quantities and color variants
+        // 2. Update product stock quantities, storage stock, and color variants
         console.log("Updating product stock quantities...");
+        
+        // Prepare all updates to execute in parallel
+        const updatePromises = [];
         
         for (const item of items) {
           console.log(`Processing item ${item.id} - Quantity: ${item.quantity}`);
           
-          // Always update the main product stock
-          console.log(`Updating main product stock for ${item.id}`);
-          await prisma.product.update({
-            where: { id: item.id },
-            data: {
-              stock: {
-                decrement: item.quantity
-              }
-            }
-          });
-          console.log(`Main product stock updated`);
-          
-          // If a color is selected, update that specific variant's quantity
-          if (item.selectedColor) {
-            console.log(`Updating variant with color ${item.selectedColor}`);
+          if (item.storageId) {
+            // Storage-based product: Update storage stock and storage variants
+            console.log(`Updating storage stock for storage ${item.storageId}`);
             
-            // Find and update the variant with matching color
-            const variant = await prisma.productVariant.findFirst({
-              where: {
-                productId: item.id,
-                color: item.selectedColor
-              }
-            });
-
-            if (variant) {
-              console.log(`Found variant, updating quantity`);
-              await prisma.productVariant.update({
-                where: { id: variant.id },
-                data: {
-                  quantity: {
-                    decrement: item.quantity
+            if (item.selectedColor) {
+              // Storage + Color: Update storage variant quantity, storage stock, and product stock
+              console.log(`Updating storage variant with color ${item.selectedColor}`);
+              
+              // Find and update storage variant
+              updatePromises.push(
+                prisma.productStorageVariant.updateMany({
+                  where: {
+                    storageId: item.storageId,
+                    color: item.selectedColor
+                  },
+                  data: {
+                    quantity: {
+                      decrement: item.quantity
+                    }
                   }
-                }
-              });
-              console.log(`Variant quantity updated`);
+                })
+              );
+              
+              // Update storage total stock
+              updatePromises.push(
+                prisma.productStorage.update({
+                  where: { id: item.storageId },
+                  data: {
+                    stock: {
+                      decrement: item.quantity
+                    }
+                  }
+                })
+              );
+              
+              // Update main product stock
+              updatePromises.push(
+                prisma.product.update({
+                  where: { id: item.id },
+                  data: {
+                    stock: {
+                      decrement: item.quantity
+                    }
+                  }
+                })
+              );
             } else {
-              console.log(`No variant found for color ${item.selectedColor}`);
+              // Storage only: Update storage stock and product stock
+              updatePromises.push(
+                prisma.productStorage.update({
+                  where: { id: item.storageId },
+                  data: {
+                    stock: {
+                      decrement: item.quantity
+                    }
+                  }
+                })
+              );
+              
+              updatePromises.push(
+                prisma.product.update({
+                  where: { id: item.id },
+                  data: {
+                    stock: {
+                      decrement: item.quantity
+                    }
+                  }
+                })
+              );
+            }
+          } else {
+            // Non-storage product (legacy): Update product and color variants
+            if (item.selectedColor) {
+              // Color only: Update product variant quantity and main product stock
+              console.log(`Updating variant with color ${item.selectedColor}`);
+              
+              updatePromises.push(
+                prisma.productVariant.updateMany({
+                  where: {
+                    productId: item.id,
+                    color: item.selectedColor
+                  },
+                  data: {
+                    quantity: {
+                      decrement: item.quantity
+                    }
+                  }
+                })
+              );
+              
+              updatePromises.push(
+                prisma.product.update({
+                  where: { id: item.id },
+                  data: {
+                    stock: {
+                      decrement: item.quantity
+                    }
+                  }
+                })
+              );
+            } else {
+              // No storage, no color: Update main product stock
+              console.log(`Updating main product stock for ${item.id}`);
+              updatePromises.push(
+                prisma.product.update({
+                  where: { id: item.id },
+                  data: {
+                    stock: {
+                      decrement: item.quantity
+                    }
+                  }
+                })
+              );
             }
           }
         }
+        
+        // Execute all stock updates in parallel
+        await Promise.all(updatePromises);
         
         console.log("Stock quantities updated");
 
@@ -373,11 +506,15 @@ export async function POST(request: Request) {
         }
 
         return newOrder;
+      }, {
+        maxWait: 10000, // 10 seconds
+        timeout: 20000, // 20 seconds
       });
       
       // Clear the coupon cookie after order is created
       if (couponData) {
-        cookies().delete('coupon');
+        const cookieStore = await cookies();
+        cookieStore.delete('coupon');
         console.log("Coupon cookie cleared");
       }
 
@@ -398,6 +535,7 @@ export async function POST(request: Request) {
               price: Number(item.price),
             })),
             shippingName: order.shippingName,
+            shippingPhone: order.shippingPhone,
             shippingAddress: order.shippingAddress,
             shippingCity: order.shippingCity,
           };

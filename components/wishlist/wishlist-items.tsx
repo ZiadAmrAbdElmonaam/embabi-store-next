@@ -7,6 +7,7 @@ import { ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { formatPrice } from "@/lib/utils";
 import { useState } from "react";
+import { ProductSelectionModal } from "@/components/products/product-selection-modal";
 
 interface FormattedProduct extends Omit<Product, 'price' | 'salePrice' | 'discountPrice' | 'createdAt' | 'updatedAt' | 'saleEndDate'> {
   price: number;
@@ -17,6 +18,19 @@ interface FormattedProduct extends Omit<Product, 'price' | 'salePrice' | 'discou
   saleEndDate: string | null;
   category: Category | null;
   variants: (Omit<ProductVariant, 'price'> & { price: number })[];
+  storages?: Array<{
+    id: string;
+    size: string;
+    price: number;
+    stock: number;
+    salePercentage?: number | null;
+    saleEndDate?: string | null;
+    variants: Array<{
+      id: string;
+      color: string;
+      quantity: number;
+    }>;
+  }>;
 }
 
 interface WishlistItemsProps {
@@ -25,6 +39,8 @@ interface WishlistItemsProps {
 
 export default function WishlistItems({ products }: WishlistItemsProps) {
   const [isLoading, setIsLoading] = useState<string>("");
+  const [showSelectionModal, setShowSelectionModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<FormattedProduct | null>(null);
 
   const removeFromWishlist = async (productId: string) => {
     try {
@@ -51,15 +67,34 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
     }
   };
 
-  const addToCart = async (productId: string) => {
+  const addToCart = async (product: FormattedProduct) => {
+    // Check if the product has storages
+    const hasStorages = product.storages && product.storages.length > 0;
+    
+    // Check if the product has colors or variants
+    const hasColors = product.colors && product.colors.length > 0;
+    const hasVariants = product.variants && product.variants.length > 0;
+    
+    // Check if there are any variants with quantity > 0
+    const hasAvailableVariants = product.variants && 
+      product.variants.some(variant => variant.quantity > 0);
+    
+    // Show ProductSelectionModal if product has storages, colors, or variants that require selection
+    if (hasStorages || ((hasColors || hasVariants) && hasAvailableVariants)) {
+      setSelectedProduct(product);
+      setShowSelectionModal(true);
+      return;
+    }
+    
+    // For products without storages, colors or variants, add directly to cart using the API
     try {
-      setIsLoading(productId);
+      setIsLoading(product.id);
       const response = await fetch('/api/cart/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ productId, quantity: 1 }),
+        body: JSON.stringify({ productId: product.id, quantity: 1 }),
       });
 
       if (!response.ok) {
@@ -75,6 +110,7 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
   };
 
   return (
+    <>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {products.map((product) => (
         <div 
@@ -115,18 +151,33 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
             {/* Category and Stock */}
             <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
               <span>{product.category?.name}</span>
-              <span>{product.stock > 0 ? '' : 'Out of stock'}</span>
+              <span>{(() => {
+                const hasMainStock = product.stock > 0;
+                const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+                const hasStock = hasMainStock || hasStorageStock;
+                return hasStock ? '' : 'Out of stock';
+              })()}</span>
             </div>
 
             {/* Actions */}
             <div className="mt-4 flex items-center gap-2">
               <button
-                onClick={() => addToCart(product.id)}
-                disabled={product.stock === 0 || isLoading === product.id}
+                  onClick={() => addToCart(product)}
+                disabled={(() => {
+                  const hasMainStock = product.stock > 0;
+                  const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+                  const hasStock = hasMainStock || hasStorageStock;
+                  return !hasStock || isLoading === product.id;
+                })()}
                 className="flex-1 flex items-center justify-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-full hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart className="w-4 h-4" />
-                <span>{product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}</span>
+                <span>{(() => {
+                  const hasMainStock = product.stock > 0;
+                  const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+                  const hasStock = hasMainStock || hasStorageStock;
+                  return hasStock ? 'Add to Cart' : 'Out of Stock';
+                })()}</span>
               </button>
               <button
                 onClick={() => removeFromWishlist(product.id)}
@@ -140,5 +191,18 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
         </div>
       ))}
     </div>
+      
+      {/* Product Selection Modal */}
+      {selectedProduct && (
+        <ProductSelectionModal
+          isOpen={showSelectionModal}
+          onClose={() => {
+            setShowSelectionModal(false);
+            setSelectedProduct(null);
+          }}
+          product={selectedProduct}
+        />
+      )}
+    </>
   );
 } 

@@ -43,6 +43,7 @@ export async function GET() {
         where: { userId },
         include: {
           items: {
+            orderBy: { createdAt: 'asc' },
             include: {
               product: {
                 select: {
@@ -53,6 +54,16 @@ export async function GET() {
                   images: true,
                   slug: true,
                   variants: true,
+                  storages: {
+                    select: {
+                      id: true,
+                      size: true,
+                      price: true,
+                      salePercentage: true,
+                      saleEndDate: true,
+                      variants: true
+                    }
+                  }
                 }
               }
             }
@@ -62,20 +73,101 @@ export async function GET() {
       });
       
       if (userCart) {
-        cartItems = userCart.items.map(item => ({
+        // Filter out and fix any items with invalid quantities
+        const validItems = [];
+        const itemsToUpdate = [];
+        
+        for (const item of userCart.items) {
+          // Find selected storage if exists
+          const selectedStorage = item.storageId 
+            ? item.product.storages.find(s => s.id === item.storageId)
+            : null;
+          
+          // Determine available stock
+          let availableStock;
+          if (selectedStorage && item.selectedColor) {
+            // Storage + Color: Check storage variant stock
+            const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
+            availableStock = storageVariant ? storageVariant.quantity : 0;
+          } else if (selectedStorage) {
+            // Storage only: Use storage stock
+            availableStock = selectedStorage.stock;
+          } else if (item.selectedColor) {
+            // Color only (no storage): Check product variant stock
+            const variant = item.product.variants.find(v => v.color === item.selectedColor);
+            availableStock = variant ? variant.quantity : 0;
+          } else {
+            // No storage, no color: Use product stock
+            availableStock = item.product.stock;
+          }
+          
+          // Fix quantity if it exceeds available stock
+          let finalQuantity = item.quantity;
+          if (item.quantity > availableStock) {
+            finalQuantity = Math.max(0, availableStock);
+            if (finalQuantity > 0) {
+              itemsToUpdate.push({
+                id: item.id,
+                quantity: finalQuantity
+              });
+            } else {
+              // Remove item if no stock available
+              await prisma.cartItem.delete({
+                where: { id: item.id }
+              });
+              continue;
+            }
+          }
+          
+          // Calculate price based on storage or product
+          let finalPrice, finalSalePrice;
+          if (selectedStorage) {
+            finalPrice = Number(selectedStorage.price);
+            // Check if storage has a sale
+            if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
+                new Date(selectedStorage.saleEndDate) > new Date()) {
+              finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+            } else {
+              finalSalePrice = null;
+            }
+          } else {
+            finalPrice = Number(item.product.price);
+            finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
+          }
+          
+          validItems.push({
           id: item.product.id,
           name: item.product.name,
-          price: Number(item.product.price),
-          salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
+            price: finalPrice,
+            salePrice: finalSalePrice,
           images: item.product.images,
-          quantity: item.quantity,
+            slug: item.product.slug,
+            quantity: finalQuantity,
           selectedColor: item.selectedColor,
-          availableColors: item.product.variants.map(v => ({
+            storageId: item.storageId,
+            storageSize: selectedStorage?.size || null,
+            availableColors: selectedStorage 
+              ? selectedStorage.variants.map(v => ({
+                  color: v.color,
+                  quantity: v.quantity
+                }))
+              : item.product.variants.map(v => ({
             color: v.color,
             quantity: v.quantity
           })),
-          uniqueId: item.selectedColor ? `${item.product.id}-${item.selectedColor}` : item.product.id
-        }));
+            uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+          });
+        }
+        
+        // Update quantities in database if needed
+        for (const itemUpdate of itemsToUpdate) {
+          await prisma.cartItem.update({
+            where: { id: itemUpdate.id },
+            data: { quantity: itemUpdate.quantity }
+          });
+        }
+        
+        cartItems = validItems;
         
         coupon = userCart.coupon;
       }
@@ -85,6 +177,7 @@ export async function GET() {
         where: { sessionId },
         include: {
           items: {
+            orderBy: { createdAt: 'asc' },
             include: {
               product: {
                 select: {
@@ -95,6 +188,16 @@ export async function GET() {
                   images: true,
                   slug: true,
                   variants: true,
+                  storages: {
+                    select: {
+                      id: true,
+                      size: true,
+                      price: true,
+                      salePercentage: true,
+                      saleEndDate: true,
+                      variants: true
+                    }
+                  }
                 }
               }
             }
@@ -104,20 +207,101 @@ export async function GET() {
       });
       
       if (anonCart) {
-        cartItems = anonCart.items.map(item => ({
+        // Filter out and fix any items with invalid quantities
+        const validItems = [];
+        const itemsToUpdate = [];
+        
+        for (const item of anonCart.items) {
+          // Find selected storage if exists
+          const selectedStorage = item.storageId 
+            ? item.product.storages.find(s => s.id === item.storageId)
+            : null;
+          
+          // Determine available stock
+          let availableStock;
+          if (selectedStorage && item.selectedColor) {
+            // Storage + Color: Check storage variant stock
+            const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
+            availableStock = storageVariant ? storageVariant.quantity : 0;
+          } else if (selectedStorage) {
+            // Storage only: Use storage stock
+            availableStock = selectedStorage.stock;
+          } else if (item.selectedColor) {
+            // Color only (no storage): Check product variant stock
+            const variant = item.product.variants.find(v => v.color === item.selectedColor);
+            availableStock = variant ? variant.quantity : 0;
+          } else {
+            // No storage, no color: Use product stock
+            availableStock = item.product.stock;
+          }
+          
+          // Fix quantity if it exceeds available stock
+          let finalQuantity = item.quantity;
+          if (item.quantity > availableStock) {
+            finalQuantity = Math.max(0, availableStock);
+            if (finalQuantity > 0) {
+              itemsToUpdate.push({
+                id: item.id,
+                quantity: finalQuantity
+              });
+            } else {
+              // Remove item if no stock available
+              await prisma.anonymousCartItem.delete({
+                where: { id: item.id }
+              });
+              continue;
+            }
+          }
+          
+          // Calculate price based on storage or product
+          let finalPrice, finalSalePrice;
+          if (selectedStorage) {
+            finalPrice = Number(selectedStorage.price);
+            // Check if storage has a sale
+            if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
+                new Date(selectedStorage.saleEndDate) > new Date()) {
+              finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+            } else {
+              finalSalePrice = null;
+            }
+          } else {
+            finalPrice = Number(item.product.price);
+            finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
+          }
+          
+          validItems.push({
           id: item.product.id,
           name: item.product.name,
-          price: Number(item.product.price),
-          salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
+            price: finalPrice,
+            salePrice: finalSalePrice,
           images: item.product.images,
-          quantity: item.quantity,
+            slug: item.product.slug,
+            quantity: finalQuantity,
           selectedColor: item.selectedColor,
-          availableColors: item.product.variants.map(v => ({
+            storageId: item.storageId,
+            storageSize: selectedStorage?.size || null,
+            availableColors: selectedStorage 
+              ? selectedStorage.variants.map(v => ({
+                  color: v.color,
+                  quantity: v.quantity
+                }))
+              : item.product.variants.map(v => ({
             color: v.color,
             quantity: v.quantity
           })),
-          uniqueId: item.selectedColor ? `${item.product.id}-${item.selectedColor}` : item.product.id
-        }));
+            uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+          });
+        }
+        
+        // Update quantities in database if needed
+        for (const itemUpdate of itemsToUpdate) {
+          await prisma.anonymousCartItem.update({
+            where: { id: itemUpdate.id },
+            data: { quantity: itemUpdate.quantity }
+          });
+        }
+        
+        cartItems = validItems;
         
         coupon = anonCart.coupon;
       }
@@ -171,10 +355,10 @@ export async function POST(request: Request) {
         return await addItemToCart(userId, sessionId, isAuthenticated, item);
         
       case 'REMOVE_ITEM':
-        return await removeItemFromCart(userId, sessionId, isAuthenticated, item.id);
+        return await removeItemFromCart(userId, sessionId, isAuthenticated, item.uniqueId || item);
         
       case 'UPDATE_QUANTITY':
-        return await updateItemQuantity(userId, sessionId, isAuthenticated, item.id, quantity);
+        return await updateItemQuantity(userId, sessionId, isAuthenticated, item.uniqueId || item, quantity);
         
       case 'UPDATE_COLOR':
         return await updateItemColor(userId, sessionId, isAuthenticated, item.id, color);
@@ -234,10 +418,53 @@ async function ensureCartExists(userId, sessionId, isAuthenticated) {
 // Add item to cart
 async function addItemToCart(userId, sessionId, isAuthenticated, item) {
   const cart = await ensureCartExists(userId, sessionId, isAuthenticated);
-  const { id, selectedColor, variants, price, salePrice, name, images } = item;
+  const { id, selectedColor, storageId, storageSize, variants, price, salePrice, name, images } = item;
   
-  // Check if the item already exists with the same color
-  const uniqueId = selectedColor ? `${id}-${selectedColor}` : id;
+  // Fetch product data to check stock
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      variants: true,
+      storages: {
+        include: {
+          variants: true,
+        },
+      },
+    }
+  });
+  
+  if (!product) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+  
+  // Determine available stock based on storage and color selection
+  let availableStock;
+  
+  if (storageId) {
+    // Product has storage selected
+    const selectedStorage = product.storages.find(s => s.id === storageId);
+    if (!selectedStorage) {
+      return NextResponse.json({ error: "Selected storage not found" }, { status: 400 });
+    }
+    
+    if (selectedColor) {
+      // Storage + Color: Check storage variant stock
+      const storageVariant = selectedStorage.variants.find(v => v.color === selectedColor);
+      availableStock = storageVariant ? storageVariant.quantity : 0;
+    } else {
+      // Storage only: Use storage stock
+      availableStock = selectedStorage.stock;
+    }
+  } else if (selectedColor) {
+    // Color only (no storage): Check product variant stock
+    const variant = product.variants.find(v => v.color === selectedColor);
+    availableStock = variant ? variant.quantity : 0;
+  } else {
+    // No storage, no color: Use product stock
+    availableStock = product.stock;
+  }
+  
+  // Check if item already exists in cart
   let existingItem;
   
   if (isAuthenticated && userId) {
@@ -245,7 +472,8 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
       where: {
         cartId: cart.id,
         productId: id,
-        selectedColor: selectedColor
+        selectedColor: selectedColor,
+        storageId: storageId
       }
     });
   } else if (sessionId) {
@@ -253,9 +481,20 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
       where: {
         cartId: cart.id,
         productId: id,
-        selectedColor: selectedColor
+        selectedColor: selectedColor,
+        storageId: storageId
       }
     });
+  }
+  
+  // Calculate new quantity if adding to existing item
+  const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
+  
+  // Validate stock
+  if (newQuantity > availableStock) {
+    return NextResponse.json({ 
+      error: `Only ${availableStock} items available in stock. You currently have ${existingItem?.quantity || 0} in your cart.` 
+    }, { status: 400 });
   }
   
   if (existingItem) {
@@ -263,12 +502,12 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
     if (isAuthenticated && userId) {
       await prisma.cartItem.update({
         where: { id: existingItem.id },
-        data: { quantity: { increment: 1 } }
+        data: { quantity: newQuantity }
       });
     } else if (sessionId) {
       await prisma.anonymousCartItem.update({
         where: { id: existingItem.id },
-        data: { quantity: { increment: 1 } }
+        data: { quantity: newQuantity }
       });
     }
   } else {
@@ -280,6 +519,7 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
           productId: id,
           quantity: 1,
           selectedColor,
+          storageId,
         }
       });
     } else if (sessionId) {
@@ -289,6 +529,7 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
           productId: id,
           quantity: 1,
           selectedColor,
+          storageId,
         }
       });
     }
@@ -299,19 +540,66 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
 }
 
 // Remove item from cart
-async function removeItemFromCart(userId, sessionId, isAuthenticated, itemId) {
+async function removeItemFromCart(userId, sessionId, isAuthenticated, itemData) {
+  // Parse the composite ID or use individual fields
+  let productId, selectedColor, storageId;
+  
+  if (typeof itemData === 'string') {
+    // Parse uniqueId format: "productId-color-storageId"
+    // Handle the known suffixes first
+    let remaining = itemData;
+    
+    // Handle storage ID
+    if (remaining.endsWith('-no-storage')) {
+      storageId = null;
+      remaining = remaining.slice(0, -'-no-storage'.length);
+    } else {
+      // Find the last hyphen to extract storage ID
+      const lastHyphen = remaining.lastIndexOf('-');
+      if (lastHyphen > -1) {
+        storageId = remaining.substring(lastHyphen + 1);
+        remaining = remaining.substring(0, lastHyphen);
+      }
+    }
+    
+    // Handle color
+    if (remaining.endsWith('-no-color')) {
+      selectedColor = null;
+      remaining = remaining.slice(0, -'-no-color'.length);
+    } else {
+      // Find the last hyphen to extract color
+      const lastHyphen = remaining.lastIndexOf('-');
+      if (lastHyphen > -1) {
+        selectedColor = remaining.substring(lastHyphen + 1);
+        remaining = remaining.substring(0, lastHyphen);
+      }
+    }
+    
+    // What's left is the product ID
+    productId = remaining;
+  } else {
+    // Use individual fields from itemData object
+    productId = itemData.productId || itemData.id;
+    selectedColor = itemData.selectedColor || null;
+    storageId = itemData.storageId || null;
+  }
+
   if (isAuthenticated && userId) {
     await prisma.cartItem.deleteMany({
       where: {
         cart: { userId },
-        productId: itemId
+        productId: productId,
+        selectedColor: selectedColor,
+        storageId: storageId
       }
     });
   } else if (sessionId) {
     await prisma.anonymousCartItem.deleteMany({
       where: {
         cart: { sessionId },
-        productId: itemId
+        productId: productId,
+        selectedColor: selectedColor,
+        storageId: storageId
       }
     });
   }
@@ -320,12 +608,112 @@ async function removeItemFromCart(userId, sessionId, isAuthenticated, itemId) {
 }
 
 // Update item quantity
-async function updateItemQuantity(userId, sessionId, isAuthenticated, itemId, quantity) {
+async function updateItemQuantity(userId, sessionId, isAuthenticated, itemData, quantity) {
+  if (quantity < 1) {
+    return NextResponse.json({ error: "Quantity must be at least 1" }, { status: 400 });
+  }
+
+  // Parse the composite ID or use individual fields
+  let productId, selectedColor, storageId;
+  
+  if (typeof itemData === 'string') {
+    // Parse uniqueId format: "productId-color-storageId"
+    // Handle the known suffixes first
+    let remaining = itemData;
+    
+    // Handle storage ID
+    if (remaining.endsWith('-no-storage')) {
+      storageId = null;
+      remaining = remaining.slice(0, -'-no-storage'.length);
+    } else {
+      // Find the last hyphen to extract storage ID
+      const lastHyphen = remaining.lastIndexOf('-');
+      if (lastHyphen > -1) {
+        storageId = remaining.substring(lastHyphen + 1);
+        remaining = remaining.substring(0, lastHyphen);
+      }
+    }
+    
+    // Handle color
+    if (remaining.endsWith('-no-color')) {
+      selectedColor = null;
+      remaining = remaining.slice(0, -'-no-color'.length);
+    } else {
+      // Find the last hyphen to extract color
+      const lastHyphen = remaining.lastIndexOf('-');
+      if (lastHyphen > -1) {
+        selectedColor = remaining.substring(lastHyphen + 1);
+        remaining = remaining.substring(0, lastHyphen);
+      }
+    }
+    
+    // What's left is the product ID
+    productId = remaining;
+  } else {
+    // Use individual fields from itemData object
+    productId = itemData.productId || itemData.id;
+    selectedColor = itemData.selectedColor || null;
+    storageId = itemData.storageId || null;
+  }
+
+  // Fetch product data to check stock
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: {
+      variants: true,
+      storages: {
+        include: {
+          variants: true,
+        },
+      },
+    }
+  });
+  
+  if (!product) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+  
+  // Determine available stock based on storage and color selection
+  let availableStock;
+  
+  if (storageId) {
+    // Product has storage selected
+    const selectedStorage = product.storages.find(s => s.id === storageId);
+    if (!selectedStorage) {
+      return NextResponse.json({ error: "Selected storage not found" }, { status: 400 });
+    }
+    
+    if (selectedColor) {
+      // Storage + Color: Check storage variant stock
+      const storageVariant = selectedStorage.variants.find(v => v.color === selectedColor);
+      availableStock = storageVariant ? storageVariant.quantity : 0;
+    } else {
+      // Storage only: Use storage stock
+      availableStock = selectedStorage.stock;
+    }
+  } else if (selectedColor) {
+    // Color only (no storage): Check product variant stock
+    const variant = product.variants.find(v => v.color === selectedColor);
+    availableStock = variant ? variant.quantity : 0;
+  } else {
+    // No storage, no color: Use product stock
+    availableStock = product.stock;
+  }
+  
+  // Validate stock
+  if (quantity > availableStock) {
+    return NextResponse.json({ 
+      error: `Only ${availableStock} items available in stock.` 
+    }, { status: 400 });
+  }
+
   if (isAuthenticated && userId) {
     await prisma.cartItem.updateMany({
       where: {
         cart: { userId },
-        productId: itemId
+        productId: productId,
+        selectedColor: selectedColor,
+        storageId: storageId
       },
       data: { quantity }
     });
@@ -333,7 +721,9 @@ async function updateItemQuantity(userId, sessionId, isAuthenticated, itemId, qu
     await prisma.anonymousCartItem.updateMany({
       where: {
         cart: { sessionId },
-        productId: itemId
+        productId: productId,
+        selectedColor: selectedColor,
+        storageId: storageId
       },
       data: { quantity }
     });
@@ -387,7 +777,8 @@ async function clearCart(userId, sessionId, isAuthenticated) {
     });
   }
   
-  return NextResponse.json({ success: true });
+  // Return updated cart (should be empty)
+  return await getUpdatedCart(userId, sessionId, isAuthenticated);
 }
 
 // Apply coupon
@@ -426,6 +817,7 @@ async function removeCoupon(userId, sessionId, isAuthenticated) {
 
 // Helper to get updated cart after changes
 async function getUpdatedCart(userId, sessionId, isAuthenticated) {
+  // Just call the same logic as GET request to ensure consistency
   let cartItems = [];
   let coupon = null;
   
@@ -434,6 +826,7 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
       where: { userId },
       include: {
         items: {
+          orderBy: { createdAt: 'asc' },
           include: {
             product: {
                   select: {
@@ -444,6 +837,16 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
                 images: true,
                 slug: true,
                 variants: true,
+                storages: {
+                  select: {
+                    id: true,
+                    size: true,
+                    price: true,
+                    salePercentage: true,
+                    saleEndDate: true,
+                    variants: true
+                  }
+                }
               }
             }
           }
@@ -453,21 +856,101 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
     });
     
     if (userCart) {
-      cartItems = userCart.items.map(item => ({
+      // Filter out and fix any items with invalid quantities
+      const validItems = [];
+      const itemsToUpdate = [];
+      
+      for (const item of userCart.items) {
+        // Find selected storage if exists
+        const selectedStorage = item.storageId 
+          ? item.product.storages.find(s => s.id === item.storageId)
+          : null;
+        
+        // Determine available stock
+        let availableStock;
+        if (selectedStorage && item.selectedColor) {
+          // Storage + Color: Check storage variant stock
+          const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
+          availableStock = storageVariant ? storageVariant.quantity : 0;
+        } else if (selectedStorage) {
+          // Storage only: Use storage stock
+          availableStock = selectedStorage.stock;
+        } else if (item.selectedColor) {
+          // Color only (no storage): Check product variant stock
+          const variant = item.product.variants.find(v => v.color === item.selectedColor);
+          availableStock = variant ? variant.quantity : 0;
+        } else {
+          // No storage, no color: Use product stock
+          availableStock = item.product.stock;
+        }
+        
+        // Fix quantity if it exceeds available stock
+        let finalQuantity = item.quantity;
+        if (item.quantity > availableStock) {
+          finalQuantity = Math.max(0, availableStock);
+          if (finalQuantity > 0) {
+            itemsToUpdate.push({
+              id: item.id,
+              quantity: finalQuantity
+            });
+          } else {
+            // Remove item if no stock available
+            await prisma.cartItem.delete({
+              where: { id: item.id }
+            });
+            continue;
+          }
+        }
+        
+        // Calculate price based on storage or product
+        let finalPrice, finalSalePrice;
+        if (selectedStorage) {
+          finalPrice = Number(selectedStorage.price);
+          // Check if storage has a sale
+          if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
+              new Date(selectedStorage.saleEndDate) > new Date()) {
+            finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+          } else {
+            finalSalePrice = null;
+          }
+        } else {
+          finalPrice = Number(item.product.price);
+          finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
+        }
+        
+        validItems.push({
         id: item.product.id,
         name: item.product.name,
-        price: Number(item.product.price),
-        salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
+          price: finalPrice,
+          salePrice: finalSalePrice,
         images: item.product.images,
-        quantity: item.quantity,
+          slug: item.product.slug,
+          quantity: finalQuantity,
         selectedColor: item.selectedColor,
-        availableColors: item.product.variants.map(v => ({
+          storageId: item.storageId,
+          storageSize: selectedStorage?.size || null,
+          availableColors: selectedStorage 
+            ? selectedStorage.variants.map(v => ({
+                color: v.color,
+                quantity: v.quantity
+              }))
+            : item.product.variants.map(v => ({
           color: v.color,
           quantity: v.quantity
         })),
-        uniqueId: item.selectedColor ? `${item.product.id}-${item.selectedColor}` : item.product.id
-      }));
+          uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+        });
+      }
       
+      // Update quantities in database if needed
+      for (const itemUpdate of itemsToUpdate) {
+        await prisma.cartItem.update({
+          where: { id: itemUpdate.id },
+          data: { quantity: itemUpdate.quantity }
+        });
+      }
+      
+      cartItems = validItems;
       coupon = userCart.coupon;
     }
   } else if (sessionId) {
@@ -475,6 +958,7 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
       where: { sessionId },
       include: {
         items: {
+          orderBy: { createdAt: 'asc' },
           include: {
             product: {
               select: {
@@ -485,6 +969,16 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
                 images: true,
                 slug: true,
                 variants: true,
+                storages: {
+                  select: {
+                    id: true,
+                    size: true,
+                    price: true,
+                    salePercentage: true,
+                    saleEndDate: true,
+                    variants: true
+                  }
+                }
               }
             }
           }
@@ -494,21 +988,101 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
     });
     
     if (anonCart) {
-      cartItems = anonCart.items.map(item => ({
+      // Filter out and fix any items with invalid quantities
+      const validItems = [];
+      const itemsToUpdate = [];
+      
+      for (const item of anonCart.items) {
+        // Find selected storage if exists
+        const selectedStorage = item.storageId 
+          ? item.product.storages.find(s => s.id === item.storageId)
+          : null;
+        
+        // Determine available stock
+        let availableStock;
+        if (selectedStorage && item.selectedColor) {
+          // Storage + Color: Check storage variant stock
+          const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
+          availableStock = storageVariant ? storageVariant.quantity : 0;
+        } else if (selectedStorage) {
+          // Storage only: Use storage stock
+          availableStock = selectedStorage.stock;
+        } else if (item.selectedColor) {
+          // Color only (no storage): Check product variant stock
+          const variant = item.product.variants.find(v => v.color === item.selectedColor);
+          availableStock = variant ? variant.quantity : 0;
+        } else {
+          // No storage, no color: Use product stock
+          availableStock = item.product.stock;
+        }
+        
+        // Fix quantity if it exceeds available stock
+        let finalQuantity = item.quantity;
+        if (item.quantity > availableStock) {
+          finalQuantity = Math.max(0, availableStock);
+          if (finalQuantity > 0) {
+            itemsToUpdate.push({
+              id: item.id,
+              quantity: finalQuantity
+            });
+          } else {
+            // Remove item if no stock available
+            await prisma.anonymousCartItem.delete({
+              where: { id: item.id }
+            });
+            continue;
+          }
+        }
+        
+        // Calculate price based on storage or product
+        let finalPrice, finalSalePrice;
+        if (selectedStorage) {
+          finalPrice = Number(selectedStorage.price);
+          // Check if storage has a sale
+          if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
+              new Date(selectedStorage.saleEndDate) > new Date()) {
+            finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+          } else {
+            finalSalePrice = null;
+          }
+        } else {
+          finalPrice = Number(item.product.price);
+          finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
+        }
+        
+        validItems.push({
         id: item.product.id,
       name: item.product.name,
-      price: Number(item.product.price),
-      salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
+          price: finalPrice,
+          salePrice: finalSalePrice,
       images: item.product.images,
-      quantity: item.quantity,
+          slug: item.product.slug,
+          quantity: finalQuantity,
         selectedColor: item.selectedColor,
-        availableColors: item.product.variants.map(v => ({
+          storageId: item.storageId,
+          storageSize: selectedStorage?.size || null,
+          availableColors: selectedStorage 
+            ? selectedStorage.variants.map(v => ({
+                color: v.color,
+                quantity: v.quantity
+              }))
+            : item.product.variants.map(v => ({
           color: v.color,
           quantity: v.quantity
         })),
-        uniqueId: item.selectedColor ? `${item.product.id}-${item.selectedColor}` : item.product.id
-      }));
+          uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+        });
+      }
       
+      // Update quantities in database if needed
+      for (const itemUpdate of itemsToUpdate) {
+        await prisma.anonymousCartItem.update({
+          where: { id: itemUpdate.id },
+          data: { quantity: itemUpdate.quantity }
+        });
+      }
+      
+      cartItems = validItems;
       coupon = anonCart.coupon;
     }
   }

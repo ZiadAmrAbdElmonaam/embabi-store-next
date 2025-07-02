@@ -5,19 +5,40 @@ import { HomeCarousel } from "@/components/home/carousel";
 import { CategoriesCarousel } from "@/components/home/categories-carousel";
 import { ProductCard } from "@/components/products/product-card";
 import { TranslatedContent } from "@/components/ui/translated-content";
+import { getProductDisplayPrice } from "@/lib/utils";
 
 export default async function HomePage() {
   // Fetch featured products
   const featuredProducts = await prisma.product.findMany({
     where: {
-      stock: {
-        gt: 0  // Only get products with stock greater than 0
-      }
+      OR: [
+        // Products with main stock
+        {
+          stock: {
+            gt: 0
+          }
+        },
+        // Products with storage that has stock
+        {
+          storages: {
+            some: {
+              stock: {
+                gt: 0
+              }
+            }
+          }
+        }
+      ]
     },
     take: 6,
     include: {
       category: true,
       variants: true,
+      storages: {
+        include: {
+          variants: true,
+        },
+      },
     },
     orderBy: {
       createdAt: 'desc'
@@ -25,34 +46,78 @@ export default async function HomePage() {
   });
 
   // Convert Decimal prices to numbers and format the data
-  const formattedProducts = featuredProducts.map(product => ({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    price: Number(product.price),
-    salePrice: product.salePrice ? Number(product.salePrice) : null,
-    sale: product.sale,
-    stock: product.stock,
-    images: product.images,
-    slug: product.slug,
-    category: product.category,
-    saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
-    variants: product.variants.map(variant => ({
-      id: variant.id,
-      color: variant.color,
-      quantity: variant.quantity
-    }))
-  }));
+  const formattedProducts = featuredProducts.map(product => {
+    // Get display pricing (prioritizes storage with stock)
+    const displayPrice = getProductDisplayPrice({
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+      storages: product.storages?.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        stock: storage.stock,
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+      })) || []
+    });
+
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: displayPrice.price,
+      salePrice: displayPrice.salePrice,
+      sale: product.sale,
+      stock: product.stock,
+      images: product.images,
+      slug: product.slug,
+      category: product.category,
+      saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+      variants: product.variants.map(variant => ({
+        id: variant.id,
+        color: variant.color,
+        quantity: variant.quantity
+      })),
+      storages: product.storages?.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        stock: storage.stock,
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+        variants: storage.variants.map(variant => ({
+        id: variant.id,
+        color: variant.color,
+        quantity: variant.quantity
+      }))
+      })) || []
+    };
+  });
 
   // Fetch categories with at least one product
   const categories = await prisma.category.findMany({
     where: {
       products: {
         some: {
-          // Only include categories with at least one product
-          stock: {
-            gt: 0
-          }
+          OR: [
+            // Products with main stock
+            {
+              stock: {
+                gt: 0
+              }
+            },
+            // Products with storage that has stock
+            {
+              storages: {
+                some: {
+                  stock: {
+                    gt: 0
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -63,9 +128,24 @@ export default async function HomePage() {
       image: true,
       products: {
         where: {
-          stock: {
-            gt: 0
-          }
+          OR: [
+            // Products with main stock
+            {
+              stock: {
+                gt: 0
+              }
+            },
+            // Products with storage that has stock
+            {
+              storages: {
+                some: {
+                  stock: {
+                    gt: 0
+                  }
+                }
+              }
+            }
+          ]
         },
         select: {
           id: true

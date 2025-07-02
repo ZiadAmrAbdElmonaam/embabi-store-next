@@ -9,17 +9,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Use the adminDashboard flag to trigger our middleware
     const products = await prisma.product.findMany({
-      where: {
-        adminDashboard: true // This custom flag will be removed by our middleware
-      },
       include: {
         category: {
           select: {
             name: true,
           },
         },
+        storages: {
+          include: {
+            variants: true,
+          },
+        },
+        variants: true,
+        details: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -30,6 +33,10 @@ export async function GET() {
     const serializedProducts = products.map(product => ({
       ...product,
       price: Number(product.price),
+      storages: product.storages.map(storage => ({
+        ...storage,
+        price: Number(storage.price),
+      })),
     }));
 
     return NextResponse.json(serializedProducts);

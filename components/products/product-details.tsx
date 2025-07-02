@@ -34,6 +34,19 @@ interface ProductDetailsProps {
       label: string;
       description: string;
     }>;
+    storages: Array<{
+      id: string;
+      size: string;
+      price: number;
+      stock: number;
+      salePercentage?: number | null;
+      saleEndDate?: string | null;
+      variants: Array<{
+        id: string;
+        color: string;
+        quantity: number;
+      }>;
+    }>;
     reviews: Array<{
       id: string;
       rating: number;
@@ -50,6 +63,12 @@ interface ProductDetailsProps {
 
 export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedStorage, setSelectedStorage] = useState<string | null>(
+    // Auto-select first storage if available
+    product.storages && product.storages.length > 0 && product.storages.some(s => s.stock > 0)
+      ? product.storages.find(s => s.stock > 0)?.id || null
+      : null
+  );
   const [showImage, setShowImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState(product.images[0] || '/images/placeholder.png');
   const { t, lang } = useTranslation();
@@ -59,10 +78,40 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
     ? product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length
     : 0;
 
+  // Get the currently selected storage object
+  const currentStorage = selectedStorage 
+    ? product.storages.find(s => s.id === selectedStorage)
+    : null;
+
+  // Get available colors (either from storage variants or product variants)
+  const availableColors = currentStorage 
+    ? currentStorage.variants.filter(v => v.quantity > 0)
+    : product.variants.filter(v => v.quantity > 0);
+
+  // Get current price (either from selected storage or base product)
+  const getCurrentPrice = () => {
+    if (currentStorage) {
+      if (currentStorage.salePercentage && currentStorage.saleEndDate && new Date(currentStorage.saleEndDate) > new Date()) {
+        const salePrice = currentStorage.price - (currentStorage.price * (currentStorage.salePercentage / 100));
+        return { price: currentStorage.price, salePrice };
+      }
+      return { price: currentStorage.price, salePrice: null };
+    }
+    return { price: product.price, salePrice: product.salePrice };
+  };
+
+  const { price, salePrice } = getCurrentPrice();
+
   const calculateDiscount = () => {
-    if (!product.salePrice || !product.price) return 0;
-    const discount = ((product.price - product.salePrice) / product.price) * 100;
+    if (!salePrice || !price) return 0;
+    const discount = ((price - salePrice) / price) * 100;
     return Math.round(discount);
+  };
+
+  // Reset color selection when storage changes
+  const handleStorageSelect = (storageId: string) => {
+    setSelectedStorage(storageId);
+    setSelectedColor(null); // Reset color when storage changes
   };
 
   const formatDate = (dateString?: string | null) => {
@@ -256,15 +305,39 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
             <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">{product.description}</p>
           </div>
 
-          {/* Colors Section */}
-          {product.variants && product.variants.length > 0 && 
-           product.variants.some(variant => variant.quantity > 0) && (
+          {/* Storage Selection */}
+          {product.storages && product.storages.length > 0 && product.storages.some(s => s.stock > 0) && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('productDetail.availableColors')}</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('productDetail.selectStorage')}</h3>
               <div className="flex flex-wrap gap-3">
-                {product.variants
-                  .filter(variant => variant.quantity > 0)
-                  .map((variant) => (
+                {product.storages
+                  .filter(storage => storage.stock > 0)
+                  .map((storage) => (
+                    <button
+                      key={storage.id}
+                      className={cn(
+                        "px-4 py-2 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md font-medium",
+                        selectedStorage === storage.id 
+                          ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300" 
+                          : "border-gray-200 dark:border-gray-700 hover:border-orange-300 text-gray-700 dark:text-gray-300"
+                      )}
+                      onClick={() => handleStorageSelect(storage.id)}
+                    >
+                      {storage.size}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Colors Section */}
+          {availableColors && availableColors.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                {t('productDetail.availableColors')}
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {availableColors.map((variant) => (
                   <div
                     key={variant.id}
                     className="group relative"
@@ -307,21 +380,26 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
           <div className="py-6 border-y border-gray-200 dark:border-gray-700 space-y-4">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                {product.salePrice ? (
+                {salePrice ? (
                   <>
                     <div className="flex items-center gap-3">
                       <span className="text-4xl font-bold text-red-600 dark:text-red-500">
-                        {formatPrice(product.salePrice)}
+                        {formatPrice(salePrice)}
                       </span>
                       <span className="text-xl text-gray-500 dark:text-gray-400 line-through">
-                        {formatPrice(product.price)}
+                        {formatPrice(price)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
                         {t('productDetail.save')} {calculateDiscount()}%
                       </span>
-                      {product.saleEndDate && (
+                      {currentStorage?.saleEndDate && (
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {t('productDetail.saleEnds')} {formatDate(currentStorage.saleEndDate)}
+                        </span>
+                      )}
+                      {!currentStorage && product.saleEndDate && (
                         <span className="text-sm text-gray-600 dark:text-gray-400">
                           {t('productDetail.saleEnds')} {formatDate(product.saleEndDate)}
                         </span>
@@ -330,7 +408,7 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                   </>
                 ) : (
                   <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                    {formatPrice(product.price)}
+                    {formatPrice(price)}
                   </span>
                 )}
                 {/* Tax disclaimer text */}
@@ -342,19 +420,20 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                 </p>
               </div>
               <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                product.stock > 0 
+                (currentStorage ? currentStorage.stock : product.stock) > 0 
                   ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
                   : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
               }`}>
-                {product.stock > 0 ? t('productDetail.inStock') : t('productDetail.outOfStock')}
+                {(currentStorage ? currentStorage.stock : product.stock) > 0 ? t('productDetail.inStock') : t('productDetail.outOfStock')}
               </span>
             </div>
           </div>
 
-          {/* Pass the selected color to the AddToCartButton */}
+          {/* Pass selected storage and color to AddToCartButton */}
           <AddToCartButton 
             product={product}
             selectedColor={selectedColor}
+            selectedStorage={selectedStorage}
           />
         </div>
       </div>

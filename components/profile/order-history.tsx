@@ -15,6 +15,11 @@ interface Order {
   total: number;
   status: OrderStatus;
   createdAt: string;
+  shippingName: string;
+  shippingPhone: string;
+  shippingAddress: string;
+  shippingCity: string;
+  shippingNotes: string | null;
   items: Array<{
     quantity: number;
     color: string | null;
@@ -83,6 +88,21 @@ export function OrderHistory() {
                 </p>
               </div>
               <OrderStatusBadge status={order.status} />
+            </div>
+
+            {/* Shipping Address */}
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-medium mb-2">
+                <TranslatedContent translationKey="order.shippingInformation" />
+              </h4>
+              <div className="text-sm text-gray-600 space-y-1">
+                <div>
+                  <span className="font-medium">{order.shippingName}</span>
+                </div>
+                <div>{order.shippingPhone}</div>
+                <div>{order.shippingAddress}</div>
+                <div>{order.shippingCity}{order.shippingNotes ? `, ${order.shippingNotes}` : ''}</div>
+              </div>
             </div>
 
             <div>

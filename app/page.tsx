@@ -30,7 +30,7 @@ export default async function HomePage() {
         }
       ]
     },
-    take: 6,
+    take: 10,
     include: {
       category: true,
       variants: true,

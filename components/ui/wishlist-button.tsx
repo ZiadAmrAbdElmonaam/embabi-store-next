@@ -4,6 +4,8 @@ import { Heart } from "lucide-react";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/hooks/use-translation";
+import { TranslatedContent } from "./translated-content";
 
 interface WishlistButtonProps {
   productId: string;
@@ -28,6 +30,7 @@ interface WishlistButtonProps {
 export function WishlistButton({ productId, product, className, variant = 'icon' }: WishlistButtonProps) {
   const { items, addItem, removeItem, isInitialized, syncWithServer } = useWishlist();
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!isInitialized) {
@@ -67,12 +70,17 @@ export function WishlistButton({ productId, product, className, variant = 'icon'
       <Heart
         className={cn(
           "w-5 h-5 transition-colors",
-          isInWishlist ? "fill-red-500 text-red-500" : "text-gray-600"
+          isInWishlist ? "fill-red-500 text-red-500" : 
+          variant === 'full' ? "text-white" : "text-gray-600"
         )}
       />
       {variant === 'full' && (
         <span className="text-sm font-medium">
-          {isInWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
+          {isInWishlist ? (
+            <TranslatedContent translationKey="wishlist.removeFromWishlist" />
+          ) : (
+            <TranslatedContent translationKey="wishlist.addToWishlist" />
+          )}
         </span>
       )}
     </button>

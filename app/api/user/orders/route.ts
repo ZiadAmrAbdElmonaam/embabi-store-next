@@ -20,6 +20,12 @@ export async function GET() {
             product: {
               select: {
                 name: true,
+                storages: {
+                  select: {
+                    id: true,
+                    size: true,
+                  },
+                },
               },
             },
           },

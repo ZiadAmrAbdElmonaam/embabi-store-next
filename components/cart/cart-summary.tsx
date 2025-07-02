@@ -18,7 +18,7 @@ export function CartSummary() {
     return total + (itemPrice * item.quantity);
   }, 0);
 
-  const shipping = 50; // Fixed shipping cost
+  const shipping = 300; // Fixed shipping cost
   const total = subtotal + shipping;
 
   const handleCheckout = (e) => {

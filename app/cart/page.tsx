@@ -47,7 +47,7 @@ export default function CartPage() {
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto py-12">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col items-center justify-center gap-4 mb-8">
           <div className="flex items-center gap-3">
             <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">

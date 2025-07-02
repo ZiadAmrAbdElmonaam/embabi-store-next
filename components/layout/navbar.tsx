@@ -116,13 +116,13 @@ export function Navbar() {
         <div className="mx-auto px-2" style={{ maxWidth: '115rem' }}>
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link href="/" className="flex items-center ml-2">
+            <Link href="/" className="flex items-center">
               <Image
                 src="/logo.png"
                 alt="Embabi Logo"
-                width={200}
-                height={200}
-                className="object-contain"
+                width={250}
+                height={250}
+                className="object-contain w-28 h-28 sm:w-[250px] sm:h-[250px] h-auto"
                 priority
               />
             </Link>

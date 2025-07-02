@@ -13,7 +13,7 @@ export function Footer() {
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12">
           {/* Company Info */}
           <div className={cn(
             "flex flex-col items-center justify-center",
@@ -25,7 +25,7 @@ export function Footer() {
                 alt="Embabi Store Logo" 
                 width={200}
                 height={160}
-                className="h-40 w-auto" 
+                className="h-32 md:h-40 w-auto" 
                 priority
               />
             </div>
@@ -45,36 +45,32 @@ export function Footer() {
             )}>
               <TranslatedContent translationKey="footer.quickLinks" />
             </h4>
-            <ul className="space-y-3">
-              <li className={cn(
-                isRtl ? "text-right" : "text-left"
+            <div className="grid grid-cols-2 gap-2 md:block md:space-y-3">
+              <Link href="/products" className={cn(
+                "text-gray-400 hover:text-white text-sm md:text-base block text-center md:text-left",
+                isRtl && "md:text-right"
               )}>
-                <Link href="/products" className="text-gray-400 hover:text-white">
-                  <TranslatedContent translationKey="footer.products" />
-                </Link>
-              </li>
-              <li className={cn(
-                isRtl ? "text-right" : "text-left"
+                <TranslatedContent translationKey="footer.products" />
+              </Link>
+              <Link href="/categories" className={cn(
+                "text-gray-400 hover:text-white text-sm md:text-base block text-center md:text-left",
+                isRtl && "md:text-right"
               )}>
-                <Link href="/categories" className="text-gray-400 hover:text-white">
-                  <TranslatedContent translationKey="footer.categories" />
-                </Link>
-              </li>
-              <li className={cn(
-                isRtl ? "text-right" : "text-left"
+                <TranslatedContent translationKey="footer.categories" />
+              </Link>
+              <Link href="/reviews" className={cn(
+                "text-gray-400 hover:text-white text-sm md:text-base block text-center md:text-left",
+                isRtl && "md:text-right"
               )}>
-                <Link href="/reviews" className="text-gray-400 hover:text-white">
-                  <TranslatedContent translationKey="footer.reviews" />
-                </Link>
-              </li>
-              <li className={cn(
-                isRtl ? "text-right" : "text-left"
+                <TranslatedContent translationKey="footer.reviews" />
+              </Link>
+              <Link href="/contact" className={cn(
+                "text-gray-400 hover:text-white text-sm md:text-base block text-center md:text-left",
+                isRtl && "md:text-right"
               )}>
-                <Link href="/contact" className="text-gray-400 hover:text-white">
-                  <TranslatedContent translationKey="footer.contact" />
-                </Link>
-              </li>
-            </ul>
+                <TranslatedContent translationKey="footer.contact" />
+              </Link>
+            </div>
           </div>
 
           {/* Contact Info */}
@@ -89,28 +85,32 @@ export function Footer() {
               <TranslatedContent translationKey="footer.contactUs" />
             </h4>
             <ul className={cn(
-              "space-y-3 text-gray-400",
-              isRtl ? "text-right" : "text-left"
+              "space-y-2 md:space-y-3 text-gray-400 text-sm md:text-base",
+              "text-center md:text-left",
+              isRtl && "md:text-right"
             )}>
-              <li className="flex items-center gap-2 justify-start">
+              <li className="flex justify-between items-center gap-2">
                 <span><TranslatedContent translationKey="footer.email" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}>oxygenembabi@gmail.com</span>
+                <span className="break-all">oxygenembabi@gmail.com</span>
               </li>
-              <li className="flex items-center gap-2 justify-start">
+              <li className="flex justify-between items-center gap-2">
                 <span><TranslatedContent translationKey="footer.phone" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}> <TranslatedContent translationKey="footer.mobile" /></span>
+                <span><TranslatedContent translationKey="footer.mobile" /></span>
               </li>
-              <li className="flex items-center gap-2 justify-start">
+              <li className="flex justify-between items-center gap-2">
                 <span><TranslatedContent translationKey="footer.address" />:</span>
-                <span className={isRtl ? "mr-auto" : "ml-auto"}><TranslatedContent translationKey="footer.addressText2" /></span>
-                
+                <span><TranslatedContent translationKey="footer.addressText2" /></span>
               </li>
-             
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+          <div className="mb-4">
+            <p className="text-orange-400 font-semibold text-lg">
+              ضمان شهر ضد عيوب الصناعه (Hardware) من اكسجين امبابي ستور
+            </p>
+          </div>
           <p>&copy; {new Date().getFullYear()} <TranslatedContent translationKey="footer.allRightsReserved" /></p>
         </div>
       </div>

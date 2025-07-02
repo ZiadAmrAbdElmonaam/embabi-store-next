@@ -262,25 +262,9 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
 
         {/* Product Info */}
         <div className="space-y-8">
-          <div className="flex justify-between items-start gap-4">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">{product.name}</h1>
-              <p className="text-lg text-gray-600 dark:text-gray-300">{product.category.name}</p>
-            </div>
-            <WishlistButton 
-              productId={product.id} 
-              product={{
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                salePrice: product.salePrice || null,
-                images: product.images,
-                slug: product.id,
-                description: product.description,
-                variants: product.variants
-              }}
-              variant="full"
-            />
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight">{product.name}</h1>
+            <p className="text-lg text-gray-600 dark:text-gray-300">{product.category.name}</p>
           </div>
 
           {/* <div className="flex items-center gap-3">
@@ -378,20 +362,20 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
 
           {/* Price Section */}
           <div className="py-6 border-y border-gray-200 dark:border-gray-700 space-y-4">
-            <div className="flex items-start justify-between">
+            <div className="space-y-4">
               <div className="space-y-1">
                 {salePrice ? (
                   <>
-                    <div className="flex items-center gap-3">
-                      <span className="text-4xl font-bold text-red-600 dark:text-red-500">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-500">
                         {formatPrice(salePrice)}
                       </span>
-                      <span className="text-xl text-gray-500 dark:text-gray-400 line-through">
+                      <span className="text-lg sm:text-xl text-gray-500 dark:text-gray-400 line-through">
                         {formatPrice(price)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 w-fit">
                         {t('productDetail.save')} {calculateDiscount()}%
                       </span>
                       {currentStorage?.saleEndDate && (
@@ -407,34 +391,55 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                     </div>
                   </>
                 ) : (
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                  <span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
                     {formatPrice(price)}
                   </span>
                 )}
                 {/* Tax disclaimer text */}
-                <p className="text-sm font-bold text-orange-600 dark:text-orange-400 mt-3 text-center pt-2 opacity-90 tracking-wide" dir="rtl">
-                  الجهاز غير شامل الضريبه
-                </p>
-                <p className="text-sm font-bold text-orange-600 dark:text-orange-400 mt-3 text-center pt-2 opacity-90 tracking-wide" dir="rtl">
-                  متاح تقسيط بالفيزا
-                </p>
+                <div className="space-y-1 pt-2">
+                  <p className="text-sm font-bold text-orange-600 dark:text-orange-400 text-center opacity-90 tracking-wide" dir="rtl">
+                    الجهاز غير شامل الضريبه
+                  </p>
+                  <p className="text-sm font-bold text-orange-600 dark:text-orange-400 text-center opacity-90 tracking-wide" dir="rtl">
+                    متاح تقسيط بالفيزا
+                  </p>
+                </div>
               </div>
-              <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                (currentStorage ? currentStorage.stock : product.stock) > 0 
-                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
-                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-              }`}>
-                {(currentStorage ? currentStorage.stock : product.stock) > 0 ? t('productDetail.inStock') : t('productDetail.outOfStock')}
-              </span>
+              
+              {/* Stock Status - Only show if out of stock */}
+              {(currentStorage ? currentStorage.stock : product.stock) === 0 && (
+                <div className="flex justify-center">
+                  <span className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">
+                    {t('productDetail.outOfStock')}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Pass selected storage and color to AddToCartButton */}
-          <AddToCartButton 
-            product={product}
-            selectedColor={selectedColor}
-            selectedStorage={selectedStorage}
-          />
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <AddToCartButton 
+              product={product}
+              selectedColor={selectedColor}
+              selectedStorage={selectedStorage}
+            />
+            <WishlistButton 
+              productId={product.id} 
+              product={{
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                salePrice: product.salePrice || null,
+                images: product.images,
+                slug: product.id,
+                description: product.description,
+                variants: product.variants
+              }}
+              variant="full"
+              className="w-full flex items-center justify-center gap-2 bg-gray-600 text-white py-4 px-6 rounded-lg hover:bg-gray-700 transition-all duration-200 transform hover:scale-105 shadow-lg text-base font-medium"
+            />
+          </div>
         </div>
       </div>
 

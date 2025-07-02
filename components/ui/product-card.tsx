@@ -275,21 +275,32 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
           )}
         </div>
 
-        <div className="mt-2 flex items-center gap-2">
-          {product.salePrice && product.salePrice < product.price && stockStatus.hasStock ? (
-            <>
-              <p className="font-bold text-orange-600">
-                {formatPrice(product.salePrice)}
-              </p>
-              <p className="text-sm text-gray-500 line-through">
-                {formatPrice(product.price)}
-              </p>
-            </>
-          ) : (
-            <p className={`font-bold ${stockStatus.hasStock ? 'text-gray-900' : 'text-gray-500'}`}>
-              {formatPrice(product.price)}
-            </p>
-          )}
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {product.salePrice && product.salePrice < product.price && stockStatus.hasStock ? (
+                <>
+                  <p className="font-bold text-orange-600 truncate">
+                    {formatPrice(product.salePrice)}
+                  </p>
+                  <p className="text-sm text-gray-500 line-through truncate">
+                    {formatPrice(product.price)}
+                  </p>
+                </>
+              ) : (
+                <p className={`font-bold truncate ${stockStatus.hasStock ? 'text-gray-900' : 'text-gray-500'}`}>
+                  {formatPrice(product.price)}
+                </p>
+              )}
+            </div>
+            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+              stockStatus.hasStock 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-red-100 text-red-800'
+            }`}>
+              {stockStatus.hasStock ? 'In Stock' : 'Out of Stock'}
+            </span>
+          </div>
         </div>
       </div>
 

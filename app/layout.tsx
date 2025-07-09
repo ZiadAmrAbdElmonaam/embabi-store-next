@@ -28,9 +28,9 @@ export const metadata: Metadata = {
   creator: 'Embabi Store',
   publisher: 'Embabi Store',
   icons: {
-    icon: '/logo.png',
-    shortcut: '/logo.png',
-    apple: '/logo.png',
+    icon: '/app-icon.png',
+    shortcut: '/app-icon.png',
+    apple: '/app-icon.png',
   },
   robots: {
     index: true,

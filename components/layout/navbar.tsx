@@ -19,20 +19,43 @@ import {
 } from "lucide-react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWhatsapp, faFacebook } from '@fortawesome/free-brands-svg-icons';
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/hooks/use-cart";
 import Image from "next/image";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { useTranslation } from "@/hooks/use-translation";
+import { SearchBar } from "@/components/ui/search-bar";
 
 export function Navbar() {
   const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isFacebookOpen, setIsFacebookOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { items } = useCart();
   const { lang } = useTranslation();
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Check if user is admin
   const isAdmin = session?.user?.role === 'ADMIN';
@@ -114,6 +137,7 @@ export function Navbar() {
       {/* Main Navbar */}
       <nav className="bg-white shadow-sm">
         <div className="mx-auto px-2" style={{ maxWidth: '115rem' }}>
+          {/* Top Bar with Logo and Icons */}
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center">
@@ -127,7 +151,7 @@ export function Navbar() {
               />
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation and Icons */}
             <div className="hidden md:flex items-center gap-8">
               <Link href="/products" className="text-gray-700 hover:text-orange-600 text-base">
                 <TranslatedContent translationKey="navbar.products" />
@@ -145,7 +169,7 @@ export function Navbar() {
             </div>
 
             {/* Right Side Icons */}
-            <div className="flex items-center gap-4 mr-2">
+            <div className="flex items-center gap-4">
               <Link href="/wishlist" className="relative">
                 <Heart className="h-6 w-6 text-gray-700 hover:text-orange-600" />
               </Link>
@@ -158,115 +182,125 @@ export function Navbar() {
                 )}
               </Link>
 
-              {/* Profile Section with Dropdown */}
-              <div className="relative">
+              {/* Profile Section */}
+              <div className="relative" ref={profileDropdownRef}>
                 {session ? (
-                  <>
-                    <button
-                      onClick={() => setIsProfileOpen(!isProfileOpen)}
-                      className="relative"
-                    >
-                      <User className="h-6 w-6 text-gray-700 hover:text-orange-600" />
-                    </button>
-                    
-                    {/* Profile Dropdown */}
-                    {isProfileOpen && (
-                      <div 
-                        className="absolute end-0 mt-2 w-48 bg-white rounded-lg shadow-lg overflow-hidden z-50"
-                        onMouseLeave={() => setIsProfileOpen(false)}
-                      >
-                        <div className="px-4 py-2 bg-orange-50 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {session.user?.name}
-                          </p>
-                        </div>
-                        <div className="py-1">
-                          {isAdmin && (
-                            <Link
-                              href="/admin"
-                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
-                              onClick={() => setIsProfileOpen(false)}
-                            >
-                              <LayoutDashboard className="h-4 w-4 me-2" />
-                              <TranslatedContent translationKey="navbar.dashboard" />
-                            </Link>
-                          )}
-                          <Link
-                            href="/profile"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
-                            onClick={() => setIsProfileOpen(false)}
-                          >
-                            <UserCircle className="h-4 w-4 me-2" />
-                            <TranslatedContent translationKey="navbar.profile" />
-                          </Link>
-                          <button
-                            onClick={() => {
-                              signOut();
-                              setIsProfileOpen(false);
-                            }}
-                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
-                          >
-                            <LogOut className="h-4 w-4 me-2" />
-                            <TranslatedContent translationKey="navbar.signOut" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  <button
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className="relative"
+                  >
+                    <User className="h-6 w-6 text-gray-700 hover:text-orange-600" />
+                  </button>
                 ) : (
-                  <Link href="/login">
+                  <Link href="/auth/login">
                     <User className="h-6 w-6 text-gray-700 hover:text-orange-600" />
                   </Link>
+                )}
+                {/* Profile Dropdown */}
+                {isProfileOpen && session && (
+                  <div 
+                    className="absolute end-0 mt-2 w-48 bg-white rounded-lg shadow-lg overflow-hidden z-[60]"
+                  >
+                    <div className="px-4 py-2 bg-orange-50 border-b border-gray-100">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {session.user?.name}
+                      </p>
+                    </div>
+                    <div className="py-1">
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <LayoutDashboard className="h-4 w-4 me-2" />
+                          <TranslatedContent translationKey="navbar.dashboard" />
+                        </Link>
+                      )}
+                      <Link
+                        href="/profile"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <UserCircle className="h-4 w-4 me-2" />
+                        <TranslatedContent translationKey="navbar.profile" />
+                      </Link>
+                      <button
+                        onClick={() => {
+                          signOut();
+                          setIsProfileOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
+                      >
+                        <LogOut className="h-4 w-4 me-2" />
+                        <TranslatedContent translationKey="navbar.signOut" />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
 
               {/* Mobile Menu Button */}
-              <button 
-                className="md:hidden"
+              <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="md:hidden p-2 text-gray-700 hover:text-orange-600"
               >
-                {isMenuOpen ? (
-                  <X className="h-6 w-6 text-gray-700" />
-                ) : (
-                  <Menu className="h-6 w-6 text-gray-700" />
-                )}
+                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
+            </div>
+          </div>
+
+          {/* Search Section with Gradient Background */}
+          <div className={`sticky top-0 z-50 bg-gradient-to-r from-orange-400 to-yellow-300 -mx-2 transition-all duration-300 ${
+            isScrolled ? 'py-3' : 'py-6'
+          }`}>
+            <div className="max-w-3xl mx-auto px-4">
+              <SearchBar isScrolled={isScrolled} />
             </div>
           </div>
 
           {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="md:hidden py-2 border-t">
-              <div className="flex flex-col space-y-2">
+            <div className="md:hidden border-t py-4">
+              <div className="flex flex-col space-y-4">
                 <Link 
                   href="/products" 
-                  className="px-2 py-1 text-gray-700 hover:text-orange-600"
+                  className="text-gray-700 hover:text-orange-600 text-base px-4"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <TranslatedContent translationKey="navbar.products" />
                 </Link>
                 <Link 
                   href="/categories" 
-                  className="px-2 py-1 text-gray-700 hover:text-orange-600"
+                  className="text-gray-700 hover:text-orange-600 text-base px-4"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <TranslatedContent translationKey="navbar.categories" />
                 </Link>
                 <Link 
                   href="/deals" 
-                  className="px-2 py-1 text-gray-700 hover:text-orange-600 flex items-center"
+                  className="flex items-center gap-2 text-gray-700 hover:text-orange-600 text-base px-4"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <span><TranslatedContent translationKey="navbar.deals" /></span>
-                  <Flame size={16} className="text-red-500 ms-1" />
+                  <Flame size={18} className="text-red-500" />
                 </Link>
                 <Link 
                   href="/most-selling" 
-                  className="px-2 py-1 text-gray-700 hover:text-orange-600"
+                  className="text-gray-700 hover:text-orange-600 text-base px-4"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <TranslatedContent translationKey="navbar.mostSelling" />
                 </Link>
+                {!session && (
+                  <Link 
+                    href="/auth/login" 
+                    className="text-gray-700 hover:text-orange-600 text-base px-4"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <TranslatedContent translationKey="common.signIn" />
+                  </Link>
+                )}
               </div>
             </div>
           )}

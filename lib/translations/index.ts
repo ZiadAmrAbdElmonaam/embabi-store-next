@@ -28,7 +28,12 @@ export const translations = {
       mostSelling: 'Most Selling',
       dashboard: 'Dashboard',
       profile: 'Profile',
-      signOut: 'Sign Out'
+      signOut: 'Sign Out',
+      searchPlaceholder: 'Search products and categories...',
+      searchProducts: 'Products',
+      searchCategories: 'Categories',
+      searchNoResults: 'No results found',
+      searchInCategory: 'in',
     },
     products: {
       addToCart: 'Add to Cart',
@@ -471,7 +476,12 @@ export const translations = {
       mostSelling: 'الأكثر مبيعاً',
       dashboard: 'لوحة التحكم',
       profile: 'الملف الشخصي',
-      signOut: 'تسجيل الخروج'
+      signOut: 'تسجيل الخروج',
+      searchPlaceholder: 'بحث عن المنتجات والفئات...',
+      searchProducts: 'المنتجات',
+      searchCategories: 'الفئات',
+      searchNoResults: 'لا توجد نتائج',
+      searchInCategory: 'في',
     },
     products: {
       addToCart: 'أضف إلى السلة',

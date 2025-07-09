@@ -138,21 +138,31 @@ export function Navbar() {
       <nav className="bg-white shadow-sm">
         <div className="mx-auto px-2" style={{ maxWidth: '115rem' }}>
           {/* Top Bar with Logo and Icons */}
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <Image
-                src="/logo.png"
-                alt="Embabi Logo"
-                width={250}
-                height={250}
-                className="object-contain w-28 h-28 sm:w-[250px] sm:h-[250px] h-auto"
-                priority
-              />
-            </Link>
+          <div className="flex items-center h-20">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden mr-4 text-gray-700 hover:text-orange-600"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
 
-            {/* Desktop Navigation and Icons */}
-            <div className="hidden md:flex items-center gap-8">
+            {/* Logo - Fixed width */}
+            <div className="flex-1 md:w-[280px] md:flex-none">
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/logo.png"
+                  alt="Embabi Logo"
+                  width={250}
+                  height={250}
+                  className="object-contain w-28 h-28 sm:w-[250px] sm:h-[250px] h-auto"
+                  priority
+                />
+              </Link>
+            </div>
+
+            {/* Desktop Navigation - Centered */}
+            <div className="hidden md:flex flex-1 items-center justify-center gap-8">
               <Link href="/products" className="text-gray-700 hover:text-orange-600 text-base">
                 <TranslatedContent translationKey="navbar.products" />
               </Link>
@@ -168,8 +178,8 @@ export function Navbar() {
               </Link>
             </div>
 
-            {/* Right Side Icons */}
-            <div className="flex items-center gap-4">
+            {/* Right Side Icons - Fixed width */}
+            <div className="flex items-center justify-end gap-4 md:w-[280px] md:flex-none">
               <Link href="/wishlist" className="relative">
                 <Heart className="h-6 w-6 text-gray-700 hover:text-orange-600" />
               </Link>
@@ -239,14 +249,6 @@ export function Navbar() {
                   </div>
                 )}
               </div>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden p-2 text-gray-700 hover:text-orange-600"
-              >
-                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
             </div>
           </div>
 
@@ -308,4 +310,4 @@ export function Navbar() {
       </nav>
     </div>
   );
-} 
+}

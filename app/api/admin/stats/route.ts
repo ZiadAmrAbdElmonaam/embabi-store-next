@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/auth-options";
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -14,14 +15,17 @@ export async function GET() {
       totalOrders,
       totalProducts,
       totalUsers,
-      totalRevenue,
+      deliveredOrders,
       ordersByStatus,
     ] = await Promise.all([
       prisma.order.count(),
       prisma.product.count(),
       prisma.user.count(),
-      prisma.order.aggregate({
-        _sum: {
+      prisma.order.findMany({
+        where: {
+          status: 'DELIVERED',
+        },
+        select: {
           total: true,
         },
       }),
@@ -31,11 +35,19 @@ export async function GET() {
       }),
     ]);
 
+    // Calculate total revenue: sum of delivered orders + shipping costs
+    const deliveredOrdersTotal = deliveredOrders.reduce((sum, order) => sum + Number(order.total), 0);
+    const deliveredOrdersCount = deliveredOrders.length;
+    const shippingCost = deliveredOrdersCount * 300; // 300 per delivered order
+    const totalRevenue = deliveredOrdersTotal + shippingCost;
+
     const stats = {
       totalOrders,
       totalProducts,
       totalUsers,
-      totalRevenue: Number(totalRevenue._sum.total) || 0,
+      totalRevenue,
+      deliveredOrdersCount,
+      shippingCost,
       ordersByStatus: Object.fromEntries(
         ordersByStatus.map(({ status, _count }) => [status, _count])
       ),

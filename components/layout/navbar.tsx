@@ -202,7 +202,7 @@ export function Navbar() {
                     <User className="h-6 w-6 text-gray-700 hover:text-orange-600" />
                   </button>
                 ) : (
-                  <Link href="/auth/login">
+                  <Link href="/login">
                     <User className="h-6 w-6 text-gray-700 hover:text-orange-600" />
                   </Link>
                 )}
@@ -296,7 +296,7 @@ export function Navbar() {
                 </Link>
                 {!session && (
                   <Link 
-                    href="/auth/login" 
+                    href="/login" 
                     className="text-gray-700 hover:text-orange-600 text-base px-4"
                     onClick={() => setIsMenuOpen(false)}
                   >

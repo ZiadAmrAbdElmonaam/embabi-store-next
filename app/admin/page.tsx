@@ -9,6 +9,8 @@ interface DashboardStats {
   totalProducts: number;
   totalUsers: number;
   totalRevenue: number;
+  deliveredOrdersCount: number;
+  shippingCost: number;
   ordersByStatus: Record<OrderStatus, number>;
 }
 
@@ -73,6 +75,10 @@ export default function AdminDashboardPage() {
             <p className="text-2xl font-semibold">
               EGP{stats.totalRevenue.toFixed(2)}
             </p>
+            <div className="text-xs text-gray-500 mt-2">
+              <div>Delivered Orders: {stats.deliveredOrdersCount}</div>
+              <div>Shipping Cost: EGP{stats.shippingCost.toFixed(2)}</div>
+            </div>
           </div>
         </Card>
       </div>

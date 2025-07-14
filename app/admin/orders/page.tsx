@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { UpdateStatusModal } from "@/components/admin/update-status-modal";
 import { CancelItemsModal } from "@/components/admin/cancel-items-modal";
+import { DeleteOrderModal } from "@/components/admin/delete-order-modal";
 import { getColorValue, getColorName } from "@/lib/colors";
 import { Ticket } from "lucide-react";
 
@@ -19,6 +20,7 @@ export default function AdminOrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [updateModalOrder, setUpdateModalOrder] = useState<string | null>(null);
   const [cancelItemsOrder, setCancelItemsOrder] = useState<string | null>(null);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -61,6 +63,31 @@ export default function AdminOrdersPage() {
 
   const handleItemsCancelled = () => {
     fetchOrders(); // Refresh the orders list
+  };
+
+  const handleDeleteOrder = (orderId: string) => {
+    setDeleteOrderId(orderId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteOrderId) return;
+
+    try {
+      const response = await fetch(`/api/admin/orders/${deleteOrderId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete order');
+      }
+
+      toast.success('Order deleted successfully');
+      setDeleteOrderId(null);
+      fetchOrders(); // Refresh the orders list
+    } catch (error) {
+      toast.error('Failed to delete order');
+      console.error('Failed to delete order:', error);
+    }
   };
 
   return (
@@ -141,8 +168,11 @@ export default function AdminOrdersPage() {
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-medium text-gray-900">
-                    #{order.id}
+                  <span
+                    className="text-sm font-medium text-gray-900 cursor-pointer"
+                    title={order.id}
+                  >
+                    #{order.id.slice(0, 5)}...{order.id.slice(-4)}
                   </span>
                 </td>
                 <td className="px-6 py-4">
@@ -259,9 +289,15 @@ export default function AdminOrdersPage() {
                   </button>
                   <button
                     onClick={() => handleCancelItems(order.id)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-orange-600 hover:text-orange-900 mr-3"
                   >
                     Cancel Items
+                  </button>
+                  <button
+                    onClick={() => handleDeleteOrder(order.id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -284,6 +320,15 @@ export default function AdminOrdersPage() {
           order={orders.find(o => o.id === cancelItemsOrder) || { id: cancelItemsOrder, items: [] }}
           onClose={() => setCancelItemsOrder(null)}
           onItemsCancelled={handleItemsCancelled}
+        />
+      )}
+
+      {deleteOrderId && (
+        <DeleteOrderModal
+          orderId={deleteOrderId}
+          orderNumber={deleteOrderId}
+          onClose={() => setDeleteOrderId(null)}
+          onConfirm={handleConfirmDelete}
         />
       )}
     </div>

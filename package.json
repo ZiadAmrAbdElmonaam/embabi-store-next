@@ -13,7 +13,8 @@
     "check-admin": "ts-node -T scripts/check-admin.ts",
     "delete-dummy-products": "ts-node -T scripts/delete-dummy-products.ts",
     "delete-electronics": "ts-node -T scripts/delete-electronics.ts",
-    "delete-clothing": "ts-node -T scripts/delete-clothing.ts"
+    "delete-clothing": "ts-node -T scripts/delete-clothing.ts",
+    "cleanup-unverified": "ts-node -T scripts/cleanup-unverified.ts"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",

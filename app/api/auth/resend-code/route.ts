@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAndSendVerificationCode, canRequestNewCode } from "@/lib/verification";
 import { prisma } from "@/lib/prisma";
+import { validateEmail } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
@@ -9,6 +10,15 @@ export async function POST(request: Request) {
     if (!email) {
       return NextResponse.json(
         { error: 'Email is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      return NextResponse.json(
+        { error: emailValidation.errors[0] },
         { status: 400 }
       );
     }

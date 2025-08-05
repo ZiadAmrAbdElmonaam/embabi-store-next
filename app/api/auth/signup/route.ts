@@ -3,22 +3,40 @@ import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { generateVerificationCode } from "@/lib/verification";
 import { sendVerificationEmail } from "@/lib/email";
+import { validateEmail, validatePassword, validateName, sanitizeInput } from "@/lib/validation";
 
 export async function POST(request: Request) {
   try {
     const data = await request.json();
     
-    // Validate required fields
-    if (!data.email || !data.password) {
+    // Sanitize inputs
+    const sanitizedData = {
+      email: sanitizeInput(data.email || ''),
+      password: data.password || '',
+      name: sanitizeInput(data.name || '')
+    };
+    
+    // Validate all inputs
+    const emailValidation = validateEmail(sanitizedData.email);
+    const passwordValidation = validatePassword(sanitizedData.password);
+    const nameValidation = validateName(sanitizedData.name);
+    
+    const allErrors = [
+      ...emailValidation.errors,
+      ...passwordValidation.errors,
+      ...nameValidation.errors
+    ];
+    
+    if (allErrors.length > 0) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: allErrors[0] }, // Return first error
         { status: 400 }
       );
     }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
+      where: { email: sanitizedData.email },
     });
 
     if (existingUser) {
@@ -42,7 +60,7 @@ export async function POST(request: Request) {
 
         // Send verification email
         try {
-          await sendVerificationEmail(data.email, verificationCode, data.name);
+          await sendVerificationEmail(sanitizedData.email, verificationCode, sanitizedData.name);
         } catch (emailError) {
           if (process.env.NODE_ENV === 'development') {
             console.error('Failed to send verification email:', emailError);
@@ -51,7 +69,7 @@ export async function POST(request: Request) {
         }
 
         return NextResponse.json({
-          email: data.email,
+          email: sanitizedData.email,
           message: 'Verification code sent. Please verify your email.'
         });
       } else {
@@ -74,8 +92,8 @@ export async function POST(request: Request) {
     // Create user (unverified)
     const user = await prisma.user.create({
       data: {
-        name: data.name || '',  // Ensure name is never null
-        email: data.email,
+        name: sanitizedData.name,
+        email: sanitizedData.email,
         password: hashedPassword,
         role: 'USER', // Default role
         emailVerified: false,
@@ -87,7 +105,7 @@ export async function POST(request: Request) {
 
     // Send verification email
     try {
-      await sendVerificationEmail(data.email, verificationCode, data.name);
+      await sendVerificationEmail(sanitizedData.email, verificationCode, sanitizedData.name);
     } catch (emailError) {
       if (process.env.NODE_ENV === 'development') {
         console.error('Failed to send verification email:', emailError);

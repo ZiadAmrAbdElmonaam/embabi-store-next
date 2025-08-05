@@ -194,7 +194,14 @@ export const translations = {
       emailNotFound: 'Email not found',
       invalidCode: 'Invalid verification code',
       codeExpired: 'Verification code expired',
-      tooManyAttempts: 'Too many attempts. Please request a new code.'
+      tooManyAttempts: 'Too many attempts. Please request a new code.',
+      passwordRequirements: 'Password Requirements',
+      passwordMustContain: 'Your password must contain:',
+      atLeast8Characters: 'At least 8 characters',
+      oneLowercaseLetter: 'At least one lowercase letter (a-z)',
+      oneUppercaseLetter: 'At least one uppercase letter (A-Z)',
+      oneNumber: 'At least one number (0-9)',
+      oneSpecialCharacter: 'At least one special character (@$!%*?&)'
     },
     profile: {
       title: 'Profile Settings',
@@ -642,7 +649,14 @@ export const translations = {
       emailNotFound: 'البريد الإلكتروني غير موجود',
       invalidCode: 'رمز التحقق غير صالح',
       codeExpired: 'انتهت صلاحية رمز التحقق',
-      tooManyAttempts: 'محاولات كثيرة جدًا. يرجى طلب رمز جديد.'
+      tooManyAttempts: 'محاولات كثيرة جدًا. يرجى طلب رمز جديد.',
+      passwordRequirements: 'متطلبات كلمة المرور',
+      passwordMustContain: 'يجب أن تحتوي كلمة المرور على:',
+      atLeast8Characters: '8 أحرف على الأقل',
+      oneLowercaseLetter: 'حرف صغير واحد على الأقل (a-z)',
+      oneUppercaseLetter: 'حرف كبير واحد على الأقل (A-Z)',
+      oneNumber: 'رقم واحد على الأقل (0-9)',
+      oneSpecialCharacter: 'رمز خاص واحد على الأقل (@$!%*?&)'
     },
     profile: {
       title: 'إعدادات الملف الشخصي',

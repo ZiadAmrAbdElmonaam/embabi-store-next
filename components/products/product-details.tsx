@@ -397,9 +397,9 @@ export function ProductDetails({ product, hasPurchased }: ProductDetailsProps) {
                 )}
                 {/* Tax disclaimer text */}
                 <div className="space-y-1 pt-2">
-                  <p className="text-sm font-bold text-orange-600 dark:text-orange-400 text-center opacity-90 tracking-wide" dir="rtl">
+                  {/* <p className="text-sm font-bold text-orange-600 dark:text-orange-400 text-center opacity-90 tracking-wide" dir="rtl">
                     الجهاز غير شامل الضريبه
-                  </p>
+                  </p> */}
                   <p className="text-sm font-bold text-orange-600 dark:text-orange-400 text-center opacity-90 tracking-wide" dir="rtl">
                     متاح تقسيط بالفيزا
                   </p>

@@ -58,11 +58,13 @@ export async function POST(request: Request) {
 
     const data = await request.json();
 
-    // Create slug from name
+    // Create slug from name - Google-friendly format
     const slug = data.name
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+      .replace(/(\d+)/g, '-$1')  // Add hyphen before numbers
+      .replace(/[^a-z0-9-]+/g, '-')  // Convert other chars to hyphens
+      .replace(/(^-|-$)/g, '')  // Remove leading/trailing hyphens
+      .replace(/-+/g, '-');  // Replace multiple hyphens with single hyphen
 
     // Validate required fields
     if (!data.name || !data.price || !data.stock || !data.categoryId || data.thumbnails.length === 0) {

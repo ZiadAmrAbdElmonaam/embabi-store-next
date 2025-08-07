@@ -64,6 +64,12 @@ export function Footer() {
               )}>
                 <TranslatedContent translationKey="footer.reviews" />
               </Link>
+              <Link href="/policies" className={cn(
+                "text-gray-400 hover:text-white text-sm md:text-base block text-center md:text-left",
+                isRtl && "md:text-right"
+              )}>
+                <TranslatedContent translationKey="footer.policies" />
+              </Link>
               <Link href="/contact" className={cn(
                 "text-gray-400 hover:text-white text-sm md:text-base block text-center md:text-left",
                 isRtl && "md:text-right"
@@ -91,7 +97,7 @@ export function Footer() {
             )}>
               <li className="flex justify-between items-center gap-2">
                 <span><TranslatedContent translationKey="footer.email" />:</span>
-                <span className="break-all">oxygenembabi@gmail.com</span>
+                <span className="break-all">embabistore110@gmail.com</span>
               </li>
               <li className="flex justify-between items-center gap-2">
                 <span><TranslatedContent translationKey="footer.phone" />:</span>

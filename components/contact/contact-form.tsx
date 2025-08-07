@@ -60,7 +60,7 @@ export function ContactForm() {
               <p className="mt-1 text-sm text-red-700">{error}</p>
               <p className="mt-2 text-sm text-red-700">
                 Please try again later or contact us directly at{' '}
-                <a href="mailto:oxygenembabi@gmail.com" className="font-medium underline">
+                <a href="mailto:embabistore110@gmail.com" className="font-medium underline">
                   embabistore110@gmail.com
                 </a>
               </p>
@@ -83,14 +83,14 @@ export function ContactForm() {
             <Phone className="h-5 w-5 text-orange-600" />
             <div>
               <h3 className="font-medium"><TranslatedContent translationKey="contact.phone" /></h3>
-              <p className="text-gray-600">+20 123 456 7890</p>
+              <p className="text-gray-600"><TranslatedContent translationKey="footer.mobile" /></p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <MapPin className="h-5 w-5 text-orange-600" />
             <div>
               <h3 className="font-medium"><TranslatedContent translationKey="contact.address" /></h3>
-              <p className="text-gray-600">123 Embabi Street, Cairo, Egypt</p>
+              <p className="text-gray-600"><TranslatedContent translationKey="footer.addressText2" /></p>
             </div>
           </div>
         </div>

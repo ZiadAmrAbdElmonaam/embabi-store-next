@@ -117,6 +117,7 @@ export const translations = {
       aboutUs: 'About Us',
       contact: 'Contact',
       reviews: 'Reviews',
+      policies: 'Policies',
       contactUs: 'Contact',
       email: 'Email',
       phone: 'Phone',
@@ -124,8 +125,37 @@ export const translations = {
       allRightsReserved: 'Oxgen Embabi Store. All rights reserved',
       safeHands: 'Oxgen Embabi Store. You are in safe hands',
       mobile: '+20 100 298 8606',
+
       addressText: 'Al-Serag Mall, Nasr City, Cairo',
       addressText2: 'Al-alSon Mall, Makram Ebeid, Nasr City'
+    },
+    policies: {
+      title: 'Our Policies',
+      privacy: {
+        title: 'Privacy Policy',
+        content1: 'We respect your privacy and are committed to protecting your personal data.',
+        content2: 'When you visit our website or provide any information, such as name, phone number, or email, it is used only to provide the service and improve user experience.',
+        content3: 'We do not share your information with any third party unless required by law or to improve our services (such as shipping company or payment gateway).',
+        content4: 'By using our website, you agree to this privacy policy.'
+      },
+      shipping: {
+        title: 'Shipping Policy',
+        content1: 'We provide fast and reliable shipping services to all governorates in Egypt.',
+        content2: 'Shipping costs vary according to the delivery location and will be calculated during checkout.',
+        content3: 'Delivery time is usually 2-5 business days depending on your location.'
+      },
+      refund: {
+        title: 'Refund & Exchange Policy',
+        content1: 'We provide our customers with a 30-day warranty against manufacturing defects only.',
+        content2: 'In case of a manufacturing defect in the product, you can contact us during the warranty period to exchange the product after inspecting it and confirming the defect.',
+        content3: 'Exchange or refund is not allowed for any other reason such as change of mind or misuse.',
+        content4: 'The product must be in its original condition with the box, accessories and complete contents.',
+        content5: 'The request will be rejected if it is found that the product has been misused or opened or changed in any way.',
+        content6: 'We bear shipping costs in case of an actual defect in the product.'
+      },
+      warranty: {
+        notice: '30-day warranty against manufacturing defects (Hardware) from Oxygen Embabi Store'
+      }
     },
     auth: {
       signIn: 'Sign In',
@@ -572,6 +602,7 @@ export const translations = {
       aboutUs: 'من نحن',
       contact: 'اتصل بنا',
       reviews: 'التقييمات',
+      policies: 'السياسات',
       contactUs: 'اتصل بنا',
       email: 'البريد الإلكتروني',
       phone: 'الهاتف',
@@ -581,6 +612,34 @@ export const translations = {
       mobile: '8606 298 100 20+',
       addressText: 'مول السراج، مدينة نصر، القاهرة',
       addressText2: 'مول الألسن، اخر مكرم عبيد، مدينة نصر'
+    },
+    policies: {
+      title: 'سياساتنا',
+      privacy: {
+        title: 'سياسة الخصوصية',
+        content1: 'نحن نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية.',
+        content2: 'عند زيارتك لموقعنا أو تقديمك لأي معلومات، مثل الاسم أو رقم الهاتف أو البريد الإلكتروني، يتم استخدامها فقط لتقديم الخدمة وتحسين تجربة المستخدم.',
+        content3: 'نحن لا نشارك معلوماتك مع أي جهة خارجية إلا إذا كان ذلك مطلوبًا بموجب القانون أو لتحسين خدماتنا (مثل شركة الشحن أو بوابة الدفع).',
+        content4: 'باستخدامك لموقعنا، فإنك توافق على سياسة الخصوصية هذه.'
+      },
+      shipping: {
+        title: 'سياسة الشحن',
+        content1: 'نوفر خدمات شحن سريعة وموثوقة لجميع محافظات مصر.',
+        content2: 'تختلف تكاليف الشحن حسب موقع التسليم وسيتم حسابها أثناء إتمام الطلب.',
+        content3: 'وقت التسليم عادة من 2-5 أيام عمل حسب موقعك.'
+      },
+      refund: {
+        title: 'سياسة الاستبدال والاسترجاع',
+        content1: 'نحن نقدم لعملائنا ضمانًا لمدة 30 يومًا ضد عيوب الصناعة فقط.',
+        content2: 'في حالة وجود عيب مصنعي في المنتج، يمكنك التواصل معنا خلال مدة الضمان لإجراء عملية الاستبدال بعد فحص المنتج والتأكد من وجود العيب.',
+        content3: 'لا يُسمح بالاستبدال أو الاسترجاع لأي سبب آخر مثل تغيير الرأي أو الاستخدام الخاطئ.',
+        content4: 'يجب أن يكون المنتج في حالته الأصلية مع العلبة والإكسسوارات وكامل المحتويات.',
+        content5: 'يتم رفض الطلب إذا تبين أن المنتج تعرض لسوء استخدام أو تم فتحه أو تغييره بأي شكل.',
+        content6: 'نتحمل مصاريف الشحن في حالة وجود عيب فعلي في المنتج.'
+      },
+      warranty: {
+        notice: 'ضمان 30 يوم ضد عيوب الصناعة (Hardware) من أوكسجن إمبابي ستور'
+      }
     },
     auth: {
       signIn: 'تسجيل الدخول',

@@ -15,7 +15,7 @@ export async function GET(request: Request) {
         where: {
           OR: [
             { name: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
+            { slug: { contains: query, mode: "insensitive" } },
           ],
         },
         select: {

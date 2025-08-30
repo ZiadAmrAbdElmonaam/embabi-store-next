@@ -34,7 +34,15 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   image       String?
+  parentId    String?
+
+  brand       String?   // Brand field - only for subcategories
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
   products    Product[]
+
+  @@index([parentId])
+  @@index([brand])
 }
 
 model Product {

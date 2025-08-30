@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lightbulb, Check } from "lucide-react";
+import { getCategoryNameSuggestions, generateSlugPreview, isNameDescriptive, CategorySuggestion } from "@/lib/category-suggestions";
 
 interface CategoryFormProps {
   initialData?: {
@@ -12,6 +13,8 @@ interface CategoryFormProps {
     name: string;
     description?: string | null;
     image?: string | null;
+    parentId?: string | null;
+    brand?: string | null;
   };
 }
 
@@ -19,10 +22,16 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [availableImages, setAvailableImages] = useState<Array<{url: string, source: string, originalFilename?: string, publicId?: string}>>([]);
+  const [parentCategories, setParentCategories] = useState<Array<{id: string, name: string, slug: string}>>([]);
+  const [suggestions, setSuggestions] = useState<CategorySuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedParentName, setSelectedParentName] = useState("");
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     description: initialData?.description || "",
     image: initialData?.image || "",
+    parentId: initialData?.parentId || "",
+    brand: initialData?.brand || "",
   });
 
   useEffect(() => {
@@ -39,8 +48,51 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
       }
     };
 
+    // Fetch parent categories (only categories that can be parents)
+    const fetchParentCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        if (!response.ok) throw new Error('Failed to fetch categories');
+        const categories = await response.json();
+        
+        // Filter to get potential parent categories (excluding current category if editing)
+        const potentialParents = categories.filter((cat: any) => 
+          cat.id !== initialData?.id && // Can't be parent of itself
+          !cat.parentId // Only categories without parents can be parents (no grandparents)
+        );
+        
+        setParentCategories(potentialParents);
+      } catch (error) {
+        console.error('Error fetching parent categories:', error);
+        toast.error('Failed to load parent categories');
+      }
+    };
+
     fetchImages();
-  }, []);
+    fetchParentCategories();
+  }, [initialData?.id]);
+
+  // Generate suggestions when name or parent changes
+  useEffect(() => {
+    if (formData.name.trim() && selectedParentName.trim()) {
+      const newSuggestions = getCategoryNameSuggestions(formData.name, selectedParentName);
+      setSuggestions(newSuggestions);
+      setShowSuggestions(newSuggestions.length > 1); // Show if there are suggestions beyond original name
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [formData.name, selectedParentName]);
+
+  // Update selected parent name when parentId changes
+  useEffect(() => {
+    if (formData.parentId) {
+      const selectedParent = parentCategories.find(cat => cat.id === formData.parentId);
+      setSelectedParentName(selectedParent?.name || "");
+    } else {
+      setSelectedParentName("");
+    }
+  }, [formData.parentId, parentCategories]);
 
   // Function to get image name from path or originalFilename
   const getImageName = (imagePath: string) => {
@@ -57,6 +109,16 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
   // Function to get image source badge color
   const getSourceBadgeColor = (source: string) => {
     return source === 'local' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (suggestion: CategorySuggestion) => {
+    setFormData(prev => ({
+      ...prev,
+      name: suggestion.name
+    }));
+    setShowSuggestions(false);
+    toast.success(`Selected: "${suggestion.name}"`);
   };
 
   // Refresh available images
@@ -108,12 +170,16 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
         name: initialData.name,
         description: initialData.description || "",
         image: initialData.image || "",
+        parentId: initialData.parentId || "",
+        brand: initialData.brand || "",
       });
     } else {
       setFormData({
         name: "",
         description: "",
         image: "",
+        parentId: "",
+        brand: "",
       });
     }
   };
@@ -129,6 +195,71 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
         />
+        
+        {/* Smart Suggestions */}
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800">
+                Smart Suggestions for "{selectedParentName}"
+              </span>
+            </div>
+            
+            <div className="space-y-2">
+              {suggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleSuggestionSelect(suggestion)}
+                  className={`w-full text-left p-3 rounded-md border-2 transition-all hover:border-blue-300 hover:bg-blue-100 ${
+                    formData.name === suggestion.name 
+                      ? 'border-blue-500 bg-blue-100' 
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{suggestion.icon}</span>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {suggestion.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {suggestion.description}
+                        </div>
+                        <div className="text-xs text-blue-600 mt-1">
+                          URL: /categories/{generateSlugPreview(suggestion.name, selectedParentName)}
+                        </div>
+                      </div>
+                    </div>
+                    {formData.name === suggestion.name && (
+                      <Check className="h-4 w-4 text-blue-600" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div className="mt-3 pt-3 border-t border-blue-200">
+              <p className="text-xs text-blue-600">
+                💡 Tip: Choose a descriptive name to help customers find exactly what they're looking for!
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {/* Slug Preview */}
+        {formData.name && (
+          <div className="mt-2">
+            <p className="text-xs text-gray-500">
+              URL Preview: <code className="bg-gray-100 px-1 rounded">/categories/{generateSlugPreview(formData.name, selectedParentName)}</code>
+              {selectedParentName && (
+                <span className="ml-2 text-blue-600">✨ Auto-combined with parent</span>
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       <div>
@@ -140,6 +271,74 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
         />
       </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Parent Category</label>
+        <select
+          value={formData.parentId}
+          onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+        >
+          <option value="">No Parent (This will be a main category)</option>
+          {parentCategories.map((category) => (
+            <option key={category.id} value={category.id}>
+              📁 {category.name} → /categories/{category.slug}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-sm text-gray-500">
+          Select a parent category to make this a subcategory, or leave empty to create a main category.
+        </p>
+        {formData.parentId && (
+          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-xs text-blue-700">
+              💡 <strong>Auto-Slug Generation:</strong> Your category URL will be automatically combined as: 
+              <code className="bg-blue-100 px-1 rounded ml-1">
+                /categories/{formData.name ? generateSlugPreview(formData.name, selectedParentName) : 'your-name-' + selectedParentName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}
+              </code>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Brand Field - Only show for subcategories */}
+      {formData.parentId && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Brand</label>
+          <select
+            value={formData.brand}
+            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+          >
+            <option value="">No Brand (Generic Category)</option>
+            <option value="Apple">🍎 Apple</option>
+            <option value="Samsung">📱 Samsung</option>
+            <option value="OnePlus">➕ OnePlus</option>
+            <option value="Sony">🎵 Sony</option>
+            <option value="Garmin">⌚ Garmin</option>
+            <option value="Dell">💻 Dell</option>
+            <option value="HP">🖥️ HP</option>
+            <option value="Microsoft">🖱️ Microsoft</option>
+            <option value="Google">🔍 Google</option>
+            <option value="Xiaomi">📲 Xiaomi</option>
+            <option value="Huawei">📡 Huawei</option>
+            <option value="LG">📺 LG</option>
+            <option value="Asus">⚡ Asus</option>
+            <option value="Lenovo">💼 Lenovo</option>
+            <option value="Acer">🎮 Acer</option>
+          </select>
+          <p className="mt-1 text-sm text-gray-500">
+            Select a brand for this subcategory. This will group it with other products from the same brand.
+          </p>
+          {formData.brand && (
+            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-xs text-green-700">
+                ✅ This category will appear under "<strong>{formData.brand}</strong>" in the "Shop by Brands" section.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Category Image */}
       <div className="space-y-6">

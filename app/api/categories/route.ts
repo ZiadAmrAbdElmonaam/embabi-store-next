@@ -20,11 +20,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create slug from name
-    const slug = data.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    // Create slug from name (with parent context if applicable)
+    let slug;
+    if (data.parentId) {
+      // For subcategories: combine child name + parent name
+      const parentCategory = await prisma.category.findUnique({
+        where: { id: data.parentId },
+        select: { name: true }
+      });
+      
+      if (parentCategory) {
+        // Format: childName-parentName (e.g., "apple-mobiles")
+        slug = `${data.name}-${parentCategory.name}`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
+      } else {
+        // Fallback if parent not found
+        slug = data.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
+      }
+    } else {
+      // For main categories: use name only
+      slug = data.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
 
     // Check if slug already exists
     const existing = await prisma.category.findUnique({
@@ -43,6 +67,8 @@ export async function POST(request: Request) {
         name: data.name,
         description: data.description,
         image: data.image,
+        parentId: data.parentId || null,
+        brand: data.brand || null,
         slug,
       },
     });

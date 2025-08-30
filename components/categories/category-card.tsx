@@ -22,6 +22,9 @@ interface CategoryCardProps {
     name: string;
     slug: string;
     image?: string | null;
+    isParent?: boolean;
+    isChild?: boolean;
+    parentName?: string;
     products: Product[];
   };
 }
@@ -70,6 +73,22 @@ export function CategoryCard({ category }: CategoryCardProps) {
           whileHover={{ y: -5 }}
           transition={{ duration: 0.2 }}
         >
+          {/* Category Type Badge */}
+          {category.isParent && (
+            <div className="mb-2">
+              <span className="px-2 py-1 bg-blue-500 text-white text-xs rounded-full font-medium">
+                Main Category
+              </span>
+            </div>
+          )}
+          {category.isChild && (
+            <div className="mb-2">
+              <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full font-medium">
+                {category.parentName}
+              </span>
+            </div>
+          )}
+          
           <h3 className="text-xl font-semibold text-white">{category.name}</h3>
           <p className="text-white/80 text-sm mt-1">
             {hasProducts ? (

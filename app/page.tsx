@@ -3,9 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { HomeCarousel } from "@/components/home/carousel";
 import { CategoriesCarousel } from "@/components/home/categories-carousel";
+import { MainCategoriesCarousel } from "@/components/home/main-categories-carousel";
+import { BrandsCarousel } from "@/components/home/brands-carousel";
 import { ProductCard } from "@/components/products/product-card";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { getProductDisplayPrice } from "@/lib/utils";
+import { groupCategoriesByBrand } from "@/lib/brand-utils";
 
 // Add revalidation - cache for 5 minutes
 export const revalidate = 300;
@@ -98,28 +101,54 @@ export default async function HomePage() {
     };
   });
 
-  // Fetch categories with at least one product
-  const categories = await prisma.category.findMany({
+  // Fetch main categories for the new section
+  const mainCategories = await prisma.category.findMany({
     where: {
+      parentId: null, // Only parent categories
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      image: true,
+      children: {
+        select: { id: true }
+      }
+    },
+    orderBy: { name: 'asc' }
+  });
+
+  // Format main categories
+  const formattedMainCategories = mainCategories.map(category => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    image: category.image,
+    subcategoryCount: category.children.length
+  }));
+
+  // Fetch all categories for brand grouping
+  const allCategories = await prisma.category.findMany({
+    include: {
+      parent: {
+        select: { id: true, name: true, slug: true }
+      },
+      _count: {
+        select: { products: true }
+      }
+    },
+    orderBy: [{ parentId: 'asc' }, { name: 'asc' }]
+  });
+
+  // Fetch subcategories with products for "Shop by Category" section  
+  const subcategories = await prisma.category.findMany({
+    where: {
+      parentId: { not: null }, // Only child categories
       products: {
         some: {
           OR: [
-            // Products with main stock
-            {
-              stock: {
-                gt: 0
-              }
-            },
-            // Products with storage that has stock
-            {
-              storages: {
-                some: {
-                  stock: {
-                    gt: 0
-                  }
-                }
-              }
-            }
+            { stock: { gt: 0 } },
+            { storages: { some: { stock: { gt: 0 } } } }
           ]
         }
       }
@@ -132,41 +161,29 @@ export default async function HomePage() {
       products: {
         where: {
           OR: [
-            // Products with main stock
-            {
-              stock: {
-                gt: 0
-              }
-            },
-            // Products with storage that has stock
-            {
-              storages: {
-                some: {
-                  stock: {
-                    gt: 0
-                  }
-                }
-              }
-            }
+            { stock: { gt: 0 } },
+            { storages: { some: { stock: { gt: 0 } } } }
           ]
         },
-        select: {
-          id: true
-        }
+        select: { id: true }
       }
-    }
+    },
+    orderBy: { name: 'asc' }
   });
 
-  // Format categories to include product count
-  const formattedCategories = categories
-    .filter(category => category.products.length > 0) // Extra filter to ensure no empty categories
+  // Format subcategories for "Shop by Category"
+  const formattedSubcategories = subcategories
     .map(category => ({
       id: category.id,
       name: category.name,
       slug: category.slug,
       image: category.image,
       productCount: category.products.length
-    }));
+    }))
+    .filter(category => category.productCount > 0); // Only show categories with products
+
+  // Group categories by brand for "Shop by Brands" section
+  const brandGroups = groupCategoriesByBrand(allCategories);
 
   return (
     <div className="min-h-screen">
@@ -176,14 +193,34 @@ export default async function HomePage() {
       </div>
 
       {/* Categories Section */}
-      <section className="py-6 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
-            <TranslatedContent translationKey="home.shopByCategory" />
+      <section className="py-4 sm:py-6 bg-gradient-to-r from-orange-50 to-red-50">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">
+            <TranslatedContent translationKey="home.categories" />
           </h2>
-          <CategoriesCarousel categories={formattedCategories} />
+          <MainCategoriesCarousel categories={formattedMainCategories} />
         </div>
       </section>
+      {/* Brands Section - Commented out temporarily */}
+      {/* <section className="py-4 sm:py-6 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">
+            <TranslatedContent translationKey="home.brands" />
+          </h2>
+          {brandGroups.length > 0 ? (
+            <BrandsCarousel brands={brandGroups} />
+          ) : (
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-gray-500 text-base sm:text-lg">
+                <TranslatedContent translationKey="home.noBrands" />
+              </p>
+              <p className="text-gray-400 text-sm mt-2">
+                <TranslatedContent translationKey="home.addBrandedCategories" />
+              </p>
+            </div>
+          )}
+        </div>
+      </section> */}
 
       {/* Featured Products Section */}
       <section className="py-4">

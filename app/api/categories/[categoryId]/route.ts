@@ -58,10 +58,60 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json();
-    const { name, description, image } = body;
+    const { name, description, image, parentId, brand } = body;
 
-    // Generate slug from name
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    // Generate slug from name (with parent context if applicable)
+    let slug;
+    if (parentId) {
+      // For subcategories: combine child name + parent name
+      const parentCategory = await prisma.category.findUnique({
+        where: { id: parentId },
+        select: { name: true }
+      });
+      
+      if (parentCategory) {
+        // Format: childName-parentName (e.g., "apple-mobiles")
+        slug = `${name}-${parentCategory.name}`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
+      } else {
+        // Fallback if parent not found
+        slug = name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
+      }
+    } else {
+      // For main categories: use name only
+      slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
+
+    // Prevent setting a category as its own parent or creating circular references
+    if (parentId === params.categoryId) {
+      return NextResponse.json(
+        { error: 'A category cannot be its own parent' },
+        { status: 400 }
+      );
+    }
+
+    // Check for circular reference (if parentId is provided)
+    if (parentId) {
+      const potentialParent = await prisma.category.findUnique({
+        where: { id: parentId },
+        include: { parent: true }
+      });
+
+      if (potentialParent?.parentId === params.categoryId) {
+        return NextResponse.json(
+          { error: 'This would create a circular reference' },
+          { status: 400 }
+        );
+      }
+    }
 
     const category = await prisma.category.update({
       where: {
@@ -71,6 +121,8 @@ export async function PATCH(
         name,
         description,
         image,
+        parentId: parentId || null,
+        brand: brand || null,
         slug,
       },
     });

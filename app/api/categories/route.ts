@@ -67,7 +67,12 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(categories);
+    const response = NextResponse.json(categories);
+    
+    // Add caching headers - cache for 10 minutes (categories change less frequently)
+    response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching categories:', error);
     return NextResponse.json(

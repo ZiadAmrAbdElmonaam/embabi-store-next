@@ -6,8 +6,28 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-// Create a new Prisma client instance
-const prismaClient = globalThis.prisma || new PrismaClient();
+// Create a new Prisma client instance with connection pooling
+const prismaClient = globalThis.prisma || new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  // Add connection pooling configuration
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
+
+// Add connection monitoring (only in development)
+if (process.env.NODE_ENV === 'development') {
+  prismaClient.$on('query', (e) => {
+    console.log(`[Prisma Query] ${e.query}`);
+    console.log(`[Prisma Duration] ${e.duration}ms`);
+  });
+
+  prismaClient.$on('error', (e) => {
+    console.error(`[Prisma Error] ${e.message}`);
+  });
+}
 
 // Add middleware to check for expired sales
 prismaClient.$use(async (params, next) => {

@@ -5,6 +5,9 @@ import { translations } from "@/lib/translations";
 import { ReviewsClient } from "@/components/reviews/reviews-client";
 import { prisma } from "@/lib/prisma";
 
+// Add revalidation - cache for 2 minutes (reviews change when users add new ones)
+export const revalidate = 120;
+
 export default async function ReviewsPage() {
   // Get language from cookies for server component
   const cookieStore = await cookies();

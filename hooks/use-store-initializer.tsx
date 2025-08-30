@@ -6,13 +6,19 @@ import { useWishlist } from '@/hooks/use-wishlist';
 // Custom hook to initialize cart and wishlist from server
 export const useStoreInitializer = () => {
   const [isInitializing, setIsInitializing] = useState(true);
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   const { syncWithServer: syncCartWithServer, loadCouponFromCookies } = useCart();
   const { syncWithServer: syncWishlistWithServer } = useWishlist();
 
   useEffect(() => {
     const initialize = async () => {
+      // Prevent multiple initializations
+      if (hasInitialized) return;
+      
       try {
+        setIsInitializing(true);
+        
         // Initialize both stores in parallel
         await Promise.all([
           syncCartWithServer(),
@@ -21,6 +27,8 @@ export const useStoreInitializer = () => {
         
         // Load any coupon from cookies
         await loadCouponFromCookies();
+        
+        setHasInitialized(true);
       } catch (error) {
         console.error('Error initializing stores:', error);
       } finally {
@@ -29,7 +37,7 @@ export const useStoreInitializer = () => {
     };
 
     initialize();
-  }, [syncCartWithServer, syncWishlistWithServer, loadCouponFromCookies]);
+  }, [syncCartWithServer, syncWishlistWithServer, loadCouponFromCookies, hasInitialized]);
 
   return { isInitializing };
 }; 

@@ -7,6 +7,9 @@ import { ProductCard } from "@/components/products/product-card";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { getProductDisplayPrice } from "@/lib/utils";
 
+// Add revalidation - cache for 5 minutes
+export const revalidate = 300;
+
 export default async function HomePage() {
   // Fetch featured products
   const featuredProducts = await prisma.product.findMany({

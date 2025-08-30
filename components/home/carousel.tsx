@@ -18,6 +18,7 @@ export function HomeCarousel() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedRef = useRef(false);
 
   // Required minimum swipe distance
   const minSwipeDistance = 50;
@@ -25,6 +26,9 @@ export function HomeCarousel() {
   // Fetch carousel images from the API
   useEffect(() => {
     const fetchCarouselImages = async () => {
+      // Prevent multiple simultaneous requests
+      if (hasLoadedRef.current) return;
+      
       try {
         setIsLoading(true);
         setError(null);
@@ -44,6 +48,8 @@ export function HomeCarousel() {
         } else {
           setImages(data.images);
         }
+        
+        hasLoadedRef.current = true;
       } catch (error) {
         console.error('Error fetching carousel images:', error);
         setError('Failed to load carousel images');

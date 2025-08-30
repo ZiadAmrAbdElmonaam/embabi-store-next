@@ -54,10 +54,15 @@ export async function GET(request: Request) {
       price: product.price.toString()
     }));
 
-    return NextResponse.json({ 
+    const response = NextResponse.json({ 
       products: formattedProducts, 
       categories 
     });
+    
+    // Add caching headers - cache for 30 seconds (search results change frequently but can be cached briefly)
+    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+    
+    return response;
   } catch (error) {
     console.error("Search error:", error);
     return NextResponse.json(

@@ -5,6 +5,9 @@ import { cookies } from "next/headers";
 import { translations } from "@/lib/translations";
 import { getProductDisplayPrice } from "@/lib/utils";
 
+// Add revalidation - cache for 5 minutes (category pages change when products are added/removed)
+export const revalidate = 300;
+
 interface CategoryPageProps {
   params: {
     slug: string;

@@ -62,7 +62,12 @@ export async function GET() {
       }))
     ];
 
-    return NextResponse.json(allImages);
+    const response = NextResponse.json(allImages);
+    
+    // Add caching headers - cache for 1 hour (category images don't change frequently)
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200');
+    
+    return response;
   } catch (error) {
     console.error('Error reading images:', error);
     return NextResponse.json({ error: 'Failed to fetch images' }, { status: 500 });

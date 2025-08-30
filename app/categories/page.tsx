@@ -2,6 +2,9 @@
 import { prisma } from "@/lib/prisma";
 import { CategoriesGrid } from "@/components/categories/categories-grid";
 
+// Add revalidation - cache for 10 minutes
+export const revalidate = 600;
+
 export default async function CategoriesPage() {
   const categories = await prisma.category.findMany({
     where: {

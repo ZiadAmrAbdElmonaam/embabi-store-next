@@ -10,16 +10,26 @@ export async function GET() {
     });
 
     if (!settings) {
-      return NextResponse.json({
+      const response = NextResponse.json({
         maintenanceMode: false,
         maintenanceMessage: ""
       });
+      
+      // Add caching headers - cache for 2 minutes (maintenance settings don't change often)
+      response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=240');
+      
+      return response;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       maintenanceMode: settings.maintenanceMode,
       maintenanceMessage: settings.maintenanceMessage
     });
+    
+    // Add caching headers - cache for 2 minutes (maintenance settings don't change often)
+    response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=240');
+    
+    return response;
   } catch (error) {
     console.error('Error checking maintenance mode:', error);
     // Default to non-maintenance mode in case of error

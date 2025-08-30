@@ -15,7 +15,12 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json({ images });
+    const response = NextResponse.json({ images });
+    
+    // Add caching headers - cache for 15 minutes (carousel changes infrequently)
+    response.headers.set('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=1800');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching carousel images:', error);
     return NextResponse.json(

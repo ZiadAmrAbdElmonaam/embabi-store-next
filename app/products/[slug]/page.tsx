@@ -6,6 +6,9 @@ import { ProductStructuredData } from "@/components/seo/structured-data";
 import { authOptions } from "@/app/api/auth/auth-options";
 import { Metadata } from "next";
 
+// Add revalidation - cache for 5 minutes (product details change occasionally)
+export const revalidate = 300;
+
 interface ProductPageProps {
   params: { slug: string };
 }

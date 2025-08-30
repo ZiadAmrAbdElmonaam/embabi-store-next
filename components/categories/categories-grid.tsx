@@ -19,6 +19,10 @@ interface CategoriesGridProps {
     id: string;
     name: string;
     slug: string;
+    image?: string;
+    isParent?: boolean;
+    isChild?: boolean;
+    parentName?: string;
     products: Array<{
       id: string;
       name: string;

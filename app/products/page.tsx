@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/auth-options";
-import { ProductsGrid } from "@/components/products/products-grid";
-import { ProductFilters } from "@/components/products/product-filters";
-import { Pagination } from "@/components/ui/pagination";
+import { getProductDisplayPrice } from "@/lib/utils";
+import { ProductsClient } from "@/components/products/products-client";
 
 // Add revalidation - cache for 3 minutes
 export const revalidate = 180;

@@ -38,10 +38,12 @@ export const translations = {
     products: {
       addToCart: 'Add to Cart',
       outOfStock: 'Out of Stock',
+      inStock: 'In Stock',
+      off: 'OFF',
+      availableColors: 'Available Colors:',
       price: 'Price',
       reviews: 'Reviews',
       noReviews: 'No reviews yet',
-      inStock: 'In Stock',
       category: 'Category',
       description: 'Description',
       allProducts: 'All Products',
@@ -90,11 +92,20 @@ export const translations = {
       notesPlaceholder: 'Any special instructions for delivery'
     },
     home: {
+      categories: 'Categories',
+      brands: 'Brands',
+      mainCategories: 'Main Categories',
       shopByCategory: 'Shop by Category',
+      shopByBrand: 'Shop by Brand',
       products: 'products',
+      product: 'product',
       featuredProducts: 'Featured Products',
       noProducts: 'No products available at the moment.',
       viewAllProducts: 'View All Products',
+      noSubcategories: 'No subcategories available yet.',
+      createSubcategories: 'Create some subcategories to see them here.',
+      noBrands: 'No brands available yet.',
+      addBrandedCategories: 'Add some branded categories to see them here.',
       features: {
         genuineProducts: {
           title: 'Genuine Products',
@@ -322,9 +333,22 @@ export const translations = {
       title: 'Categories',
       browseAll: 'Browse All',
       products: 'products',
+      product: 'product',
       viewAll: 'View All',
       noCategories: 'No categories available at the moment.',
+      noProductsAvailable: 'No Products Available',
+      noSubcategoriesOrProducts: 'There are no subcategories or products in {category} right now.',
+      checkBackLater: 'Check back later or browse other categories.',
       noProducts: 'No products available'
+    },
+    brands: {
+      title: 'Brands',
+      viewAll: 'View All',
+      otherBrands: 'Other Brands',
+      moreBrands: 'More Brands',
+      noBrands: 'No brands available',
+      categories: 'categories',
+      moreCategories: 'more categories'
     },
     mostSelling: {
       title: 'Most Popular Products',
@@ -523,10 +547,12 @@ export const translations = {
     products: {
       addToCart: 'أضف إلى السلة',
       outOfStock: 'نفذت الكمية',
+      inStock: 'متوفر',
+      off: 'خصم',
+      availableColors: 'الألوان المتاحة:',
       price: 'السعر',
       reviews: 'التقييمات',
       noReviews: 'لا توجد تقييمات بعد',
-      inStock: 'متوفر',
       category: 'الفئة',
       description: 'الوصف',
       allProducts: 'جميع المنتجات',
@@ -575,11 +601,20 @@ export const translations = {
       notesPlaceholder: 'أي تعليمات خاصة للتوصيل'
     },
     home: {
+      categories: 'الفئات',
+      brands: 'الماركات',
+      mainCategories: 'الفئات الرئيسية',
       shopByCategory: 'تسوق حسب الفئة',
+      shopByBrand: 'تسوق حسب الماركة',
       products: 'منتجات',
+      product: 'منتج',
       featuredProducts: 'منتجات مميزة',
       noProducts: 'لا توجد منتجات متاحة في الوقت الحالي.',
       viewAllProducts: 'عرض جميع المنتجات',
+      noSubcategories: 'لا توجد فئات فرعية متاحة بعد.',
+      createSubcategories: 'أنشئ بعض الفئات الفرعية لترى هنا.',
+      noBrands: 'لا توجد ماركات متاحة بعد.',
+      addBrandedCategories: 'أضف بعض فئات الماركات لترى هنا.',
       features: {
         genuineProducts: {
           title: 'منتجات أصلية',
@@ -806,9 +841,22 @@ export const translations = {
       title: 'الفئات',
       browseAll: 'تصفح الكل',
       products: 'منتجات',
+      product: 'منتج',
       viewAll: 'عرض الكل',
       noCategories: 'لا توجد فئات متاحة في الوقت الحالي.',
+      noProductsAvailable: 'لا توجد منتجات متاحة',
+      noSubcategoriesOrProducts: 'لا توجد فئات فرعية أو منتجات في {category} الآن.',
+      checkBackLater: 'تحقق مرة أخرى لاحقاً أو تصفح الفئات الأخرى.',
       noProducts: 'لا توجد منتجات متاحة'
+    },
+    brands: {
+      title: 'الماركات',
+      viewAll: 'عرض الكل',
+      otherBrands: 'ماركات أخرى',
+      moreBrands: 'المزيد من الماركات',
+      noBrands: 'لا توجد ماركات متاحة',
+      categories: 'فئات',
+      moreCategories: 'المزيد من الفئات'
     },
     mostSelling: {
       title: 'المنتجات الأكثر شعبية',

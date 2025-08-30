@@ -173,14 +173,14 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
       {/* Sale Badge */}
       {product.sale && stockStatus.hasStock && (
         <div className="absolute top-2 left-2 z-10 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-medium">
-          {Math.round(product.sale)}% OFF
+          {Math.round(product.sale)}% {t('products.off')}
         </div>
       )}
 
       {/* Out of Stock Badge */}
       {!stockStatus.hasStock && (
         <div className="absolute top-2 left-2 z-10 bg-gray-800 text-white px-2 py-1 rounded-full text-sm font-medium">
-          Out of Stock
+          {t('products.outOfStock')}
         </div>
       )}
       
@@ -204,7 +204,7 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 {/* Color variants on hover */}
                 <div className="w-full">
-                  <h4 className="text-white text-xs mb-1 font-medium">Available Colors:</h4>
+                  <h4 className="text-white text-xs mb-1 font-medium">{t('products.availableColors')}</h4>
                   <div className="flex flex-wrap gap-1.5">
                     {product.variants
                       .filter(variant => variant.quantity > 0) // Filter out variants with zero quantity
@@ -267,7 +267,7 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
           ) : (
             <button
               disabled
-              title="Out of Stock"
+              title={t('products.outOfStock')}
               className="p-2 rounded-full bg-gray-300 text-white cursor-not-allowed flex-shrink-0"
             >
               <ShoppingCart className="h-4 w-4" />
@@ -298,7 +298,7 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
-              {stockStatus.hasStock ? 'In Stock' : 'Out of Stock'}
+              {stockStatus.hasStock ? t('products.inStock') : t('products.outOfStock')}
             </span>
           </div>
         </div>

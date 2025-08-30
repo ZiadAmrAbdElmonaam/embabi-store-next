@@ -30,7 +30,7 @@ interface ColorVariant {
   quantity: number;
 }
 
-interface ProductDetail {
+interface ProductDetailForm {
   label: string;
   description: string;
 }
@@ -59,7 +59,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>(
     initialData?.variants.map(v => ({ color: v.color, quantity: v.quantity })) || []
   );
-  const [details, setDetails] = useState<ProductDetail[]>(
+  const [details, setDetails] = useState<ProductDetailForm[]>(
     initialData?.details.map(d => ({ label: d.label, description: d.description })) || []
   );
   const [storages, setStorages] = useState<ProductStorage[]>(
@@ -383,7 +383,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           <option value="">Select a category</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
-              {category.name}
+              📂 {category.name} → /categories/{category.slug}
             </option>
           ))}
         </select>

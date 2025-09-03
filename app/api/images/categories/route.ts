@@ -25,7 +25,7 @@ export async function GET() {
       const cloudinaryResult = await cloudinary.api.resources({
         type: 'upload',
         prefix: 'embabi-store/categories/',
-        max_results: 100,
+        max_results: 500, // Increased to handle more images
         resource_type: 'image'
       });
 

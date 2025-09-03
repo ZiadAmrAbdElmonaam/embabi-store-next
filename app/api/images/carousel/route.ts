@@ -25,7 +25,7 @@ export async function GET() {
       const cloudinaryResult = await cloudinary.api.resources({
         type: 'upload',
         prefix: 'embabi-store/carousel/',
-        max_results: 100,
+        max_results: 500, // Increased to handle more images
         resource_type: 'image'
       });
 
@@ -64,8 +64,9 @@ export async function GET() {
 
     const response = NextResponse.json(allImages);
     
-    // Add caching headers - cache for 1 hour (carousel images don't change frequently)
-    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200');
+    // Add caching headers - cache for 5 minutes to allow new uploads to appear faster
+    // Temporarily set to no-cache for testing, change back to 300 after testing
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     
     return response;
   } catch (error) {

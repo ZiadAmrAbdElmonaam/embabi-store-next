@@ -107,6 +107,16 @@ export function Footer() {
                 <span><TranslatedContent translationKey="footer.address" />:</span>
                 <span><TranslatedContent translationKey="footer.addressText2" /></span>
               </li>
+              <li className="flex justify-between items-center gap-2">
+                <a 
+                  href="https://www.google.com/maps/search/?query=OXGEN+EMBABI+Tech&query_place_id=ChIJowiuM1c_WBQRJTmuNu1JC5Y&api=1&hl=en"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 underline transition-colors"
+                >
+                  <TranslatedContent translationKey="footer.getDirections" />
+                </a>
+              </li>
             </ul>
           </div>
         </div>

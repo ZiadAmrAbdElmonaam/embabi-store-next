@@ -38,7 +38,8 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
     // Fetch available images from the API (now includes both local and Cloudinary)
     const fetchImages = async () => {
       try {
-        const response = await fetch('/api/images/categories');
+        // Add cache busting parameter to ensure fresh data
+        const response = await fetch(`/api/images/categories?t=${Date.now()}`);
         if (!response.ok) throw new Error('Failed to fetch images');
         const images = await response.json();
         setAvailableImages(images);
@@ -124,7 +125,8 @@ export function CategoryForm({ initialData }: CategoryFormProps) {
   // Refresh available images
   const refreshImages = async () => {
     try {
-      const response = await fetch('/api/images/categories');
+      // Add cache busting parameter to ensure fresh data
+      const response = await fetch(`/api/images/categories?t=${Date.now()}`);
       if (response.ok) {
         const images = await response.json();
         setAvailableImages(images);

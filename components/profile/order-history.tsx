@@ -9,6 +9,7 @@ import { formatPrice } from '../../lib/utils';
 import { TranslatedContent } from '@/components/ui/translated-content';
 import { useTranslation } from '@/hooks/use-translation';
 import { getColorName } from '@/lib/colors';
+import { toast } from 'react-hot-toast';
 
 interface Order {
   id: string;
@@ -37,6 +38,7 @@ interface Order {
 export function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
   const { t, lang } = useTranslation();
 
   useEffect(() => {
@@ -51,6 +53,45 @@ export function OrderHistory() {
         setIsLoading(false);
       });
   }, []);
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm(t('profile.confirmCancelOrder'))) {
+      return;
+    }
+
+    setCancellingOrderId(orderId);
+
+    try {
+      const response = await fetch(`/api/user/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel order');
+      }
+
+      // Update the order status in the local state
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId
+            ? { ...order, status: OrderStatus.CANCELLED }
+            : order
+        )
+      );
+
+      toast.success(t('profile.orderCancelledSuccess'));
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error(error instanceof Error ? error.message : t('profile.orderCancelError'));
+    } finally {
+      setCancellingOrderId(null);
+    }
+  };
 
   if (isLoading) {
     return <div className="text-center py-8">{t('profile.loadingOrders')}</div>;
@@ -144,13 +185,31 @@ export function OrderHistory() {
               <span className="font-medium">{formatPrice(order.total)}</span>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 flex justify-between items-center">
               <Link
                 href={`/orders/${order.id}`}
                 className="text-blue-600 hover:text-blue-500 text-sm"
               >
                 {t('profile.viewOrderDetails')} →
               </Link>
+              
+              {/* Cancel Order Button - Only show for PENDING orders */}
+              {order.status === OrderStatus.PENDING && (
+                <button
+                  onClick={() => handleCancelOrder(order.id)}
+                  disabled={cancellingOrderId === order.id}
+                  className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                    cancellingOrderId === order.id
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                >
+                  {cancellingOrderId === order.id 
+                    ? t('profile.cancelling') 
+                    : t('profile.cancelOrder')
+                  }
+                </button>
+              )}
             </div>
           </div>
         </div>

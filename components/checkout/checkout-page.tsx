@@ -34,7 +34,7 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
   // Determine which items to use - only client items from cart storage
   const [checkoutItems, setCheckoutItems] = useState<any[]>([]);
   const [subtotal, setSubtotal] = useState(0);
-  const [shipping, setShipping] = useState(0);
+  const [shipping, setShipping] = useState(300);
   const [total, setTotal] = useState(0);
   const [appliedCouponState, setAppliedCouponState] = useState<Coupon | null>(null);
 

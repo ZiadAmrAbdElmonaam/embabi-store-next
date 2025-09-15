@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { formatPrice } from "@/lib/utils";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { PaymentStatusBadge } from "@/components/admin/payment-status-badge";
+import { PaymentMethodBadge } from "@/components/admin/payment-method-badge";
+import { OrderActionsDropdown } from "@/components/admin/order-actions-dropdown";
+import { OrdersPagination } from "@/components/admin/orders-pagination";
 import { OrderFilters } from "@/components/admin/order-filters";
 import { OrderActions } from "@/components/admin/order-actions";
 import { useState } from "react";
@@ -13,25 +17,38 @@ import { DeleteOrderModal } from "@/components/admin/delete-order-modal";
 import { getColorValue, getColorName } from "@/lib/colors";
 import { Ticket } from "lucide-react";
 
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 export default function AdminOrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [updateModalOrder, setUpdateModalOrder] = useState<string | null>(null);
   const [cancelItemsOrder, setCancelItemsOrder] = useState<string | null>(null);
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    fetchOrders(currentPage);
+  }, [currentPage]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page: number = 1) => {
     try {
-      const response = await fetch('/api/admin/orders');
+      setIsLoading(true);
+      const response = await fetch(`/api/admin/orders?page=${page}&limit=15`);
       if (!response.ok) throw new Error('Failed to fetch orders');
       const data = await response.json();
-      setOrders(data);
+      setOrders(data.orders);
+      setPagination(data.pagination);
     } catch (error) {
       toast.error('Failed to fetch orders');
       console.error('Failed to fetch orders:', error);
@@ -40,13 +57,18 @@ export default function AdminOrdersPage() {
     }
   };
 
-  if (isLoading) {
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedOrders([]); // Clear selections when changing pages
+  };
+
+  if (isLoading && orders.length === 0) {
     return <div className="p-8 text-center">Loading orders...</div>;
   }
 
   const handleStatusUpdate = async () => {
     // Refresh the orders list after status update
-    fetchOrders();
+    fetchOrders(currentPage);
   };
 
   const handleUpdateStatus = (orderId: string) => {
@@ -58,11 +80,11 @@ export default function AdminOrdersPage() {
   };
 
   const handleStatusUpdated = () => {
-    fetchOrders(); // Refresh the orders list
+    fetchOrders(currentPage); // Refresh the orders list
   };
 
   const handleItemsCancelled = () => {
-    fetchOrders(); // Refresh the orders list
+    fetchOrders(currentPage); // Refresh the orders list
   };
 
   const handleDeleteOrder = (orderId: string) => {
@@ -83,7 +105,7 @@ export default function AdminOrdersPage() {
 
       toast.success('Order deleted successfully');
       setDeleteOrderId(null);
-      fetchOrders(); // Refresh the orders list
+      fetchOrders(currentPage); // Refresh the orders list
     } catch (error) {
       toast.error('Failed to delete order');
       console.error('Failed to delete order:', error);
@@ -102,8 +124,17 @@ export default function AdminOrdersPage() {
         onStatusUpdate={handleStatusUpdate}
       />
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="bg-white rounded-lg shadow overflow-hidden relative">
+        {isLoading && orders.length > 0 && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-2"></div>
+              <p className="text-sm text-gray-600">Loading...</p>
+            </div>
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left">
@@ -131,7 +162,7 @@ export default function AdminOrdersPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Shipping Address
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">
                 Items
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -141,7 +172,13 @@ export default function AdminOrdersPage() {
                 Coupon
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                Payment Method
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Payment Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Order Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Date
@@ -192,10 +229,16 @@ export default function AdminOrdersPage() {
                 <td className="px-6 py-4">
                   <div className="text-sm text-gray-900 space-y-2">
                     {order.items && order.items.length > 0 ? order.items.map((item) => {
-                      // Find storage information if storageId exists
-                      const selectedStorage = item.storageId 
-                        ? item.product?.storages?.find(s => s.id === item.storageId)
-                        : null;
+                      // Resolve storage either by direct storageId match or by variantId match
+                      const selectedStorage = (() => {
+                        if (!item.storageId) return null;
+                        const storages = item.product?.storages || [];
+                        const direct = storages.find((s: any) => s.id === item.storageId);
+                        if (direct) return direct;
+                        // Fallback: some historical orders might have saved the storage variant id instead of storage id
+                        const viaVariant = storages.find((s: any) => Array.isArray(s.variants) && s.variants.some((v: any) => v.id === item.storageId));
+                        return viaVariant || null;
+                      })();
                       
                       return (
                         <div key={item.id} className="flex items-start">
@@ -210,13 +253,7 @@ export default function AdminOrdersPage() {
                                   </span>
                                 </div>
                               )}
-                              {item.storageId && !selectedStorage && (
-                                <div className="flex items-center">
-                                  <span className="text-xs text-red-500">
-                                    Storage: Not found (ID: {item.storageId})
-                                  </span>
-                                </div>
-                              )}
+                              {/* If storage cannot be resolved, gracefully omit it instead of showing an error */}
                               {item.color && (
                                 <div className="flex items-center">
                                   <div 
@@ -273,6 +310,12 @@ export default function AdminOrdersPage() {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  <PaymentMethodBadge method={order.paymentMethod} />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <PaymentStatusBadge status={order.paymentStatus} />
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <OrderStatusBadge status={order.status} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -281,29 +324,27 @@ export default function AdminOrdersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <button
-                    onClick={() => handleUpdateStatus(order.id)}
-                    className="text-blue-600 hover:text-blue-900 mr-3"
-                  >
-                    Update Status
-                  </button>
-                  <button
-                    onClick={() => handleCancelItems(order.id)}
-                    className="text-orange-600 hover:text-orange-900 mr-3"
-                  >
-                    Cancel Items
-                  </button>
-                  <button
-                    onClick={() => handleDeleteOrder(order.id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    Delete
-                  </button>
+                  <OrderActionsDropdown
+                    orderId={order.id}
+                    onUpdateStatus={handleUpdateStatus}
+                    onCancelItems={handleCancelItems}
+                    onDeleteOrder={handleDeleteOrder}
+                  />
                 </td>
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
+        
+        {/* Pagination */}
+        {pagination && (
+          <OrdersPagination
+            pagination={pagination}
+            onPageChange={handlePageChange}
+            isLoading={isLoading}
+          />
+        )}
       </div>
 
       {updateModalOrder && (

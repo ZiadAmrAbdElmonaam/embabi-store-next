@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     }
 
     // Parse items with safer error handling
-    let items = [];
+    let items: OrderItem[] = [];
     try {
       console.log("Parsing items...");
       const itemsJson = formData.get('items');
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
     console.log("Processing total...");
     const totalStr = formData.get('total');
     console.log("Total string:", totalStr, "Type:", typeof totalStr);
-    const total = typeof totalStr === 'string' ? Number(totalStr) : null;
+    const total = typeof totalStr === 'string' ? Number(totalStr) : 0;
     console.log("Parsed total:", total);
 
     // Get discount amount if provided
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required shipping information' }, { status: 400 });
     }
 
-    if (!total) {
+    if (!total || total <= 0) {
       console.error('Invalid total amount');
       return NextResponse.json({ error: 'Invalid total amount' }, { status: 400 });
     }
@@ -190,11 +191,21 @@ export async function POST(request: Request) {
       // Check stock availability for each product, storage, and color variant
       for (const orderItem of items) {
         const product = products.find(p => p.id === orderItem.id);
-        if (!product) continue;
+        if (!product) {
+          console.error(`Product ${orderItem.id} not found in database`);
+          continue;
+        }
+        
+        console.log(`Validating stock for product ${product.name} (ID: ${product.id})`);
+        console.log(`- Has storages: ${product.storages.length > 0}`);
+        console.log(`- Has variants: ${product.variants.length > 0}`);
+        console.log(`- Order item storageId: ${orderItem.storageId}`);
+        console.log(`- Order item selectedColor: ${orderItem.selectedColor}`);
         
         // Check stock based on storage selection
-        if (orderItem.storageId) {
+        if (orderItem.storageId && orderItem.storageId !== null) {
           // Storage-based product
+          console.log(`Processing storage-based product with storageId: ${orderItem.storageId}`);
           const selectedStorage = product.storages.find(s => s.id === orderItem.storageId);
           if (!selectedStorage) {
             console.error(`Storage ${orderItem.storageId} not found for product ${product.id}`);
@@ -206,6 +217,7 @@ export async function POST(request: Request) {
           
           if (orderItem.selectedColor) {
             // Storage + Color: Check storage variant stock
+            console.log(`Checking storage variant: ${orderItem.selectedColor} for storage ${orderItem.storageId}`);
             const storageVariant = selectedStorage.variants.find(v => v.color === orderItem.selectedColor);
             if (!storageVariant) {
               console.error(`Storage color variant ${orderItem.selectedColor} not found for storage ${orderItem.storageId}`);
@@ -216,29 +228,35 @@ export async function POST(request: Request) {
             }
             
             if (storageVariant.quantity < orderItem.quantity) {
-              console.error(`Insufficient storage variant stock for product ${product.name}`);
+              console.error(`Insufficient storage variant stock for product ${product.name}. Available: ${storageVariant.quantity}, Requested: ${orderItem.quantity}`);
               return NextResponse.json(
-                { error: `Insufficient stock for ${product.name} - ${orderItem.selectedColor}` },
+                { error: `Insufficient stock for ${product.name} - ${orderItem.selectedColor}. Available: ${storageVariant.quantity}` },
                 { status: 400 }
               );
             }
+            console.log(`Storage variant stock check passed: ${storageVariant.quantity} >= ${orderItem.quantity}`);
           } else {
             // Storage only: Check storage stock
+            console.log(`Checking storage stock: ${selectedStorage.stock} >= ${orderItem.quantity}`);
             if (selectedStorage.stock < orderItem.quantity) {
-              console.error(`Insufficient storage stock for product ${product.name}`);
+              console.error(`Insufficient storage stock for product ${product.name}. Available: ${selectedStorage.stock}, Requested: ${orderItem.quantity}`);
               return NextResponse.json(
-                { error: `Insufficient stock for ${product.name}` },
+                { error: `Insufficient stock for ${product.name}. Available: ${selectedStorage.stock}` },
                 { status: 400 }
               );
             }
+            console.log(`Storage stock check passed`);
           }
         } else {
-          // Non-storage product (legacy)
+          // Non-storage product (legacy or products without storage options)
+          console.log(`Processing non-storage product`);
           if (orderItem.selectedColor) {
             // Color only: Check product variant stock
+            console.log(`Checking color variant: ${orderItem.selectedColor}`);
             const colorVariant = product.variants.find(v => v.color === orderItem.selectedColor);
             if (!colorVariant) {
               console.error(`Color variant ${orderItem.selectedColor} not found for product ${product.id}`);
+              console.log(`Available variants: ${product.variants.map(v => v.color).join(', ')}`);
               return NextResponse.json(
                 { error: `Color ${orderItem.selectedColor} not available for product: ${product.name}` },
                 { status: 400 }
@@ -246,23 +264,27 @@ export async function POST(request: Request) {
             }
             
             if (colorVariant.quantity < orderItem.quantity) {
-              console.error(`Insufficient color variant stock for product ${product.name}`);
+              console.error(`Insufficient color variant stock for product ${product.name}. Available: ${colorVariant.quantity}, Requested: ${orderItem.quantity}`);
               return NextResponse.json(
-                { error: `Insufficient stock for ${product.name} - ${orderItem.selectedColor}` },
+                { error: `Insufficient stock for ${product.name} - ${orderItem.selectedColor}. Available: ${colorVariant.quantity}` },
                 { status: 400 }
               );
             }
+            console.log(`Color variant stock check passed: ${colorVariant.quantity} >= ${orderItem.quantity}`);
           } else {
             // No storage, no color: Check main product stock
+            console.log(`Checking main product stock: ${product.stock} >= ${orderItem.quantity}`);
             if (product.stock < orderItem.quantity) {
-              console.error(`Insufficient stock for product ${product.name} (ID: ${product.id})`);
+              console.error(`Insufficient stock for product ${product.name} (ID: ${product.id}). Available: ${product.stock}, Requested: ${orderItem.quantity}`);
               return NextResponse.json(
-                { error: `Insufficient stock for product: ${product.name}` },
+                { error: `Insufficient stock for product: ${product.name}. Available: ${product.stock}` },
                 { status: 400 }
               );
             }
+            console.log(`Main product stock check passed`);
           }
         }
+        console.log(`Stock validation completed for product ${product.name}`);
       }
       
       console.log("All products have sufficient stock");
@@ -297,7 +319,7 @@ export async function POST(request: Request) {
             });
             
             if (result && typeof result === 'object' && 'secure_url' in result) {
-              paymentProof = result.secure_url;
+              paymentProof = (result as any).secure_url;
               console.log("Payment proof uploaded successfully");
             }
           } catch (cloudinaryError) {
@@ -331,10 +353,12 @@ export async function POST(request: Request) {
         const newOrder = await prisma.order.create({
           data: {
             userId: session.user.id,
-            total,
+            total: total,
             discountAmount: discountAmount || 0,
             couponId: couponData?.id || null, // Store the coupon ID
-            status: paymentMethod === 'cash' ? 'PENDING' : 'PROCESSING',
+            status: 'PENDING', // Always start as PENDING, will be updated by webhook
+            paymentMethod: paymentMethod === 'cash' ? 'CASH' : 'ONLINE',
+            paymentStatus: paymentMethod === 'cash' ? 'SUCCESS' : 'PENDING', // COD = SUCCESS, Online = PENDING
             shippingName: shippingInfo.name,
             shippingPhone: shippingInfo.phone,
             shippingAddress: shippingInfo.address,
@@ -364,12 +388,12 @@ export async function POST(request: Request) {
         console.log("Updating product stock quantities...");
         
         // Prepare all updates to execute in parallel
-        const updatePromises = [];
+        const updatePromises: Promise<any>[] = [];
         
         for (const item of items) {
-          console.log(`Processing item ${item.id} - Quantity: ${item.quantity}`);
+          console.log(`Processing item ${item.id} - Quantity: ${item.quantity}, StorageId: ${item.storageId}, Color: ${item.selectedColor}`);
           
-          if (item.storageId) {
+          if (item.storageId && item.storageId !== null) {
             // Storage-based product: Update storage stock and storage variants
             console.log(`Updating storage stock for storage ${item.storageId}`);
             

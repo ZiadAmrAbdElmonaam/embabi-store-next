@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model User {
@@ -80,6 +81,9 @@ model Order {
   id              String         @id @default(cuid())
   userId          String
   status          OrderStatus    @default(PENDING)
+  paymentMethod   PaymentMethod  @default(CASH)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  trnxId          String?
   total           Decimal
   shippingName    String
   shippingPhone   String
@@ -97,6 +101,7 @@ model Order {
   statusHistory   StatusUpdate[]
 
   @@index([couponId])
+  @@index([trnxId])
 }
 
 model OrderItem {
@@ -333,4 +338,16 @@ enum OrderItemStatus {
 enum CouponType {
   PERCENTAGE
   FIXED
+}
+
+enum PaymentMethod {
+  CASH
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
 }

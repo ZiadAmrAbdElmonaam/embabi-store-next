@@ -14,7 +14,8 @@
     "delete-dummy-products": "ts-node -T scripts/delete-dummy-products.ts",
     "delete-electronics": "ts-node -T scripts/delete-electronics.ts",
     "delete-clothing": "ts-node -T scripts/delete-clothing.ts",
-    "cleanup-unverified": "ts-node -T scripts/cleanup-unverified.ts"
+    "cleanup-unverified": "ts-node -T scripts/cleanup-unverified.ts",
+    "fix-admin": "ts-node -T scripts/fix-admin.ts"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -24,6 +25,7 @@
     "@prisma/client": "^6.4.1",
     "@radix-ui/react-slider": "^1.2.2",
     "bcryptjs": "^2.4.3",
+    "cloudflared": "^0.7.1",
     "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "csv-stringify": "^6.5.2",

@@ -282,7 +282,15 @@ export const translations = {
       passwordRequirements: 'Password must be at least 8 characters',
       incorrectPassword: 'Current password is incorrect',
       readOnlyField: 'This field is read-only',
-      personalInfo: 'Personal Information'
+      personalInfo: 'Personal Information',
+      refund: 'Refund',
+      refundPrompt: 'Please contact support with our number ',
+      cancel: 'Cancel',
+      onlinePayment: 'Online Payment',
+      cashOnDelivery: 'Cash on Delivery',
+      loadMoreOrders: 'Load More Orders',
+      loading: 'Loading...',
+      showingOrdersCount: 'Showing {shown} of {total} orders'
     },
     cart: {
       shoppingCart: 'Shopping Cart',
@@ -796,7 +804,15 @@ export const translations = {
       passwordRequirements: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل',
       incorrectPassword: 'كلمة المرور الحالية غير صحيحة',
       readOnlyField: 'هذا الحقل للقراءة فقط',
-      personalInfo: 'المعلومات الشخصية'
+      personalInfo: 'المعلومات الشخصية',
+      refund: 'استرجاع',
+      refundPrompt: 'من فضلك تواصل مع الدعم برقم الهاتف ',
+      cancel: 'إغلاق',
+      onlinePayment: 'دفع أونلاين',
+      cashOnDelivery: 'الدفع عند الاستلام',
+      loadMoreOrders: 'تحميل المزيد من الطلبات',
+      loading: 'جاري التحميل...',
+      showingOrdersCount: 'عرض {shown} من {total} طلب'
     },
     cart: {
       shoppingCart: 'عربة التسوق',

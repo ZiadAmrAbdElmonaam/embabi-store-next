@@ -42,3 +42,26 @@ next-env.d.ts
 # uploads
 public/uploads/*
 !public/uploads/.gitkeep
+
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.eslintcache
+.cache/
+.swc/
+.turbo/
+.zip
+.tar.gz
+dump.rdb
+.env.local
+.db
+.sqlite
+.sqlite-journal.env
+.env.local

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { OrderHistory } from "@/components/profile/order-history";
 import { useSession } from "next-auth/react";
@@ -10,6 +10,21 @@ import { TranslatedContent } from "@/components/ui/translated-content";
 export default function ProfilePage() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('profile');
+  const [totalOrders, setTotalOrders] = useState<number>(0);
+
+  useEffect(() => {
+    if (session) {
+      // Fetch total order count
+      fetch('/api/user/orders/count')
+        .then((res) => res.json())
+        .then((data) => {
+          setTotalOrders(data.count || 0);
+        })
+        .catch((error) => {
+          console.error('Failed to fetch order count:', error);
+        });
+    }
+  }, [session]);
 
   if (!session) {
     return null;
@@ -70,7 +85,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600"><TranslatedContent translationKey="profile.totalOrders" /></p>
-                  <p className="text-2xl font-bold text-gray-900">12</p>
+                  <p className="text-2xl font-bold text-gray-900">{totalOrders}</p>
                 </div>
               </div>
             </div>

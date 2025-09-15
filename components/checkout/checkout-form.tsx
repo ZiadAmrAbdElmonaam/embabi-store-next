@@ -41,7 +41,7 @@ const EGYPTIAN_STATES = [
   "Suez"
 ].sort();
 
-type PaymentMethod = 'cash' | 'vodafone' | 'instapay' | 'visa';
+type PaymentMethod = 'cash' | 'online';
 
 interface CheckoutFormProps {
   user: {
@@ -107,12 +107,24 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
     phone: "",
     address: "",
     state: "",
-    city: ""
+    city: "",
+    notes: ""
   });
-  const [selectedPaymentMethod] = useState<PaymentMethod>('cash'); // Fixed to cash only
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const { isMaintenanceMode, maintenanceMessage } = useMaintenance();
+
+  // Disable body scroll and interactions while loading
+  useEffect(() => {
+    if (isLoading) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isLoading]);
 
   // Fetch any applied coupon
   useEffect(() => {
@@ -211,8 +223,8 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         name: formData.name,
         phone: formData.phone,
         address: formData.address,
-        city: formData.city,
-        notes: `State: ${formData.state}`
+        city: `${formData.city}, ${formData.state}`,
+        notes: formData.notes || null
       };
       formDataToSend.append('shippingInfo', JSON.stringify(shippingData));
 
@@ -250,9 +262,53 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
       // Set the order completed flag to prevent redirect to cart
       onOrderComplete();
       
+      // Store order ID in localStorage for potential failed payment redirects
+      localStorage.setItem("lastOrderId", id);
+      
       // Clear the cart after successful order
       clearCart();
       
+      // If user selected online payment, initiate Paymob intention
+      if (selectedPaymentMethod === 'online') {
+        try {
+          const paymobRes = await fetch('/api/paymob/intentions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              orderId: id,
+              amount: totalWithDiscount,
+              currency: 'EGP',
+              billingData: {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+              },
+              payment_methods: [5272644] // Backend will convert to integration ID
+            })
+          });
+          const paymobData = await paymobRes.json();
+          console.log('Paymob data:', paymobData);
+          const redirectUrl =
+            paymobData.unified_checkout_url ||
+            paymobData.payment_url ||
+            paymobData.iframe_url ||
+            null;
+          if (!paymobRes.ok || !redirectUrl) {
+            throw new Error('Failed to initiate online payment');
+          }
+          toast.success(t('checkout.orderPlaced'));
+          window.location.href = redirectUrl;
+          return;
+        } catch (e) {
+          console.error('Paymob initiation failed', e);
+          toast.error(lang === 'ar' ? 'فشل في بدء الدفع الإلكتروني. يمكنك الدفع عند الاستلام.' : 'Failed to start online payment. You can pay on delivery.');
+          // Don't redirect to order page if payment initiation fails
+          return;
+        }
+      }
+
       toast.success(t('checkout.orderPlaced'));
       router.push(`/orders/${id}`);
     } catch (error: unknown) {
@@ -265,6 +321,23 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {isLoading && (
+        <div
+          role="alert"
+          aria-busy="true"
+          className="fixed inset-0 z-[1000] bg-black/50 backdrop-blur-sm flex items-center justify-center"
+        >
+          <div className="bg-white rounded-xl px-6 py-5 shadow-md flex items-center gap-3">
+            <svg className="animate-spin h-5 w-5 text-orange-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-sm font-medium text-gray-800">
+              {lang === 'ar' ? 'جارٍ إتمام الطلب والدفع...' : 'Placing your order and starting payment...'}
+            </span>
+          </div>
+        </div>
+      )}
       {/* Maintenance Mode Banner */}
       {isMaintenanceMode && (
         <div className="lg:col-span-3 bg-red-50 border-l-4 border-red-400 p-4 mb-4">
@@ -400,16 +473,36 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
             <TranslatedContent translationKey="checkout.paymentMethod" />
           </h2>
           
-          {/* Active Payment Method - Cash on Delivery Only */}
-          <div className="mb-6">
-            <div className="border-2 border-orange-500 bg-orange-50 rounded-lg p-4">
+          {/* Payment Method Selection */}
+          <div className="space-y-3">
+            <div
+              className={`border-2 rounded-lg p-4 cursor-pointer ${selectedPaymentMethod === 'cash' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white'}`}
+              onClick={() => setSelectedPaymentMethod('cash')}
+            >
               <div className="flex items-center gap-3">
                 <BanknoteIcon className="h-6 w-6 text-orange-600" />
                 <span className="font-medium text-orange-800">
                   <TranslatedContent translationKey="checkout.cashOnDelivery" />
                 </span>
                 <div className="ml-auto">
-                  <div className="w-4 h-4 rounded-full bg-orange-600 flex items-center justify-center">
+                  <div className={`w-4 h-4 rounded-full ${selectedPaymentMethod === 'cash' ? 'bg-orange-600' : 'bg-gray-300'} flex items-center justify-center`}>
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`border-2 rounded-lg p-4 cursor-pointer ${selectedPaymentMethod === 'online' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+              onClick={() => setSelectedPaymentMethod('online')}
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-6 w-6 text-blue-700" />
+                <span className="font-medium text-blue-800">
+                  {lang === 'ar' ? 'الدفع أونلاين' : 'Pay Online'}
+                </span>
+                <div className="ml-auto">
+                  <div className={`w-4 h-4 rounded-full ${selectedPaymentMethod === 'online' ? 'bg-blue-600' : 'bg-gray-300'} flex items-center justify-center`}>
                     <div className="w-2 h-2 rounded-full bg-white"></div>
                   </div>
                 </div>

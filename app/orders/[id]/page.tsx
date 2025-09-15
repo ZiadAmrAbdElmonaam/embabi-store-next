@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { notFound, redirect } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import { Package, Truck, CheckCircle, Clock, XCircle, Ticket } from "lucide-react";
+import { Package, Truck, CheckCircle, Clock, XCircle, Ticket, CreditCard, AlertCircle } from "lucide-react";
 import { authOptions } from "@/app/api/auth/auth-options";
 import Image from "next/image";
 import { format } from "date-fns";
@@ -18,33 +18,73 @@ const statusSteps = [
   'CANCELLED'
 ] as const;
 
-// Function to get translations
-function t(key: string) {
-  // Get the language from cookies, default to English
-  const cookieStore = cookies();
-  const lang = cookieStore.get('lang')?.value || 'en';
-  
-  // Split the key by dots to navigate the translations object
-  const keys = key.split('.');
-  let translation: any = translations[lang];
-  
-  // Navigate through the keys
-  for (const k of keys) {
-    if (translation && translation[k]) {
-      translation = translation[k];
-    } else {
-      // Return the key if translation not found
-      return key;
+// Translation helper factory (avoids reading cookies inside)
+function makeT(lang: string) {
+  return (key: string) => {
+    const keys = key.split('.');
+    let translation: any = translations[lang];
+    for (const k of keys) {
+      if (translation && translation[k]) {
+        translation = translation[k];
+      } else {
+        return key;
+      }
+    }
+    return translation;
+  };
+}
+
+// Lightweight localization for common Egyptian cities/governorates
+const cityDictionary: Array<{ en: string; ar: string }> = [
+  { en: 'Cairo', ar: 'القاهرة' },
+  { en: 'Giza', ar: 'الجيزة' },
+  { en: 'Alexandria', ar: 'الإسكندرية' },
+  { en: 'Luxor', ar: 'الأقصر' },
+  { en: 'Aswan', ar: 'أسوان' },
+  { en: 'Asyut', ar: 'أسيوط' },
+  { en: 'Qena', ar: 'قنا' },
+  { en: 'Minya', ar: 'المنيا' },
+  { en: 'Mansoura', ar: 'المنصورة' },
+  { en: 'Tanta', ar: 'طنطا' },
+  { en: 'Port Said', ar: 'بورسعيد' },
+  { en: 'Suez', ar: 'السويس' },
+  { en: 'Ismailia', ar: 'الإسماعيلية' },
+  { en: 'Beni Suef', ar: 'بني سويف' },
+  { en: 'Fayoum', ar: 'الفيوم' },
+  { en: 'Sohag', ar: 'سوهاج' },
+  { en: 'Damietta', ar: 'دمياط' },
+  { en: 'Kafr El Sheikh', ar: 'كفر الشيخ' },
+  { en: 'Qalyubia', ar: 'القليوبية' },
+  { en: 'Sharqia', ar: 'الشرقية' },
+  { en: 'Beheira', ar: 'البحيرة' },
+  { en: 'Red Sea', ar: 'البحر الأحمر' },
+  { en: 'New Valley', ar: 'الوادي الجديد' },
+  { en: 'Matrouh', ar: 'مطروح' },
+  { en: 'North Sinai', ar: 'شمال سيناء' },
+  { en: 'South Sinai', ar: 'جنوب سيناء' },
+  { en: 'Nasr City', ar: 'مدينة نصر' },
+];
+
+function localizeCityName(raw: string | null | undefined, lang: string): string {
+  const value = (raw || '').trim();
+  if (!value) return '';
+  for (const entry of cityDictionary) {
+    if (value.toLowerCase() === entry.en.toLowerCase()) {
+      return lang === 'ar' ? entry.ar : entry.en;
+    }
+    if (value === entry.ar) {
+      return lang === 'ar' ? entry.ar : entry.en;
     }
   }
-  
-  return translation;
+  return value; // fallback to what user entered
 }
 
 export default async function OrderPage({
   params,
+  searchParams,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ payment?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -52,11 +92,18 @@ export default async function OrderPage({
   }
 
   // Get language from cookies for color name translation
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const lang = cookieStore.get('lang')?.value || 'en';
+  const t = makeT(lang);
+  const isRTL = lang === 'ar';
 
+  const { id } = await params;
+  const { payment } = await searchParams;
+  
+  // Check if this is a failed payment redirect
+  const isFailedPayment = payment === 'failed';
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       items: {
         include: {
@@ -97,12 +144,86 @@ export default async function OrderPage({
     'CANCELLED': <XCircle className="w-5 h-5" />
   };
 
-  // Calculate the subtotal (without discount)
-  const subtotal = order.discountAmount ? Number(order.total) + Number(order.discountAmount) : Number(order.total);
+  // Calculate the actual subtotal from order items (before shipping and discount)
+  const subtotal = order.items.reduce((total, item) => {
+    return total + (Number(item.price) * item.quantity);
+  }, 0);
 
   return (
     <div className="flex justify-center items-center py-12 px-4 bg-gray-50 min-h-[calc(100vh-4rem)]">
       <div className="bg-white rounded-xl shadow-sm overflow-hidden max-w-4xl w-full">
+        {/* Payment Status Banner (moved to top) */}
+        <div className="p-6 border-b bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {order.paymentStatus === 'SUCCESS' && (
+                <>
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <div>
+                    <p className="font-semibold text-green-800">
+                      {lang === 'ar' ? 'تم الدفع بنجاح' : 'Payment Successful'}
+                    </p>
+                    <p className="text-sm text-green-600">
+                      {lang === 'ar' ? 'تم تأكيد الدفع ويمكن الآن معالجة الطلب' : 'Payment confirmed and order can now be processed'}
+                    </p>
+                  </div>
+                </>
+              )}
+              {order.paymentStatus === 'PENDING' && (
+                <>
+                  <Clock className="w-6 h-6 text-yellow-600" />
+                  <div>
+                    <p className="font-semibold text-yellow-800">
+                      {lang === 'ar' ? 'في انتظار الدفع' : 'Payment Pending'}
+                    </p>
+                    <p className="text-sm text-yellow-600">
+                      {lang === 'ar' ? 'جاري معالجة الدفع، يرجى الانتظار' : 'Payment is being processed, please wait'}
+                    </p>
+                  </div>
+                </>
+              )}
+              {order.paymentStatus === 'FAILED' && (
+                <>
+                  <XCircle className="w-6 h-6 text-red-600" />
+                  <div>
+                    <p className="font-semibold text-red-800">
+                      {lang === 'ar' ? 'فشل في الدفع' : 'Payment Failed'}
+                    </p>
+                    <p className="text-sm text-red-600">
+                      {isFailedPayment 
+                        ? (lang === 'ar' ? 'لم يتم الدفع بنجاح، يمكنك المحاولة مرة أخرى من صفحة الطلب' : 'Payment failed, you can try again from the order page')
+                        : (lang === 'ar' ? 'لم يتم الدفع بنجاح، يمكنك المحاولة مرة أخرى' : 'Payment was not successful, you can try again')
+                      }
+                    </p>
+                  </div>
+                </>
+              )}
+              {order.paymentStatus === 'CANCELLED' && (
+                <>
+                  <AlertCircle className="w-6 h-6 text-gray-600" />
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      {lang === 'ar' ? 'تم إلغاء الدفع' : 'Payment Cancelled'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {lang === 'ar' ? 'تم إلغاء عملية الدفع' : 'Payment process was cancelled'}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <CreditCard className="w-4 h-4" />
+              <span>
+                {order.paymentMethod === 'CASH' 
+                  ? (lang === 'ar' ? 'الدفع عند الاستلام' : 'Cash on Delivery')
+                  : (lang === 'ar' ? 'الدفع الإلكتروني' : 'Online Payment')
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Order Header */}
         <div className="p-8 border-b">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -115,23 +236,27 @@ export default async function OrderPage({
                 {t('order.placedOn')}: {format(order.createdAt, 'PPP')}
               </p>
             </div>
-            <div className="bg-gray-100 px-5 py-3 rounded-lg">
-              <p className="text-sm font-medium">
-                {t('order.status')}: <span className="text-orange-600 font-semibold">{t(`order.${order.status.toLowerCase()}`)}</span>
-              </p>
-            </div>
+            {!isFailedPayment && order.paymentStatus !== 'FAILED' && (
+              <div className="bg-gray-100 px-5 py-3 rounded-lg">
+                <p className="text-sm font-medium">
+                  {t('order.status')}: <span className="text-orange-600 font-semibold">{t(`order.${order.status.toLowerCase()}`)}</span>
+                </p>
+              </div>
+            )}
           </div>
           </div>
 
-          {/* Progress Tracker */}
-        {order.status !== 'CANCELLED' && (
+          {/* Payment Status Banner moved above */}
+
+          {/* Progress Tracker - Only show if payment is successful and not a failed payment redirect */}
+        {!isFailedPayment && order.paymentStatus === 'SUCCESS' && order.status !== 'CANCELLED' && (
           <div className="p-8 border-b">
             <h2 className="text-lg font-semibold mb-8 text-center">{t('order.trackYourOrder')}</h2>
             <div className="relative px-4">
               {/* Progress Bar */}
               <div className="absolute top-1/2 left-0 w-full h-2 bg-gray-200 -translate-y-1/2 rounded-full"></div>
               <div 
-                className="absolute top-1/2 left-0 h-2 bg-orange-500 -translate-y-1/2 transition-all duration-500 rounded-full"
+                className={`absolute top-1/2 ${isRTL ? 'right-0' : 'left-0'} h-2 bg-orange-500 -translate-y-1/2 transition-all duration-500 rounded-full`}
                 style={{ width: `${(currentStepIndex / (statusSteps.length - 2)) * 100}%` }}
               ></div>
               
@@ -170,10 +295,15 @@ export default async function OrderPage({
           <h2 className="text-lg font-semibold mb-6">{t('order.items')}</h2>
           <div className="space-y-6">
                 {order.items.map((item) => {
-                  // Find storage information if storageId exists
-                  const selectedStorage = item.storageId 
-                    ? item.product.storages.find(s => s.id === item.storageId)
-                    : null;
+                  // Resolve storage by storage id or, if historical, by variant id
+                  const selectedStorage = (() => {
+                    if (!item.storageId) return null;
+                    const storages = item.product.storages || [];
+                    const direct = storages.find((s: any) => s.id === item.storageId);
+                    if (direct) return direct;
+                    const viaVariant = storages.find((s: any) => Array.isArray((s as any).variants) && (s as any).variants.some((v: any) => v.id === item.storageId));
+                    return viaVariant || null;
+                  })();
                   
                   return (
               <div key={item.id} className="flex gap-6 p-4 bg-gray-50 rounded-lg">
@@ -221,7 +351,7 @@ export default async function OrderPage({
             <div className="md:col-span-2">
               <p className="text-gray-500 text-sm">{t('order.address')}</p>
               <p className="font-medium mt-1">{order.shippingAddress}</p>
-              <p className="font-medium">{order.shippingCity}{order.shippingNotes ? `, ${order.shippingNotes}` : ''}</p>
+              <p className="font-medium">{localizeCityName(order.shippingCity, lang)}</p>
             </div>
           </div>
         </div>
@@ -258,7 +388,7 @@ export default async function OrderPage({
             
             <div className="flex justify-between">
               <p className="text-gray-500">{t('order.shipping')}</p>
-              <p>EGP 0</p>
+              <p>EGP 300</p>
             </div>
             <div className="flex justify-between font-semibold text-lg pt-3 border-t border-gray-200 mt-3">
               <p>{t('order.total')}</p>

@@ -161,6 +161,12 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
 
   // Recalculate total with discount
   const totalWithDiscount = subtotal + shipping - discountAmount;
+  // Paymob online payment fee (3.2%) applies only when paying online
+  const PAYMOB_FEE_RATE = 0.032;
+  const paymobFee = selectedPaymentMethod === 'online' 
+    ? Math.round(totalWithDiscount * PAYMOB_FEE_RATE) 
+    : 0;
+  const onlineTotalWithFee = totalWithDiscount + paymobFee;
 
   const validateEgyptianPhone = (phone: string) => {
     // Egyptian phone number format: +20 1XX XXX XXXX
@@ -278,7 +284,8 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
             },
             body: JSON.stringify({
               orderId: id,
-              amount: totalWithDiscount,
+              // Include Paymob service fee in intention amount (not part of order total)
+              amount: onlineTotalWithFee,
               currency: 'EGP',
               billingData: {
                 name: formData.name,
@@ -638,11 +645,26 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
                 </span>
                 <span>EGP {shipping.toLocaleString()}</span>
               </div>
+              {selectedPaymentMethod === 'online' && (
+                <>
+                  <div className="flex justify-between text-blue-700">
+                    <span>
+                      {lang === 'ar' ? 'ضريبة (3.2%)' : 'VAT (3.2%)'}
+                    </span>
+                    <span>EGP {paymobFee.toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 -mt-1">
+                    {lang === 'ar' ? 'تطبق فقط عند الدفع أونلاين' : 'Applies only to online payments'}
+                  </p>
+                </>
+              )}
               <div className="flex justify-between font-semibold text-lg pt-2 border-t border-gray-100">
                 <span>
-                  <TranslatedContent translationKey="cart.total" />
+                  {selectedPaymentMethod === 'online' 
+                    ? (lang === 'ar' ? 'الإجمالي أونلاين' : 'Online total')
+                    : <TranslatedContent translationKey="cart.total" />}
                 </span>
-                <span>EGP {totalWithDiscount.toLocaleString()}</span> {/* Subtotal + Shipping - Discount */}
+                <span>EGP {(selectedPaymentMethod === 'online' ? onlineTotalWithFee : totalWithDiscount).toLocaleString()}</span>
               </div>
             </div>
             

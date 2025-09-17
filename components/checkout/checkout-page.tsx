@@ -110,7 +110,7 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
         },
         0
       );
-      const calculatedShipping = 300; // Fixed shipping cost
+      const calculatedShipping = 0; // Fixed shipping cost
       
       // Calculate discount if a coupon is applied
       let discountAmount = 0;

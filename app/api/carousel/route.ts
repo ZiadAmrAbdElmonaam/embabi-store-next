@@ -11,8 +11,9 @@ export async function GET() {
       select: {
         id: true,
         url: true,
-        order: true
-      }
+        order: true,
+        linkUrl: true,
+      },
     });
 
     const response = NextResponse.json({ images });

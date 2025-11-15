@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useCallback, useRef, TouchEvent } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CarouselImage {
   id: string;
   url: string;
   order: number;
+  linkUrl?: string | null;
 }
 
 export function HomeCarousel() {
@@ -170,16 +172,35 @@ export function HomeCarousel() {
               index === currentIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
-            <Image
-              src={image.url}
-              alt={`Carousel image ${index + 1}`}
-              fill
-              priority={index === currentIndex}
-              className="object-contain object-center transition-all duration-300"
-              sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, (max-width: 1280px) 100vw, 1400px"
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyb5bt69OuuIyn0lcgezo9vFJs/1pSMicp6lSNRV4+0Ob/7fZvP3wZqBw=="
-            />
+            {image.linkUrl ? (
+              <Link
+                href={image.linkUrl}
+                aria-label={`View details for slide ${index + 1}`}
+                className="block h-full w-full"
+              >
+                <Image
+                  src={image.url}
+                  alt={`Carousel image ${index + 1}`}
+                  fill
+                  priority={index === currentIndex}
+                  className="object-contain object-center transition-all duration-300 cursor-pointer"
+                  sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, (max-width: 1280px) 100vw, 1400px"
+                  placeholder="blur"
+                  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyb5bt69OuuIyn0lcgezo9vFJs/1pSMicp6lSNRV4+0Ob/7fZvP3wZqBw=="
+                />
+              </Link>
+            ) : (
+              <Image
+                src={image.url}
+                alt={`Carousel image ${index + 1}`}
+                fill
+                priority={index === currentIndex}
+                className="object-contain object-center transition-all duration-300"
+                sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, (max-width: 1024px) 100vw, (max-width: 1280px) 100vw, 1400px"
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyb5bt69OuuIyn0lcgezo9vFJs/1pSMicp6lSNRV4+0Ob/7fZvP3wZqBw=="
+              />
+            )}
           </div>
         ))}
       </div>

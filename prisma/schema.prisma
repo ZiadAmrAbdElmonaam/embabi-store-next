@@ -311,6 +311,7 @@ model CarouselImage {
   url       String
   order     Int
   isActive  Boolean  @default(true)
+  linkUrl   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

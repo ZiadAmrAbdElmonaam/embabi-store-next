@@ -22,7 +22,16 @@ export async function GET() {
     try {
       images = await prisma.carouselImage.findMany({
         where: { isActive: true },
-        orderBy: { order: 'asc' }
+        orderBy: { order: 'asc' },
+        select: {
+          id: true,
+          url: true,
+          order: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          linkUrl: true,
+        },
       });
     } catch (prismaError) {
       console.log('⚠️ Prisma model failed, trying raw SQL...', prismaError.message);
@@ -63,7 +72,7 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
-    const { url, order } = data;
+    const { url, order, linkUrl } = data;
 
     if (!url) {
       return NextResponse.json(
@@ -84,8 +93,9 @@ export async function POST(request: Request) {
       data: {
         url,
         order: newOrder,
-        isActive: true
-      }
+        isActive: true,
+        linkUrl: linkUrl || null,
+      },
     });
 
     return NextResponse.json({ 

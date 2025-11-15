@@ -9,6 +9,7 @@ interface CarouselImage {
   id: string;
   url: string;
   order: number;
+  linkUrl?: string | null;
 }
 
 export default function CarouselManagementPage() {
@@ -16,6 +17,9 @@ export default function CarouselManagementPage() {
   const [availableImages, setAvailableImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [newImageLink, setNewImageLink] = useState('');
+  const [linkInputs, setLinkInputs] = useState<Record<string, string>>({});
+  const [savingLinkId, setSavingLinkId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -28,7 +32,14 @@ export default function CarouselManagementPage() {
         const carouselData = await imagesResponse.json();
         
         // Ensure images array exists even if API returns incomplete data
-        setImages(carouselData.images || []);
+        const imagesData = carouselData.images || [];
+        setImages(imagesData);
+        setLinkInputs(
+          imagesData.reduce((acc: Record<string, string>, image: CarouselImage) => {
+            acc[image.id] = image.linkUrl || '';
+            return acc;
+          }, {})
+        );
         
         // Fetch available images from both local and Cloudinary
         const availableResponse = await fetch('/api/images/carousel');
@@ -42,6 +53,7 @@ export default function CarouselManagementPage() {
         toast.error('Failed to load carousel data');
         // Set empty arrays to prevent undefined errors
         setImages([]);
+        setLinkInputs({});
         setAvailableImages([]);
       } finally {
         setIsLoading(false);
@@ -66,6 +78,7 @@ export default function CarouselManagementPage() {
         body: JSON.stringify({
           url: selectedImage,
           order: images.length + 1, // Add to the end
+          linkUrl: newImageLink.trim() || null,
         }),
       });
 
@@ -73,7 +86,12 @@ export default function CarouselManagementPage() {
       
       const result = await response.json();
       setImages([...images, result.image]);
+      setLinkInputs((prev) => ({
+        ...prev,
+        [result.image.id]: result.image.linkUrl || '',
+      }));
       setSelectedImage(null);
+      setNewImageLink('');
       toast.success('Image added to carousel');
     } catch (error) {
       console.error('Error adding image:', error);
@@ -91,10 +109,60 @@ export default function CarouselManagementPage() {
       
       // Remove from local state
       setImages(images.filter(img => img.id !== id));
+      setLinkInputs((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
       toast.success('Image removed from carousel');
     } catch (error) {
       console.error('Error removing image:', error);
       toast.error('Failed to remove image from carousel');
+    }
+  };
+
+  const handleLinkInputChange = (id: string, value: string) => {
+    setLinkInputs((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  const handleSaveLink = async (id: string) => {
+    const linkValue = linkInputs[id]?.trim() || '';
+
+    try {
+      setSavingLinkId(id);
+      const response = await fetch(`/api/admin/carousel/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          linkUrl: linkValue || null,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update link');
+
+      const result = await response.json();
+
+      setImages((prev) =>
+        prev.map((img) =>
+          img.id === id ? { ...img, linkUrl: result.image.linkUrl } : img
+        )
+      );
+      setLinkInputs((prev) => ({
+        ...prev,
+        [id]: result.image.linkUrl || '',
+      }));
+
+      toast.success('Link saved');
+    } catch (error) {
+      console.error('Error saving link:', error);
+      toast.error('Failed to save link');
+    } finally {
+      setSavingLinkId(null);
     }
   };
 
@@ -117,6 +185,12 @@ export default function CarouselManagementPage() {
       
       // Update local state with the new order from the server
       setImages(result.images);
+      setLinkInputs(
+        result.images.reduce((acc: Record<string, string>, image: CarouselImage) => {
+          acc[image.id] = image.linkUrl || '';
+          return acc;
+        }, {})
+      );
       
       toast.success('Carousel order updated');
     } catch (error) {
@@ -135,7 +209,14 @@ export default function CarouselManagementPage() {
       const carouselData = await imagesResponse.json();
       
       // Ensure images array exists even if API returns incomplete data
-      setImages(carouselData.images || []);
+      const imagesData = carouselData.images || [];
+      setImages(imagesData);
+      setLinkInputs(
+        imagesData.reduce((acc: Record<string, string>, image: CarouselImage) => {
+          acc[image.id] = image.linkUrl || '';
+          return acc;
+        }, {})
+      );
       
       // Fetch available images from both local and Cloudinary
       const availableResponse = await fetch('/api/images/carousel');
@@ -199,38 +280,61 @@ export default function CarouselManagementPage() {
                     className="object-cover"
                   />
                 </div>
-                <div className="p-3 flex justify-between items-center">
-                  <div>
-                    <span className="text-sm font-medium">Position: {index + 1}</span>
-                    <div className="text-xs text-gray-500 truncate max-w-24">
-                      {(() => {
-                        const parts = image.url.split('/');
-                        const fileName = parts[parts.length - 1];
-                        return fileName.split('.')[0].replace(/[-_]/g, ' ');
-                      })()}
+                <div className="p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium">Position: {index + 1}</span>
+                      <div className="text-xs text-gray-500 truncate max-w-24">
+                        {(() => {
+                          const parts = image.url.split('/');
+                          const fileName = parts[parts.length - 1];
+                          return fileName.split('.')[0].replace(/[-_]/g, ' ');
+                        })()}
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleReorderImage(image.id, 'up')}
+                        disabled={index === 0}
+                        className="p-1 text-gray-600 hover:text-blue-600 disabled:text-gray-300"
+                      >
+                        <ArrowUp className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleReorderImage(image.id, 'down')}
+                        disabled={index === images.length - 1}
+                        className="p-1 text-gray-600 hover:text-blue-600 disabled:text-gray-300"
+                      >
+                        <ArrowDown className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveImage(image.id)}
+                        className="p-1 text-gray-600 hover:text-red-600"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleReorderImage(image.id, 'up')}
-                      disabled={index === 0}
-                      className="p-1 text-gray-600 hover:text-blue-600 disabled:text-gray-300"
-                    >
-                      <ArrowUp className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleReorderImage(image.id, 'down')}
-                      disabled={index === images.length - 1}
-                      className="p-1 text-gray-600 hover:text-blue-600 disabled:text-gray-300"
-                    >
-                      <ArrowDown className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleRemoveImage(image.id)}
-                      className="p-1 text-gray-600 hover:text-red-600"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Link URL (optional)
+                    </label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={linkInputs[image.id] ?? ''}
+                        onChange={(e) => handleLinkInputChange(image.id, e.target.value)}
+                        placeholder="/products/iphone-16"
+                        className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs"
+                      />
+                      <button
+                        onClick={() => handleSaveLink(image.id)}
+                        disabled={savingLinkId === image.id}
+                        className="px-3 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                      >
+                        {savingLinkId === image.id ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -278,22 +382,39 @@ export default function CarouselManagementPage() {
         {selectedImage && (
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2">Selected Image:</h3>
-            <div className="flex items-center space-x-4">
-              <div className="relative w-32 h-20 bg-gray-100 rounded overflow-hidden">
-                <Image 
-                  src={selectedImage}
-                  alt="Selected carousel image"
-                  fill
-                  className="object-cover"
-                />
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+              <div className="flex items-center space-x-4">
+                <div className="relative w-32 h-20 bg-gray-100 rounded overflow-hidden">
+                  <Image 
+                    src={selectedImage}
+                    alt="Selected carousel image"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
               </div>
-              <button
-                onClick={handleAddImage}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <ImagePlus className="h-5 w-5 mr-2" />
-                Add to Carousel
-              </button>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Link URL (optional)
+                </label>
+                <input
+                  type="text"
+                  value={newImageLink}
+                  onChange={(e) => setNewImageLink(e.target.value)}
+                  placeholder="/products/iphone-16"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">Use relative URLs like /products/iphone-16</p>
+              </div>
+              <div>
+                <button
+                  onClick={handleAddImage}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <ImagePlus className="h-5 w-5 mr-2" />
+                  Add to Carousel
+                </button>
+              </div>
             </div>
           </div>
         )}

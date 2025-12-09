@@ -41,7 +41,7 @@ const EGYPTIAN_STATES = [
   "Suez"
 ].sort();
 
-type PaymentMethod = 'cash' | 'online';
+type PaymentMethod = 'cash' | 'online' | 'cash_store_pickup' | 'online_store_pickup';
 
 interface CheckoutFormProps {
   user: {
@@ -159,11 +159,16 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
     }
   }, [appliedCoupon, subtotal]);
 
+  // Calculate shipping: 0 for store pickup, regular shipping for delivery
+  const calculatedShipping = (selectedPaymentMethod === 'cash_store_pickup' || selectedPaymentMethod === 'online_store_pickup') 
+    ? 0 
+    : shipping;
+  
   // Recalculate total with discount
-  const totalWithDiscount = subtotal + shipping - discountAmount;
-  // Paymob online payment fee (3.2%) applies only when paying online
+  const totalWithDiscount = subtotal + calculatedShipping - discountAmount;
+  // Paymob online payment fee (3.2%) applies when paying online (including store pickup)
   const PAYMOB_FEE_RATE = 0.032;
-  const paymobFee = selectedPaymentMethod === 'online' 
+  const paymobFee = (selectedPaymentMethod === 'online' || selectedPaymentMethod === 'online_store_pickup')
     ? Math.round(totalWithDiscount * PAYMOB_FEE_RATE) 
     : 0;
   const onlineTotalWithFee = totalWithDiscount + paymobFee;
@@ -236,7 +241,11 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
 
       // Add payment method and total
       formDataToSend.append('paymentMethod', selectedPaymentMethod);
-      formDataToSend.append('total', totalWithDiscount.toString());
+      // Use the correct total based on payment method
+      const finalTotal = (selectedPaymentMethod === 'online' || selectedPaymentMethod === 'online_store_pickup') 
+        ? onlineTotalWithFee 
+        : totalWithDiscount;
+      formDataToSend.append('total', finalTotal.toString());
       
       // Add discount amount if there's a coupon applied
       if (discountAmount > 0 && appliedCoupon) {
@@ -275,7 +284,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
       clearCart();
       
       // If user selected online payment, initiate Paymob intention
-      if (selectedPaymentMethod === 'online') {
+      if (selectedPaymentMethod === 'online' || selectedPaymentMethod === 'online_store_pickup') {
         try {
           const paymobRes = await fetch('/api/paymob/intentions', {
             method: 'POST',
@@ -515,6 +524,50 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
                 </div>
               </div>
             </div>
+
+            <div
+              className={`border-2 rounded-lg p-4 cursor-pointer ${selectedPaymentMethod === 'cash_store_pickup' ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}
+              onClick={() => setSelectedPaymentMethod('cash_store_pickup')}
+            >
+              <div className="flex items-center gap-3">
+                <BanknoteIcon className="h-6 w-6 text-green-600" />
+                <div className="flex-1">
+                  <span className="font-medium text-green-800">
+                    {lang === 'ar' ? 'كاش - استلام من المتجر' : 'Cash - Store Pickup'}
+                  </span>
+                  <p className="text-xs text-green-600 mt-1">
+                    {lang === 'ar' ? 'بدون رسوم شحن' : 'No shipping fees'}
+                  </p>
+                </div>
+                <div className="ml-auto">
+                  <div className={`w-4 h-4 rounded-full ${selectedPaymentMethod === 'cash_store_pickup' ? 'bg-green-600' : 'bg-gray-300'} flex items-center justify-center`}>
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`border-2 rounded-lg p-4 cursor-pointer ${selectedPaymentMethod === 'online_store_pickup' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}
+              onClick={() => setSelectedPaymentMethod('online_store_pickup')}
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-6 w-6 text-purple-700" />
+                <div className="flex-1">
+                  <span className="font-medium text-purple-800">
+                    {lang === 'ar' ? 'أونلاين - استلام من المتجر' : 'Online - Store Pickup'}
+                  </span>
+                  <p className="text-xs text-purple-600 mt-1">
+                    {lang === 'ar' ? 'بدون رسوم شحن' : 'No shipping fees'}
+                  </p>
+                </div>
+                <div className="ml-auto">
+                  <div className={`w-4 h-4 rounded-full ${selectedPaymentMethod === 'online_store_pickup' ? 'bg-purple-600' : 'bg-gray-300'} flex items-center justify-center`}>
+                    <div className="w-2 h-2 rounded-full bg-white"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Payment Options Hint */}
@@ -643,9 +696,9 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
                 <span className="text-gray-600">
                   <TranslatedContent translationKey="cart.shipping" />
                 </span>
-                <span>EGP {shipping.toLocaleString()}</span>
+                <span>EGP {calculatedShipping.toLocaleString()}</span>
               </div>
-              {selectedPaymentMethod === 'online' && (
+              {(selectedPaymentMethod === 'online' || selectedPaymentMethod === 'online_store_pickup') && (
                 <>
                   <div className="flex justify-between text-blue-700">
                     <span>
@@ -660,11 +713,11 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
               )}
               <div className="flex justify-between font-semibold text-lg pt-2 border-t border-gray-100">
                 <span>
-                  {selectedPaymentMethod === 'online' 
+                  {(selectedPaymentMethod === 'online' || selectedPaymentMethod === 'online_store_pickup')
                     ? (lang === 'ar' ? 'الإجمالي أونلاين' : 'Online total')
                     : <TranslatedContent translationKey="cart.total" />}
                 </span>
-                <span>EGP {(selectedPaymentMethod === 'online' ? onlineTotalWithFee : totalWithDiscount).toLocaleString()}</span>
+                <span>EGP {((selectedPaymentMethod === 'online' || selectedPaymentMethod === 'online_store_pickup') ? onlineTotalWithFee : totalWithDiscount).toLocaleString()}</span>
               </div>
             </div>
             

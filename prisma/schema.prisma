@@ -344,6 +344,8 @@ enum CouponType {
 enum PaymentMethod {
   CASH
   ONLINE
+  CASH_STORE_PICKUP
+  ONLINE_STORE_PICKUP
 }
 
 enum PaymentStatus {

@@ -357,8 +357,12 @@ export async function POST(request: Request) {
             discountAmount: discountAmount || 0,
             couponId: couponData?.id || null, // Store the coupon ID
             status: 'PENDING', // Always start as PENDING, will be updated by webhook
-            paymentMethod: paymentMethod === 'cash' ? 'CASH' : 'ONLINE',
-            paymentStatus: paymentMethod === 'cash' ? 'SUCCESS' : 'PENDING', // COD = SUCCESS, Online = PENDING
+            paymentMethod: paymentMethod === 'cash' || paymentMethod === 'cash_store_pickup' 
+              ? (paymentMethod === 'cash' ? 'CASH' : 'CASH_STORE_PICKUP')
+              : (paymentMethod === 'online' ? 'ONLINE' : 'ONLINE_STORE_PICKUP'),
+            paymentStatus: (paymentMethod === 'cash' || paymentMethod === 'cash_store_pickup') 
+              ? 'SUCCESS' 
+              : 'PENDING', // COD/Store Pickup Cash = SUCCESS, Online = PENDING
             shippingName: shippingInfo.name,
             shippingPhone: shippingInfo.phone,
             shippingAddress: shippingInfo.address,

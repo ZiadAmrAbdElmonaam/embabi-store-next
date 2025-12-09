@@ -22,6 +22,18 @@ export function PaymentMethodBadge({ method }: PaymentMethodBadgeProps) {
           icon: Banknote,
           className: 'bg-green-100 text-green-800',
         };
+      case 'CASH_STORE_PICKUP':
+        return {
+          label: 'Cash - Store Pickup',
+          icon: Banknote,
+          className: 'bg-emerald-100 text-emerald-800',
+        };
+      case 'ONLINE_STORE_PICKUP':
+        return {
+          label: 'Online - Store Pickup',
+          icon: CreditCard,
+          className: 'bg-purple-100 text-purple-800',
+        };
       default:
         return {
           label: method,

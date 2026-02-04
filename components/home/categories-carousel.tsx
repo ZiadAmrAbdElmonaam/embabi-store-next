@@ -46,10 +46,18 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
     return () => clearTimeout(timer);
   }, [categories]);
 
+  const getScrollAmount = () => {
+    if (typeof window === 'undefined') return 280;
+    const w = window.innerWidth;
+    if (w < 640) return 180; // ~one card (160) + gap
+    if (w < 768) return 216; // 192 + gap
+    return 312; // 288 + gap
+  };
+
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({
-        left: -300,
+        left: -getScrollAmount(),
         behavior: 'smooth'
       });
     }
@@ -58,7 +66,7 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
   const scrollRight = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({
-        left: 300,
+        left: getScrollAmount(),
         behavior: 'smooth'
       });
     }
@@ -67,32 +75,34 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
 
 
   return (
-    <div className="relative px-4">
-      {/* Navigation Buttons */}
+    <div className="relative px-2 sm:px-4">
+      {/* Navigation Buttons - padded so they don't overlap first/last card */}
       {categories.length > 4 && (
         <>
           <button
             onClick={scrollLeft}
             disabled={!canScrollLeft}
-            className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 items-center justify-center transition-all duration-300 hover:scale-110 hidden md:flex ${
+            className={`absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white shadow-xl border border-gray-100 items-center justify-center transition-all duration-300 hover:scale-110 flex ${
               canScrollLeft 
                 ? 'opacity-100 hover:bg-orange-50 hover:border-orange-200 hover:shadow-orange-100' 
                 : 'opacity-40 cursor-not-allowed'
             }`}
+            aria-label="Scroll left"
           >
-            <ChevronLeft className={`w-6 h-6 ${canScrollLeft ? 'text-orange-600' : 'text-gray-400'}`} />
+            <ChevronLeft className={`w-5 h-5 sm:w-6 sm:h-6 ${canScrollLeft ? 'text-orange-600' : 'text-gray-400'}`} />
           </button>
           
           <button
             onClick={scrollRight}
             disabled={!canScrollRight}
-            className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white shadow-xl border border-gray-100 items-center justify-center transition-all duration-300 hover:scale-110 hidden md:flex ${
+            className={`absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white shadow-xl border border-gray-100 items-center justify-center transition-all duration-300 hover:scale-110 flex ${
               canScrollRight 
                 ? 'opacity-100 hover:bg-orange-50 hover:border-orange-200 hover:shadow-orange-100' 
                 : 'opacity-40 cursor-not-allowed'
             }`}
+            aria-label="Scroll right"
           >
-            <ChevronRight className={`w-6 h-6 ${canScrollRight ? 'text-orange-600' : 'text-gray-400'}`} />
+            <ChevronRight className={`w-5 h-5 sm:w-6 sm:h-6 ${canScrollRight ? 'text-orange-600' : 'text-gray-400'}`} />
           </button>
         </>
       )}
@@ -102,17 +112,20 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
         ref={scrollContainerRef}
         dir="ltr"
         onScroll={checkScrollButtons}
-        className="flex gap-3 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 px-4 sm:px-8"
+        className="flex gap-3 sm:gap-5 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 pt-1 px-1 sm:px-2"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
-        {categories.map((category) => (
+        {categories.map((category, index) => (
           <Link
             key={category.id}
             href={`/categories/${category.slug}`}
-            className="group flex-shrink-0 w-48 sm:w-72 relative"
+            className="group flex-shrink-0 w-[42vw] min-w-[140px] max-w-[180px] sm:w-48 sm:min-w-0 sm:max-w-none md:w-56 lg:w-72 relative"
+            style={{ scrollSnapAlign: index === 0 ? 'start' : 'center' }}
           >
             <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform group-hover:-translate-y-2 group-hover:scale-105 border border-gray-100">
               <div className="aspect-[4/3] relative overflow-hidden">
@@ -122,7 +135,7 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
                     alt={category.name}
                     fill
                     className="object-cover transition-all duration-700 group-hover:scale-125 group-hover:rotate-2"
-                    sizes="288px"
+                    sizes="(max-width: 640px) 180px, (max-width: 768px) 192px, (max-width: 1024px) 224px, 288px"
                   />
                 )}
                 {/* Gradient Overlay */}
@@ -146,15 +159,6 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
           </Link>
         ))}
       </div>
-
-
-
-      {/* Custom scrollbar hiding styles */}
-      <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 } 

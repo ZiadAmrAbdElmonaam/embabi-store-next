@@ -387,7 +387,7 @@ export default async function HomePage() {
         <CouponBanner />
       </div>
       {/* Hero Carousel Section */}
-      <div className="w-full max-w-[1440px] mx-auto px-0 sm:px-2 md:px-4 py-0 sm:py-2 md:py-4">
+      <div className="w-full max-w-[1440px] mx-auto px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
         <HomeCarousel />
       </div>
 

@@ -32,14 +32,19 @@ export function SubcategoriesCarousel({ subcategories }: SubcategoriesCarouselPr
     }
   };
 
+  const getScrollAmount = () => {
+    if (typeof window === 'undefined') return 220;
+    const w = window.innerWidth;
+    if (w < 640) return 208;
+    if (w < 1024) return 232;
+    return 268;
+  };
+
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 300;
-      const newScrollLeft = scrollContainerRef.current.scrollLeft + 
-        (direction === 'left' ? -scrollAmount : scrollAmount);
-      
-      scrollContainerRef.current.scrollTo({
-        left: newScrollLeft,
+      const scrollValue = direction === 'left' ? -getScrollAmount() : getScrollAmount();
+      scrollContainerRef.current.scrollBy({
+        left: scrollValue,
         behavior: 'smooth'
       });
     }
@@ -50,7 +55,11 @@ export function SubcategoriesCarousel({ subcategories }: SubcategoriesCarouselPr
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', checkScrollButtons);
-      return () => container.removeEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+      return () => {
+        container.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
     }
   }, [subcategories]);
 
@@ -65,12 +74,12 @@ export function SubcategoriesCarousel({ subcategories }: SubcategoriesCarouselPr
   }
 
   return (
-    <div className="relative">
+    <div className="relative px-2 sm:px-4">
       {/* Left Arrow */}
       {canScrollLeft && (
         <button
           onClick={() => scroll('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 sm:p-3 shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-200 hover:border-orange-300"
+          className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-200 hover:border-orange-300 flex items-center justify-center"
           aria-label="Scroll left"
         >
           <ChevronLeft size={20} className="text-gray-700" />
@@ -81,7 +90,7 @@ export function SubcategoriesCarousel({ subcategories }: SubcategoriesCarouselPr
       {canScrollRight && (
         <button
           onClick={() => scroll('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 sm:p-3 shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-200 hover:border-orange-300"
+          className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-200 border border-gray-200 hover:border-orange-300 flex items-center justify-center"
           aria-label="Scroll right"
         >
           <ChevronRight size={20} className="text-gray-700" />
@@ -93,17 +102,20 @@ export function SubcategoriesCarousel({ subcategories }: SubcategoriesCarouselPr
         ref={scrollContainerRef}
         dir="ltr"
         onScroll={checkScrollButtons}
-        className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 px-4"
+        className="flex gap-3 sm:gap-4 md:gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4 pt-1 px-1 sm:px-2"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
-        {subcategories.map((subcategory) => (
+        {subcategories.map((subcategory, index) => (
           <Link
             key={subcategory.id}
             href={`/categories/${subcategory.slug}`}
-            className="group flex-shrink-0 w-48 sm:w-56 lg:w-64 relative"
+            className="group flex-shrink-0 w-[42vw] min-w-[150px] max-w-[192px] sm:w-48 sm:min-w-0 sm:max-w-none md:w-56 lg:w-64 relative"
+            style={{ scrollSnapAlign: index === 0 ? 'start' : 'center' }}
           >
             <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 transform group-hover:-translate-y-1 border border-gray-100 hover:border-orange-200">
               <div className="aspect-[4/3] relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">

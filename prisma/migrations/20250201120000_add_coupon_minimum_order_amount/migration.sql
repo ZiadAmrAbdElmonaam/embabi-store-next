@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Coupon" ADD COLUMN IF NOT EXISTS "minimumOrderAmount" DOUBLE PRECISION;

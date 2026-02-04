@@ -20,14 +20,14 @@ interface HeroThumbnail {
   linkUrl?: string | null;
 }
 
-// Unified height: carousel and 2x2 thumbnails share same height on desktop
-const CAROUSEL_HEIGHT = {
-  mobile: 'h-[200px]',
-  sm: 'sm:h-[260px]',
-  md: 'md:h-[320px]',
-  lg: 'lg:h-[380px]',
-  xl: 'xl:h-[420px]',
-};
+// Responsive: aspect-ratio on mobile, fixed height on desktop so carousel + thumbnails align
+const CAROUSEL_WRAPPER =
+  'w-full flex flex-col lg:flex-row gap-2 lg:gap-3 min-h-0';
+const CAROUSEL_MAIN_MOBILE =
+  'aspect-[16/9] min-h-[160px] max-h-[45vh] sm:aspect-[19/8] sm:min-h-[200px] sm:max-h-[50vh] md:min-h-[240px]';
+const CAROUSEL_MAIN_DESKTOP = 'lg:aspect-auto lg:min-h-0 lg:max-h-none lg:h-[360px] xl:h-[400px] 2xl:h-[440px]';
+const THUMB_GRID_MOBILE = 'min-h-[140px] sm:min-h-[180px]';
+const THUMB_GRID_DESKTOP = 'lg:min-h-0 lg:h-[360px] xl:h-[400px] 2xl:h-[440px]';
 
 export function HomeCarousel() {
   const [images, setImages] = useState<CarouselImage[]>([]);
@@ -112,9 +112,9 @@ export function HomeCarousel() {
 
   if (isLoading) {
     return (
-      <div className={`w-full flex flex-col lg:flex-row gap-2 lg:gap-3 ${CAROUSEL_HEIGHT.mobile} ${CAROUSEL_HEIGHT.sm} ${CAROUSEL_HEIGHT.md} ${CAROUSEL_HEIGHT.lg} ${CAROUSEL_HEIGHT.xl}`}>
-        <div className="flex-1 min-h-0 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-xl" />
-        <div className="grid grid-cols-2 grid-rows-2 lg:w-1/2 lg:h-full gap-2 lg:gap-3 min-h-[160px] lg:min-h-0 w-full">
+      <div className={CAROUSEL_WRAPPER}>
+        <div className={`flex-1 min-h-0 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-xl ${CAROUSEL_MAIN_MOBILE} ${CAROUSEL_MAIN_DESKTOP}`} />
+        <div className={`grid grid-cols-2 grid-rows-2 lg:w-1/2 gap-2 lg:gap-3 w-full ${THUMB_GRID_MOBILE} ${THUMB_GRID_DESKTOP}`}>
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="min-h-0 bg-gray-200 dark:bg-gray-800 animate-pulse rounded-xl" />
           ))}
@@ -125,7 +125,7 @@ export function HomeCarousel() {
 
   if (error) {
     return (
-      <div className={`w-full ${CAROUSEL_HEIGHT.mobile} ${CAROUSEL_HEIGHT.sm} bg-gray-100 dark:bg-gray-900 rounded-xl flex items-center justify-center`}>
+      <div className={`w-full min-h-[160px] sm:min-h-[200px] bg-gray-100 dark:bg-gray-900 rounded-xl flex items-center justify-center`}>
         <p className="text-gray-500 dark:text-gray-400 text-sm">{error}</p>
       </div>
     );
@@ -135,12 +135,10 @@ export function HomeCarousel() {
   const hasThumbnails = thumbnails.length > 0;
 
   return (
-    <div
-      className={`w-full flex flex-col lg:flex-row gap-2 lg:gap-3 ${CAROUSEL_HEIGHT.mobile} ${CAROUSEL_HEIGHT.sm} ${CAROUSEL_HEIGHT.md} ${CAROUSEL_HEIGHT.lg} ${CAROUSEL_HEIGHT.xl}`}
-    >
+    <div className={CAROUSEL_WRAPPER}>
       {/* Main Carousel - 50% on desktop, matches height of 2x2 thumbnails */}
       <div
-        className={`relative overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-lg ${hasThumbnails ? 'lg:w-1/2 lg:h-full' : 'flex-1'}`}
+        className={`relative overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-lg ${CAROUSEL_MAIN_MOBILE} ${hasThumbnails ? `lg:w-1/2 ${CAROUSEL_MAIN_DESKTOP}` : 'flex-1 lg:min-h-0 lg:max-h-none lg:h-[360px] xl:h-[400px] 2xl:h-[440px]'}`}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -161,7 +159,7 @@ export function HomeCarousel() {
                     fill
                     priority={index === 0}
                     className="object-contain object-center"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 50vw"
                   />
                   {/* Buy Now button */}
                   {image.linkUrl && (
@@ -216,7 +214,7 @@ export function HomeCarousel() {
 
       {/* Hero Thumbnails - 50% on desktop, 2x2 grid, same height as carousel */}
       {hasThumbnails && (
-        <div className="grid grid-cols-2 grid-rows-2 lg:w-1/2 lg:h-full gap-2 lg:gap-3 w-full min-h-[160px] lg:min-h-0">
+        <div className={`grid grid-cols-2 grid-rows-2 lg:w-1/2 gap-2 lg:gap-3 w-full ${THUMB_GRID_MOBILE} ${THUMB_GRID_DESKTOP}`}>
           {thumbnails
             .sort((a, b) => a.order - b.order)
             .map((thumb) => (

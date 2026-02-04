@@ -67,13 +67,15 @@ export function ProductsHorizontalScroll({ products, maxVisible }: ProductsHoriz
     }
   }, [products]);
 
+  const getScrollAmount = () => {
+    if (typeof window === 'undefined') return 216;
+    return window.innerWidth < 640 ? 180 + 16 : 200 + 16; // card + gap
+  };
+
   const scroll = (direction: 'left' | 'right') => {
     const container = scrollContainerRef.current;
     if (container) {
-      const cardWidth = 200;
-      const gap = 16;
-      const scrollAmount = cardWidth + gap;
-      const scrollValue = direction === 'left' ? -scrollAmount : scrollAmount;
+      const scrollValue = direction === 'left' ? -getScrollAmount() : getScrollAmount();
       container.scrollBy({
         left: scrollValue,
         behavior: 'smooth',
@@ -135,11 +137,12 @@ export function ProductsHorizontalScroll({ products, maxVisible }: ProductsHoriz
         ref={scrollContainerRef}
         dir="ltr"
         onScroll={checkScrollButtons}
-        className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide py-2 px-2 sm:px-4"
+        className="flex gap-3 sm:gap-4 overflow-x-auto scroll-smooth scrollbar-hide py-2 px-2 sm:px-4"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {products.map((product, index) => (

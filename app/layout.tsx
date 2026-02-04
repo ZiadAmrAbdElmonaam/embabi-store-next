@@ -21,13 +21,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://embabi-store.com'),
   title: {
     template: '%s | Embabi Store',
-    default: 'Embabi Store - Your One-Stop Shop for All Your Needs',
+    default: 'Oxgen Embabi Store - Your One-Stop Shop for All Your Needs',
   },
-  description: 'Discover a wide range of products at Embabi Store. From electronics to clothing, we offer quality items at competitive prices with fast delivery.',
+  description: 'Discover a wide range of products at Oxgen Embabi Store. From electronics to clothing, we offer quality items at competitive prices with fast delivery.',
   keywords: ['online store', 'e-commerce', 'electronics', 'clothing', 'accessories', 'Egypt', 'shopping'],
-  authors: [{ name: 'Embabi Store', url: 'https://embabi-store.com' }],
-  creator: 'Embabi Store',
-  publisher: 'Embabi Store',
+  authors: [{ name: 'Oxgen Embabi Store', url: 'https://embabi-store.com' }],
+  creator: 'Oxgen Embabi Store',
+  publisher: 'Oxgen Embabi Store',
   icons: {
     icon: '/app-icon.png',
     shortcut: '/app-icon.png',

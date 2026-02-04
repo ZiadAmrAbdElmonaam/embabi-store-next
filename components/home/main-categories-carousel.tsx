@@ -45,13 +45,15 @@ export function MainCategoriesCarousel({ categories }: MainCategoriesCarouselPro
     }
   }, [categories]);
 
+  const getScrollAmount = () => {
+    if (typeof window === 'undefined') return 216;
+    return window.innerWidth < 640 ? 200 + 16 : 220 + 20; // card + gap per breakpoint
+  };
+
   const scroll = (direction: 'left' | 'right') => {
     const container = scrollContainerRef.current;
     if (container) {
-      const cardWidth = 220;
-      const gap = 20;
-      const scrollAmount = cardWidth + gap;
-      const scrollValue = direction === 'left' ? -scrollAmount : scrollAmount;
+      const scrollValue = direction === 'left' ? -getScrollAmount() : getScrollAmount();
       container.scrollBy({
         left: scrollValue,
         behavior: 'smooth',
@@ -107,18 +109,19 @@ export function MainCategoriesCarousel({ categories }: MainCategoriesCarouselPro
         ref={scrollContainerRef}
         dir="ltr"
         onScroll={checkScrollButtons}
-        className="flex gap-4 sm:gap-5 overflow-x-auto scroll-smooth scrollbar-hide py-2 px-2 sm:px-4"
+        className="flex gap-3 sm:gap-4 md:gap-5 overflow-x-auto scroll-smooth scrollbar-hide py-2 px-2 sm:px-4"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
         {categories.map((category, index) => (
           <Link
             key={category.id}
             href={`/categories/${category.slug}`}
-            className="group flex-shrink-0 w-[200px] sm:w-[220px] relative"
+            className="group flex-shrink-0 w-[44vw] min-w-[140px] max-w-[200px] sm:w-[200px] sm:min-w-0 sm:max-w-none md:w-[220px] relative"
             style={{ scrollSnapAlign: index === 0 ? 'start' : 'center' }}
           >
             <div className="relative rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-md hover:shadow-2xl border border-gray-100 dark:border-gray-700 transition-all duration-500 ease-out group-hover:-translate-y-2 group-hover:border-orange-200 dark:group-hover:border-orange-800 group-hover:shadow-orange-100 dark:group-hover:shadow-orange-900/20">
@@ -129,7 +132,7 @@ export function MainCategoriesCarousel({ categories }: MainCategoriesCarouselPro
                     alt={category.name}
                     fill
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                    sizes="220px"
+                    sizes="(max-width: 640px) 200px, (max-width: 768px) 200px, 220px"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-orange-400 via-orange-500 to-amber-600 flex items-center justify-center transition-all duration-500 group-hover:from-orange-500 group-hover:via-orange-600 group-hover:to-amber-700">

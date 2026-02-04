@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/utils";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
+import { ProductsHorizontalScroll } from "@/components/home/products-horizontal-scroll";
 
 type UnitWithTax = {
   id: string;
@@ -19,6 +20,41 @@ type UnitWithTax = {
   taxType?: string;
   taxAmount?: number | null;
   taxPercentage?: number | null;
+};
+
+type ProductForCard = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  salePrice?: number | null;
+  taxStatus?: 'PAID' | 'UNPAID' | null;
+  saleEndDate?: string | null;
+  sale?: number | null;
+  stock: number;
+  images: string[];
+  slug: string;
+  variants?: Array<{
+    id: string;
+    color: string;
+    quantity: number;
+  }>;
+  storages?: Array<{
+    id: string;
+    size: string;
+    price: number;
+    salePercentage?: number | null;
+    saleEndDate?: string | null;
+    units?: Array<{
+      id: string;
+      color: string;
+      stock: number;
+      taxStatus: string;
+      taxType: string;
+      taxAmount?: number | null;
+      taxPercentage?: number | null;
+    }>;
+  }>;
 };
 
 interface ProductDetailsProps {
@@ -76,6 +112,7 @@ interface ProductDetailsProps {
   };
   session: Session | null;
   hasPurchased?: boolean;
+  youMayAlsoLike?: ProductForCard[];
 }
 
 function getUnitPrice(basePrice: number, salePct: number | null, saleEnd: string | null, unit: { taxStatus: string; taxType: string; taxAmount?: number | null; taxPercentage?: number | null }) {
@@ -105,7 +142,7 @@ function getUnitTaxNote(
   return t('productDetail.taxExcluded');
 }
 
-export function ProductDetails({ product }: ProductDetailsProps) {
+export function ProductDetails({ product, youMayAlsoLike = [] }: ProductDetailsProps) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const hasStorageWithStock = product.storages?.some(s => (s.units ?? s.variants ?? []).some((u: { stock?: number; quantity?: number }) => (u.stock ?? u.quantity ?? 0) > 0));
@@ -676,6 +713,14 @@ export function ProductDetails({ product }: ProductDetailsProps) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* You May Also Like Section */}
+      {youMayAlsoLike && youMayAlsoLike.length > 0 && (
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-16 mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">{t('productDetail.youMayAlsoLike')}</h2>
+          <ProductsHorizontalScroll products={youMayAlsoLike} maxVisible={6} />
         </div>
       )}
 

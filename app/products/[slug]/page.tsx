@@ -5,6 +5,7 @@ import { ProductDetails } from "@/components/products/product-details";
 import { ProductStructuredData } from "@/components/seo/structured-data";
 import { authOptions } from "@/app/api/auth/auth-options";
 import { Metadata } from "next";
+import { getProductDisplayPrice } from "@/lib/utils";
 
 // Add revalidation - cache for 5 minutes (product details change occasionally)
 export const revalidate = 300;
@@ -191,6 +192,111 @@ export default async function ProductPage({ params }: ProductPageProps) {
     content: review.comment || '',
   }));
 
+  // Fetch You May Also Like (same category + parent category if exists, exclude current product)
+  const categoryWithParent = await prisma.category.findUnique({
+    where: { id: product.categoryId },
+    include: { parent: true },
+  });
+
+  const youMayAlsoLikeCategoryIds = [product.categoryId];
+  if (categoryWithParent?.parentId) {
+    youMayAlsoLikeCategoryIds.push(categoryWithParent.parentId);
+  }
+
+  const youMayAlsoLikeProducts = await prisma.product.findMany({
+    where: {
+      categoryId: { in: youMayAlsoLikeCategoryIds },
+      id: { not: product.id },
+      OR: [
+        { stock: { gt: 0 } },
+        {
+          storages: {
+            some: {
+              units: {
+                some: {
+                  stock: { gt: 0 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    take: 12,
+    include: {
+      category: true,
+      variants: true,
+      storages: {
+        include: {
+          units: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+
+  // Format "You May Also Like" products for ProductCard
+  const formattedYouMayAlsoLike = youMayAlsoLikeProducts.map(p => {
+    const displayPrice = getProductDisplayPrice({
+      price: Number(p.price),
+      salePrice: p.salePrice ? Number(p.salePrice) : null,
+      sale: p.sale ?? null,
+      saleEndDate: p.saleEndDate ? p.saleEndDate.toISOString() : null,
+      storages: p.storages?.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+        units: storage.units?.map(u => ({
+          id: u.id,
+          color: u.color,
+          stock: u.stock,
+          taxStatus: u.taxStatus,
+          taxType: u.taxType,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })) ?? [],
+      })) || []
+    });
+
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      price: displayPrice.price,
+      salePrice: displayPrice.salePrice,
+      taxStatus: displayPrice.taxStatus ?? null,
+      sale: p.sale,
+      stock: p.stock ?? 0,
+      images: p.images,
+      slug: p.slug,
+      variants: p.variants.map(v => ({
+        id: v.id,
+        color: v.color,
+        quantity: v.quantity
+      })),
+      storages: p.storages?.map(storage => ({
+        id: storage.id,
+        size: storage.size,
+        price: Number(storage.price),
+        salePercentage: storage.salePercentage,
+        saleEndDate: storage.saleEndDate?.toISOString() || null,
+        units: storage.units.map(u => ({
+          id: u.id,
+          color: u.color,
+          stock: u.stock,
+          taxStatus: u.taxStatus,
+          taxType: u.taxType,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })),
+      })) || [],
+    };
+  });
+
   return (
     <div className="container mx-auto px-4 py-8 bg-white dark:bg-gray-900">
       <ProductStructuredData
@@ -219,6 +325,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         }}
         session={session} 
         hasPurchased={!!hasPurchased}
+        youMayAlsoLike={formattedYouMayAlsoLike}
       />
     </div>
   );

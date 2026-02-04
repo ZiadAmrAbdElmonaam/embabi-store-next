@@ -69,7 +69,6 @@ export const translations = {
       selectColorFor: 'Select Color for',
       selected: 'Selected',
       selectColor: 'Please select a color',
-      off: 'OFF',
       exploreMoreProducts: 'Explore more products',
     },
     checkout: {
@@ -461,6 +460,10 @@ export const translations = {
       taxExcluded: 'Tax Excluded',
       taxNoteLabel: 'Has tax: ',
       exploreMoreProducts: 'Explore more products',
+      relatedProducts: 'Related Products',
+      youMayAlsoLike: 'You May Also Like',
+      noRelatedProducts: 'No related products found',
+      noYouMayAlsoLike: 'No products available',
     },
     order: {
       order: 'Order',
@@ -1049,7 +1052,6 @@ export const translations = {
       selectColorFor: 'اختر لون لـ',
       selected: 'تم اختيار',
       selectColor: 'الرجاء اختيار لون',
-      off: 'خصم',
       exploreMoreProducts: 'تصفح المزيد من المنتجات',
     },
     checkout: {
@@ -1441,6 +1443,10 @@ export const translations = {
       taxExcluded: 'غير شامل الضريبة',
       taxNoteLabel: 'عليه ضريبة : ',
       exploreMoreProducts: 'تصفح المزيد من المنتجات',
+      relatedProducts: 'منتجات ذات صلة',
+      youMayAlsoLike: 'قد يعجبك أيضاً',
+      noRelatedProducts: 'لا توجد منتجات ذات صلة',
+      noYouMayAlsoLike: 'لا توجد منتجات متاحة',
     },
     order: {
       order: 'طلب',

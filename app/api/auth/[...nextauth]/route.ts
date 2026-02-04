@@ -4,9 +4,13 @@ import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit";
 
 const handler = NextAuth(authOptions);
 
-export const GET = handler;
+type NextAuthRouteContext = { params: Promise<{ nextauth?: string[] }> };
 
-export async function POST(req: Request) {
+export async function GET(req: Request, context: NextAuthRouteContext) {
+  return handler(req, context);
+}
+
+export async function POST(req: Request, context: NextAuthRouteContext) {
   const key = getRateLimitKey(req);
   const limit = checkRateLimit(key, "login");
   if (!limit.success) {
@@ -15,5 +19,5 @@ export async function POST(req: Request) {
       { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } }
     );
   }
-  return handler(req);
+  return handler(req, context);
 } 

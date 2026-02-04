@@ -18,19 +18,18 @@ export function BrandsCarousel({ brands }: BrandsCarouselProps) {
   const checkScrollButtons = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      const maxScroll = scrollWidth - clientWidth;
       setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+      setCanScrollRight(scrollLeft < maxScroll - 1);
     }
   };
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
       const scrollAmount = 300;
-      const newScrollLeft = scrollContainerRef.current.scrollLeft + 
-        (direction === 'left' ? -scrollAmount : scrollAmount);
-      
-      scrollContainerRef.current.scrollTo({
-        left: newScrollLeft,
+      const scrollValue = direction === 'left' ? -scrollAmount : scrollAmount;
+      scrollContainerRef.current.scrollBy({
+        left: scrollValue,
         behavior: 'smooth'
       });
     }
@@ -41,7 +40,11 @@ export function BrandsCarousel({ brands }: BrandsCarouselProps) {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', checkScrollButtons);
-      return () => container.removeEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+      return () => {
+        container.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
     }
   }, [brands]);
 
@@ -79,9 +82,10 @@ export function BrandsCarousel({ brands }: BrandsCarouselProps) {
         </button>
       )}
 
-      {/* Scrollable Brands Container */}
+      {/* Scrollable Brands Container - dir="ltr" for consistent scroll in RTL pages */}
       <div
         ref={scrollContainerRef}
+        dir="ltr"
         onScroll={checkScrollButtons}
         className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 px-4"
         style={{

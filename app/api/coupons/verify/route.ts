@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
       id: coupon.id,
       code: coupon.code,
       type: coupon.type,
-      value: coupon.value
+      value: coupon.value,
+      minimumOrderAmount: coupon.minimumOrderAmount ?? null,
     }), {
       secure: process.env.NODE_ENV === 'production',
       path: '/',
@@ -71,7 +72,8 @@ export async function POST(req: NextRequest) {
         id: coupon.id,
         code: coupon.code,
         type: coupon.type,
-        value: coupon.value
+        value: coupon.value,
+        minimumOrderAmount: coupon.minimumOrderAmount ?? null,
       }
     });
   } catch (error) {

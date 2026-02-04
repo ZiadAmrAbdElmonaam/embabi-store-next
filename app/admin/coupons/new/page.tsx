@@ -13,9 +13,12 @@ export default function NewCouponPage() {
     setIsLoading(true);
 
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/admin/coupons', {
         method: 'POST',
         headers: {
+          ...csrfHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
@@ -53,6 +56,7 @@ export default function NewCouponPage() {
           value: 0,
           endDate: null,
           userLimit: null,
+          minimumOrderAmount: null,
           isEnabled: true
         }}
         onSubmit={onSubmit}

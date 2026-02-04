@@ -88,9 +88,10 @@ export function SubcategoriesCarousel({ subcategories }: SubcategoriesCarouselPr
         </button>
       )}
 
-      {/* Scrollable Subcategories Container */}
+      {/* Scrollable Subcategories Container - dir="ltr" for consistent scroll in RTL pages */}
       <div
         ref={scrollContainerRef}
+        dir="ltr"
         onScroll={checkScrollButtons}
         className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 px-4"
         style={{

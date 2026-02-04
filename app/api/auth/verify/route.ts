@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import { verifyCode } from "@/lib/verification";
 import { validateEmail } from "@/lib/validation";
+import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const key = getRateLimitKey(request);
+    const limit = checkRateLimit(key, "verify");
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: "Too many verification attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const { email, code } = await request.json();
     
     if (!email || !code) {

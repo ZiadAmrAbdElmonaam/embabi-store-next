@@ -21,9 +21,11 @@ export function OrderActions({ selectedOrders, onStatusUpdate }: OrderActionsPro
 
     setIsLoading(true);
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/orders/bulk-update', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...csrfHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderIds: selectedOrders, status }),
       });
 

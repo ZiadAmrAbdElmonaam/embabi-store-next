@@ -14,6 +14,7 @@ interface CouponFormProps {
     value: number;
     endDate: string | null;
     userLimit: number | null;
+    minimumOrderAmount: number | null;
     isEnabled: boolean;
   };
   onSubmit?: (formData: any) => Promise<void>;
@@ -30,6 +31,7 @@ export default function CouponForm({ initialData, onSubmit, isLoading = false }:
     value: initialData?.value?.toString() || "",
     endDate: initialData?.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : "",
     userLimit: initialData?.userLimit?.toString() || "",
+    minimumOrderAmount: initialData?.minimumOrderAmount?.toString() ?? "",
     isEnabled: initialData?.isEnabled !== undefined ? initialData.isEnabled : true,
   });
 
@@ -79,6 +81,7 @@ export default function CouponForm({ initialData, onSubmit, isLoading = false }:
         value: parseFloat(formData.value),
         endDate: formData.endDate || null,
         userLimit: formData.userLimit ? parseInt(formData.userLimit) : null,
+        minimumOrderAmount: formData.minimumOrderAmount ? parseFloat(formData.minimumOrderAmount) : null,
         isEnabled: formData.isEnabled,
       });
     } else {
@@ -89,10 +92,11 @@ export default function CouponForm({ initialData, onSubmit, isLoading = false }:
         const url = initialData.id 
           ? `/api/admin/coupons/${initialData.id}`
           : '/api/admin/coupons';
-          
+        const { getCsrfHeaders } = await import('@/lib/csrf-client');
+        const csrfHeaders = await getCsrfHeaders();
         const response = await fetch(url, {
           method: initialData.id ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { ...csrfHeaders, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: formData.name,
             code: formData.code,
@@ -100,6 +104,7 @@ export default function CouponForm({ initialData, onSubmit, isLoading = false }:
             value: parseFloat(formData.value),
             endDate: formData.endDate || null,
             userLimit: formData.userLimit ? parseInt(formData.userLimit) : null,
+            minimumOrderAmount: formData.minimumOrderAmount ? parseFloat(formData.minimumOrderAmount) : null,
             isEnabled: formData.isEnabled,
           }),
         });
@@ -188,6 +193,22 @@ export default function CouponForm({ initialData, onSubmit, isLoading = false }:
             </p>
           )}
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Minimum Order Amount (EGP)</label>
+        <input
+          type="number"
+          value={formData.minimumOrderAmount}
+          onChange={(e) => setFormData({ ...formData, minimumOrderAmount: e.target.value })}
+          min="0"
+          step="0.01"
+          placeholder="No minimum"
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+        />
+        <p className="mt-1 text-sm text-gray-500">
+          Optional. Minimum cart subtotal required for this coupon to apply. Leave blank for no minimum.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

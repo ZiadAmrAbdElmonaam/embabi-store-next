@@ -3,9 +3,10 @@
 import { ProductCard } from "@/components/ui/product-card";
 import { Product } from "@prisma/client";
 
-export interface ProductWithDetails extends Omit<Product, 'price' | 'salePrice'> {
-  price: number;
+export interface ProductWithDetails extends Omit<Product, 'price' | 'salePrice' | 'stock'> {
+  price: number | null;
   salePrice: number | null;
+  stock: number | null;
   category?: {
     id: string;
     name: string;
@@ -31,8 +32,9 @@ export function ProductGrid({ products, showDescription = false }: ProductGridPr
     rating: product.reviews?.length ? 
       product.reviews.reduce((acc, review) => acc + review.rating, 0) / product.reviews.length
       : 0,
-    price: Number(product.price),
-    salePrice: product.salePrice ? Number(product.salePrice) : null,
+    price: product.price != null ? Number(product.price) : 0,
+    salePrice: product.salePrice != null ? Number(product.salePrice) : null,
+    stock: product.stock ?? null,
   }));
 
   return (

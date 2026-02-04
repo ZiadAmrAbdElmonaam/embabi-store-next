@@ -72,15 +72,15 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
     const hasStorages = product.storages && product.storages.length > 0;
     
     // Check if the product has colors or variants
-    const hasColors = product.colors && product.colors.length > 0;
     const hasVariants = product.variants && product.variants.length > 0;
+    const hasColors = hasVariants; // Colors come from variants
     
     // Check if there are any variants with quantity > 0
     const hasAvailableVariants = product.variants && 
       product.variants.some(variant => variant.quantity > 0);
     
     // Show ProductSelectionModal if product has storages, colors, or variants that require selection
-    if (hasStorages || ((hasColors || hasVariants) && hasAvailableVariants)) {
+    if (hasStorages || (hasVariants && hasAvailableVariants)) {
       setSelectedProduct(product);
       setShowSelectionModal(true);
       return;
@@ -152,8 +152,8 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
             <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
               <span>{product.category?.name}</span>
               <span>{(() => {
-                const hasMainStock = product.stock > 0;
-                const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+                const hasMainStock = (product.stock ?? 0) > 0;
+                const hasStorageStock = product.storages && product.storages.some(storage => (storage as { units?: Array<{ stock: number }> }).units?.some(u => u.stock > 0));
                 const hasStock = hasMainStock || hasStorageStock;
                 return hasStock ? '' : 'Out of stock';
               })()}</span>
@@ -164,8 +164,8 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
               <button
                   onClick={() => addToCart(product)}
                 disabled={(() => {
-                  const hasMainStock = product.stock > 0;
-                  const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+                  const hasMainStock = (product.stock ?? 0) > 0;
+                  const hasStorageStock = product.storages && product.storages.some(storage => (storage as { units?: Array<{ stock: number }> }).units?.some(u => u.stock > 0));
                   const hasStock = hasMainStock || hasStorageStock;
                   return !hasStock || isLoading === product.id;
                 })()}
@@ -173,8 +173,8 @@ export default function WishlistItems({ products }: WishlistItemsProps) {
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span>{(() => {
-                  const hasMainStock = product.stock > 0;
-                  const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+                  const hasMainStock = (product.stock ?? 0) > 0;
+                  const hasStorageStock = product.storages && product.storages.some(storage => (storage as { units?: Array<{ stock: number }> }).units?.some(u => u.stock > 0));
                   const hasStock = hasMainStock || hasStorageStock;
                   return hasStock ? 'Add to Cart' : 'Out of Stock';
                 })()}</span>

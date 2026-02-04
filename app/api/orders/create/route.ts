@@ -6,6 +6,8 @@ import { authOptions } from "@/app/api/auth/auth-options";
 import { v2 as cloudinary } from 'cloudinary';
 import { sendOrderConfirmationEmail } from '@/lib/email';
 import { cookies } from 'next/headers';
+import { requireCsrfOrReject } from "@/lib/csrf";
+import { logger, publicErrorMessage } from "@/lib/logger";
 
 // Add these interfaces at the top of the file
 interface OrderItem {
@@ -14,6 +16,7 @@ interface OrderItem {
   price: number;
   selectedColor?: string | null;
   storageId?: string | null;
+  unitId?: string | null;
 }
 
 interface ShippingInfo {
@@ -29,10 +32,14 @@ interface CouponInfo {
   code: string;
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
+  minimumOrderAmount?: number | null;
 }
 
 export async function POST(request: Request) {
   try {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
+
     console.log("Starting order creation process...");
     
     // Check if the site is in maintenance mode
@@ -155,22 +162,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid total amount' }, { status: 400 });
     }
 
+    // Validate coupon minimum order when coupon is applied
+    if (couponData?.id) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { id: couponData.id },
+        select: { minimumOrderAmount: true }
+      });
+      if (coupon?.minimumOrderAmount != null && Number(coupon.minimumOrderAmount) > 0) {
+        const orderSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        if (orderSubtotal < Number(coupon.minimumOrderAmount)) {
+          return NextResponse.json(
+            { error: 'Your cart does not meet the minimum order amount for this coupon. Add more items or remove the coupon to proceed.' },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     console.log("All required fields validated");
 
-    // Validate product IDs and check stock availability
+    // Validate product IDs and check stock availability (products must be in scope for transaction)
     console.log("Validating products and checking stock...");
+    let products: { id: string; name: string; stock: number | null; storages: { id: string; units: { id: string; color: string; stock: number }[] }[]; variants: { color: string; quantity: number }[] }[];
     try {
       const productIds = items.map(item => item.id);
       console.log("Product IDs to validate:", productIds);
       
       // Fetch products with their variants and storages to check stock
-      const products = await prisma.product.findMany({
+      products = await prisma.product.findMany({
         where: { id: { in: productIds } },
         include: {
           variants: true,
           storages: {
             include: {
-              variants: true
+              units: true
             }
           }
         }
@@ -215,37 +240,31 @@ export async function POST(request: Request) {
             );
           }
           
-          if (orderItem.selectedColor) {
-            // Storage + Color: Check storage variant stock
-            console.log(`Checking storage variant: ${orderItem.selectedColor} for storage ${orderItem.storageId}`);
-            const storageVariant = selectedStorage.variants.find(v => v.color === orderItem.selectedColor);
-            if (!storageVariant) {
-              console.error(`Storage color variant ${orderItem.selectedColor} not found for storage ${orderItem.storageId}`);
+          const units = selectedStorage.units ?? [];
+          const unit = orderItem.unitId
+            ? units.find((u: { id: string }) => u.id === orderItem.unitId)
+            : units.find((u: { color: string }) => u.color === orderItem.selectedColor);
+          if (orderItem.selectedColor || orderItem.unitId) {
+            if (!unit) {
               return NextResponse.json(
-                { error: `Color ${orderItem.selectedColor} not available for selected storage` },
+                { error: `Selected option not available for ${product.name}` },
                 { status: 400 }
               );
             }
-            
-            if (storageVariant.quantity < orderItem.quantity) {
-              console.error(`Insufficient storage variant stock for product ${product.name}. Available: ${storageVariant.quantity}, Requested: ${orderItem.quantity}`);
+            if (unit.stock < orderItem.quantity) {
               return NextResponse.json(
-                { error: `Insufficient stock for ${product.name} - ${orderItem.selectedColor}. Available: ${storageVariant.quantity}` },
+                { error: `Insufficient stock for ${product.name}. Available: ${unit.stock}` },
                 { status: 400 }
               );
             }
-            console.log(`Storage variant stock check passed: ${storageVariant.quantity} >= ${orderItem.quantity}`);
-          } else {
-            // Storage only: Check storage stock
-            console.log(`Checking storage stock: ${selectedStorage.stock} >= ${orderItem.quantity}`);
-            if (selectedStorage.stock < orderItem.quantity) {
-              console.error(`Insufficient storage stock for product ${product.name}. Available: ${selectedStorage.stock}, Requested: ${orderItem.quantity}`);
+          } else if (units.length > 0) {
+            const totalStock = units.reduce((s: number, u: { stock: number }) => s + u.stock, 0);
+            if (totalStock < orderItem.quantity) {
               return NextResponse.json(
-                { error: `Insufficient stock for ${product.name}. Available: ${selectedStorage.stock}` },
+                { error: `Insufficient stock for ${product.name}. Available: ${totalStock}` },
                 { status: 400 }
               );
             }
-            console.log(`Storage stock check passed`);
           }
         } else {
           // Non-storage product (legacy or products without storage options)
@@ -273,11 +292,12 @@ export async function POST(request: Request) {
             console.log(`Color variant stock check passed: ${colorVariant.quantity} >= ${orderItem.quantity}`);
           } else {
             // No storage, no color: Check main product stock
-            console.log(`Checking main product stock: ${product.stock} >= ${orderItem.quantity}`);
-            if (product.stock < orderItem.quantity) {
-              console.error(`Insufficient stock for product ${product.name} (ID: ${product.id}). Available: ${product.stock}, Requested: ${orderItem.quantity}`);
+            const mainStock = product.stock ?? 0;
+            console.log(`Checking main product stock: ${mainStock} >= ${orderItem.quantity}`);
+            if (mainStock < orderItem.quantity) {
+              console.error(`Insufficient stock for product ${product.name} (ID: ${product.id}). Available: ${mainStock}, Requested: ${orderItem.quantity}`);
               return NextResponse.json(
-                { error: `Insufficient stock for product: ${product.name}. Available: ${product.stock}` },
+                { error: `Insufficient stock for product: ${product.name}. Available: ${mainStock}` },
                 { status: 400 }
               );
             }
@@ -344,8 +364,9 @@ export async function POST(request: Request) {
           productId: item.id,
           quantity: item.quantity,
           price: item.price,
-          color: item.selectedColor || null, // Store the selected color
-          storageId: item.storageId || null, // Store the selected storage
+          color: item.selectedColor || null,
+          storageId: item.storageId || null,
+          unitId: item.unitId || null,
         }));
         
         console.log("Creating order with items count:", orderItems.length);
@@ -398,72 +419,17 @@ export async function POST(request: Request) {
           console.log(`Processing item ${item.id} - Quantity: ${item.quantity}, StorageId: ${item.storageId}, Color: ${item.selectedColor}`);
           
           if (item.storageId && item.storageId !== null) {
-            // Storage-based product: Update storage stock and storage variants
-            console.log(`Updating storage stock for storage ${item.storageId}`);
-            
-            if (item.selectedColor) {
-              // Storage + Color: Update storage variant quantity, storage stock, and product stock
-              console.log(`Updating storage variant with color ${item.selectedColor}`);
-              
-              // Find and update storage variant
+            const product = products.find(p => p.id === item.id);
+            const selectedStorage = product?.storages?.find((s: { id: string }) => s.id === item.storageId);
+            const units = selectedStorage?.units ?? [];
+            const unit = item.unitId
+              ? units.find((u: { id: string }) => u.id === item.unitId)
+              : units.find((u: { color: string }) => u.color === item.selectedColor);
+            if (unit) {
               updatePromises.push(
-                prisma.productStorageVariant.updateMany({
-                  where: {
-                    storageId: item.storageId,
-                    color: item.selectedColor
-                  },
-                  data: {
-                    quantity: {
-                      decrement: item.quantity
-                    }
-                  }
-                })
-              );
-              
-              // Update storage total stock
-              updatePromises.push(
-                prisma.productStorage.update({
-                  where: { id: item.storageId },
-                  data: {
-                    stock: {
-                      decrement: item.quantity
-                    }
-                  }
-                })
-              );
-              
-              // Update main product stock
-              updatePromises.push(
-                prisma.product.update({
-                  where: { id: item.id },
-                  data: {
-                    stock: {
-                      decrement: item.quantity
-                    }
-                  }
-                })
-              );
-            } else {
-              // Storage only: Update storage stock and product stock
-              updatePromises.push(
-                prisma.productStorage.update({
-                  where: { id: item.storageId },
-                  data: {
-                    stock: {
-                      decrement: item.quantity
-                    }
-                  }
-                })
-              );
-              
-              updatePromises.push(
-                prisma.product.update({
-                  where: { id: item.id },
-                  data: {
-                    stock: {
-                      decrement: item.quantity
-                    }
-                  }
+                prisma.productStorageUnit.update({
+                  where: { id: unit.id },
+                  data: { stock: { decrement: item.quantity } }
                 })
               );
             }
@@ -581,15 +547,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ id: order.id });
       
     } catch (error) {
-      console.error('Error creating order in database:', error instanceof Error ? error.message : String(error));
-      return NextResponse.json({ error: `Failed to create order in database` }, { status: 500 });
+      logger.error('Error creating order in database', error);
+      return NextResponse.json(
+        { error: publicErrorMessage('Failed to create order in database') },
+        { status: 500 }
+      );
     }
     
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Order creation error:', errorMessage);
+    logger.error('Order creation error', error);
     return NextResponse.json(
-      { error: 'Failed to create order' },
+      { error: publicErrorMessage('Failed to create order') },
       { status: 500 }
     );
   }

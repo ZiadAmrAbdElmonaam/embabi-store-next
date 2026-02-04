@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    if (product.stock < quantity) {
+    if ((product.stock ?? 0) < quantity) {
       return NextResponse.json({ error: 'Not enough stock' }, { status: 400 });
     }
 

@@ -1,23 +1,32 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/auth-options";
+import { isAdminRequest } from "@/lib/admin-auth";
+import { requireCsrfOrReject } from "@/lib/csrf";
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const data = await request.json();
     
-    // Validate required fields
-    if (!data.name || !data.description || !data.price || !data.categoryId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    const productType = data.productType || (data.storages?.length > 0 ? 'STORAGE' : 'SIMPLE');
+    
+    // Validate based on product type
+    if (!data.name || !data.description || !data.categoryId) {
+      return NextResponse.json({ error: 'Missing required fields: name, description, category' }, { status: 400 });
+    }
+    if (productType === 'SIMPLE') {
+      if (data.price == null || data.price === '' || data.stock == null || data.stock === '') {
+        return NextResponse.json({ error: 'Price and stock are required for simple products' }, { status: 400 });
+      }
+    } else {
+      if (!data.storages?.length) {
+        return NextResponse.json({ error: 'At least one storage option is required for multi-storage products' }, { status: 400 });
+      }
     }
 
     // Create slug from name - Google-friendly format
@@ -40,19 +49,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Parse numeric values
-    const price = parseFloat(data.price);
-    const stock = parseInt(data.stock) || 0;
-    const sale = data.sale ? parseFloat(data.sale) : null;
-    const salePrice = data.salePrice ? parseFloat(data.salePrice) : null;
+    const price = productType === 'SIMPLE' ? parseFloat(data.price) : null;
+    const stock = productType === 'SIMPLE' ? (parseInt(data.stock) || 0) : null;
+    const sale = productType === 'SIMPLE' && data.sale ? parseFloat(data.sale) : null;
+    const salePrice = productType === 'SIMPLE' && data.salePrice ? parseFloat(data.salePrice) : null;
 
-    // Create the product with all fields
     const product = await prisma.product.create({
       data: {
         name: data.name,
         description: data.description,
-        price: price,
-        stock: stock,
+        productType,
+        price,
+        stock,
         images: data.images || [],
         thumbnails: data.thumbnails || [],
         slug,
@@ -74,18 +82,21 @@ export async function POST(request: Request) {
             description: detail.description,
           })) || [],
         },
-        // Create storage options
+        // Create storage options with units
         storages: {
           create: data.storages?.map((storage: any) => ({
             size: storage.size,
             price: parseFloat(storage.price),
-            stock: parseInt(storage.stock),
             salePercentage: storage.salePercentage ? parseFloat(storage.salePercentage) : null,
             saleEndDate: storage.saleEndDate ? new Date(storage.saleEndDate) : null,
-            variants: {
-              create: storage.variants?.map((variant: any) => ({
-                color: variant.color,
-                quantity: parseInt(variant.quantity),
+            units: {
+              create: storage.units?.map((u: any) => ({
+                color: u.color,
+                stock: parseInt(String(u.stock)) || 0,
+                taxStatus: u.taxStatus || 'UNPAID',
+                taxType: u.taxType || 'FIXED',
+                taxAmount: u.taxType === 'FIXED' && u.taxAmount != null ? parseFloat(u.taxAmount) : null,
+                taxPercentage: u.taxType === 'PERCENTAGE' && u.taxPercentage != null ? parseFloat(u.taxPercentage) : null,
               })) || [],
             },
           })) || [],
@@ -97,16 +108,15 @@ export async function POST(request: Request) {
         details: true,
         storages: {
           include: {
-            variants: true,
+            units: true,
           },
         },
       },
     });
 
-    // Convert Decimal to number for serialization  
     const serializedProduct = {
       ...product,
-      price: Number(product.price),
+      price: product.price != null ? Number(product.price) : null,
       salePrice: product.salePrice ? Number(product.salePrice) : null,
       discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
       createdAt: product.createdAt.toISOString(),
@@ -118,6 +128,11 @@ export async function POST(request: Request) {
         createdAt: storage.createdAt.toISOString(),
         updatedAt: storage.updatedAt.toISOString(),
         saleEndDate: storage.saleEndDate?.toISOString() || null,
+        units: storage.units.map(u => ({
+          ...u,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })),
       })),
     };
 
@@ -140,16 +155,15 @@ export async function GET() {
         details: true,
         storages: {
           include: {
-            variants: true,
+            units: true,
           },
         },
       },
     });
 
-    // Convert Decimal to number for serialization
     const serializedProducts = products.map(product => ({
       ...product,
-      price: Number(product.price),
+      price: product.price != null ? Number(product.price) : null,
       salePrice: product.salePrice ? Number(product.salePrice) : null,
       discountPrice: product.discountPrice ? Number(product.discountPrice) : null,
       createdAt: product.createdAt.toISOString(),
@@ -161,6 +175,11 @@ export async function GET() {
         createdAt: storage.createdAt.toISOString(),
         updatedAt: storage.updatedAt.toISOString(),
         saleEndDate: storage.saleEndDate?.toISOString() || null,
+        units: storage.units.map(u => ({
+          ...u,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })),
       })),
     }));
 

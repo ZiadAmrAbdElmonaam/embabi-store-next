@@ -1,13 +1,14 @@
+import React from "react";
 import { prisma } from "@/lib/prisma";
 import { ProductForm } from "@/components/admin/product-form";
 import { notFound } from "next/navigation";
-import { Product, ProductVariant, ProductDetail, Category, ProductStorage, ProductStorageVariant } from "@prisma/client";
+import { Product, ProductVariant, ProductDetail, ProductStorage, ProductStorageUnit } from "@prisma/client";
 
 type ProductWithRelations = Product & {
   variants: ProductVariant[];
   details: ProductDetail[];
   storages: (ProductStorage & {
-    variants: ProductStorageVariant[];
+    units: ProductStorageUnit[];
   })[];
 };
 
@@ -20,10 +21,12 @@ interface EditProductPageProps {
 const serializeProduct = (product: ProductWithRelations) => {
   return {
     ...product,
-    price: product.price.toString(),
+    productType: product.productType || (product.storages?.length ? 'STORAGE' : 'SIMPLE'),
+    price: product.price != null ? product.price.toString() : '',
     salePrice: product.salePrice?.toString() || null,
     discountPrice: product.discountPrice?.toString() || null,
     sale: product.sale?.toString() || null,
+    stock: product.stock != null ? product.stock.toString() : '',
     createdAt: product.createdAt.toISOString(),
     updatedAt: product.updatedAt.toISOString(),
     saleEndDate: product.saleEndDate?.toISOString() || null,
@@ -34,6 +37,11 @@ const serializeProduct = (product: ProductWithRelations) => {
       saleEndDate: storage.saleEndDate?.toISOString() || null,
       createdAt: storage.createdAt.toISOString(),
       updatedAt: storage.updatedAt.toISOString(),
+      units: storage.units.map(u => ({
+        ...u,
+        taxAmount: u.taxAmount != null ? u.taxAmount.toString() : '0',
+        taxPercentage: u.taxPercentage != null ? u.taxPercentage.toString() : '',
+      })),
     })),
   };
 };
@@ -54,7 +62,7 @@ export default async function EditProductPage({
         details: true,
         storages: {
           include: {
-            variants: true,
+            units: true,
           },
         },
       },
@@ -76,7 +84,7 @@ export default async function EditProductPage({
         <h1 className="text-2xl font-bold">Edit Product</h1>
       </div>
       <ProductForm 
-        initialData={serializeProduct(product)}
+        initialData={serializeProduct(product) as React.ComponentProps<typeof ProductForm>['initialData']}
         categories={categories}
       />
     </div>

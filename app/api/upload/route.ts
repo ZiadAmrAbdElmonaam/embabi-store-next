@@ -19,6 +19,14 @@ export async function POST(req: Request): Promise<Response> {
     const urls = await Promise.all(uploadPromises);
     return NextResponse.json({ urls });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const isSizeError = message.includes("too large");
+    if (isSizeError) {
+      return NextResponse.json(
+        { error: message, urls: [] },
+        { status: 413 }
+      );
+    }
     console.error('Upload error:', error);
     return NextResponse.json(
       { error: 'Failed to upload images', urls: [] },

@@ -11,7 +11,6 @@ import { useRouter } from 'next/navigation';
 import { TranslatedContent } from '@/components/ui/translated-content';
 import { useTranslation } from '@/hooks/use-translation';
 import CartCouponForm from './coupon-form';
-import { cookies } from 'next/headers';
 import { getColorName } from '@/lib/colors';
 
 interface Coupon {
@@ -19,10 +18,11 @@ interface Coupon {
   code: string;
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
+  minimumOrderAmount?: number | null;
 }
 
 export default function CartItems() {
-  const { items, removeItem, updateQuantity, updateColor, appliedCoupon, discountAmount, setCoupon, setDiscountAmount } = useCart();
+  const { items, removeItem, updateQuantity, updateColor, appliedCoupon, discountAmount, setCoupon, setDiscountAmount, isInitialized } = useCart();
   const [isUpdating, setIsUpdating] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -71,18 +71,24 @@ export default function CartItems() {
   const handleCheckout = () => {
     // Check authentication status
     if (status === 'loading') {
-      // Wait for authentication check to complete
       return;
     }
 
     if (!session) {
-      // Save current URL to return after login, with a special param to indicate cart redirect
       const returnUrl = '/checkout';
       router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}&fromCart=true`);
       return;
     }
 
-    // User is authenticated, proceed to checkout
+    // Block checkout if coupon minimum order is not met
+    const minOrder = appliedCoupon?.minimumOrderAmount != null ? Number(appliedCoupon.minimumOrderAmount) : null;
+    const subtotalForCheck = items.reduce((s, i) => s + ((i.salePrice ?? i.price) * i.quantity), 0);
+    if (minOrder != null && minOrder > 0 && subtotalForCheck < minOrder) {
+      const needed = Math.ceil(minOrder - subtotalForCheck);
+      toast.error(t('cart.minOrderToast').replace('{amount}', needed.toLocaleString()));
+      return;
+    }
+
     toast.success('Proceeding to checkout...');
     router.push('/checkout');
   };
@@ -99,6 +105,10 @@ export default function CartItems() {
 
   const savings = totalBeforeSale - subtotal;
   const total = subtotal + 0 - discountAmount; // Adding 0 for shipping (free) and subtracting discount
+
+  const minOrder = appliedCoupon?.minimumOrderAmount != null ? Number(appliedCoupon.minimumOrderAmount) : null;
+  const meetsMinimumOrder = !minOrder || minOrder <= 0 || subtotal >= minOrder;
+  const amountNeeded = minOrder != null && minOrder > 0 && subtotal < minOrder ? Math.ceil(minOrder - subtotal) : 0;
 
   if (!items?.length) {
     return (
@@ -150,7 +160,7 @@ export default function CartItems() {
                         {item.name}
                       </Link>
                       <button
-                        onClick={() => handleRemoveItem(item.uniqueId)}
+                        onClick={() => handleRemoveItem(item.uniqueId ?? `${item.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`)}
                         className="text-gray-400 hover:text-red-500 transition-colors"
                         disabled={isUpdating}
                       >
@@ -195,7 +205,7 @@ export default function CartItems() {
                                 boxShadow: item.selectedColor.toLowerCase() === 'white' ? 'inset 0 0 0 1px rgba(0,0,0,0.1)' : undefined
                               }}
                             />
-                            <span className="text-sm text-gray-600">{getColorName(item.selectedColor, lang)}</span>
+                            <span className="text-sm text-gray-600">{getColorName(item.selectedColor ?? '', lang ?? 'en')}</span>
                           </div>
                         </div>
                       </div>
@@ -205,7 +215,7 @@ export default function CartItems() {
                     <div className="flex items-center gap-4 mt-4">
                       <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg">
                         <button
-                          onClick={() => handleUpdateQuantity(item.uniqueId, item.quantity - 1)}
+                          onClick={() => handleUpdateQuantity(item.uniqueId ?? `${item.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`, item.quantity - 1)}
                           disabled={item.quantity <= 1 || isUpdating}
                           className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed"
                         >
@@ -213,7 +223,7 @@ export default function CartItems() {
                         </button>
                         <span className="w-10 text-center text-gray-900 dark:text-white">{item.quantity}</span>
                         <button
-                          onClick={() => handleUpdateQuantity(item.uniqueId, item.quantity + 1)}
+                          onClick={() => handleUpdateQuantity(item.uniqueId ?? `${item.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`, item.quantity + 1)}
                           disabled={isUpdating || (() => {
                             // Check available stock based on selected color
                             const availableStock = item.selectedColor 
@@ -292,18 +302,25 @@ export default function CartItems() {
 
             {/* Display coupon discount if applied */}
             {appliedCoupon && (
-              <div className="flex justify-between items-center text-green-600 dark:text-green-400 border-t border-gray-100 dark:border-gray-700 pt-3">
-                <div className="flex items-center gap-1">
-                  <Ticket className="h-4 w-4" />
-                  <span className="font-medium">{appliedCoupon.code}</span>
-                  <button 
-                    onClick={handleRemoveCoupon}
-                    className="ml-2 text-red-500 dark:text-red-400 text-xs hover:underline"
-                  >
-                    <TranslatedContent translationKey="cart.removeCoupon" />
-                  </button>
+              <div className="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-1">
+                <div className="flex justify-between items-center text-green-600 dark:text-green-400">
+                  <div className="flex items-center gap-1">
+                    <Ticket className="h-4 w-4" />
+                    <span className="font-medium">{appliedCoupon.code}</span>
+                    <button 
+                      onClick={handleRemoveCoupon}
+                      className="ml-2 text-red-500 dark:text-red-400 text-xs hover:underline"
+                    >
+                      <TranslatedContent translationKey="cart.removeCoupon" />
+                    </button>
+                  </div>
+                  <span>- EGP {discountAmount.toLocaleString()}</span>
                 </div>
-                <span>- EGP {discountAmount.toLocaleString()}</span>
+                {!meetsMinimumOrder && amountNeeded > 0 && (
+                  <p className="text-amber-600 dark:text-amber-400 text-sm">
+                    {t('cart.minOrderHint').replace('{amount}', amountNeeded.toLocaleString())}
+                  </p>
+                )}
               </div>
             )}
             
@@ -322,11 +339,26 @@ export default function CartItems() {
           
           <button
             onClick={handleCheckout}
-            disabled={isUpdating || items.length === 0}
-            className="w-full bg-orange-600 text-white py-3 rounded-lg mt-6 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!isInitialized || isUpdating || items.length === 0 || (!meetsMinimumOrder && !!appliedCoupon)}
+            className="w-full bg-orange-600 text-white py-3 rounded-lg mt-6 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            <TranslatedContent translationKey="cart.proceedToCheckout" />
+            {!isInitialized ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                <span>{t('cart.loadingCheckout')}</span>
+              </>
+            ) : (
+              <TranslatedContent translationKey="cart.proceedToCheckout" />
+            )}
           </button>
+          {!meetsMinimumOrder && appliedCoupon && amountNeeded > 0 && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 mt-2 text-center">
+              {t('cart.minOrderButtonHint').replace('{amount}', amountNeeded.toLocaleString())}
+            </p>
+          )}
         </div>
       </div>
     </div>

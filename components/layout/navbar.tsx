@@ -21,6 +21,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWhatsapp, faFacebook } from '@fortawesome/free-brands-svg-icons';
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/hooks/use-cart";
+import { useWishlist } from "@/hooks/use-wishlist";
 import Image from "next/image";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { TranslatedContent } from "@/components/ui/translated-content";
@@ -34,6 +35,7 @@ export function Navbar() {
   const [isFacebookOpen, setIsFacebookOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { items } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const { lang } = useTranslation();
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -49,11 +51,19 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
+    const SCROLL_DOWN_THRESHOLD = 100;
+    const SCROLL_UP_THRESHOLD = 50;
+
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100);
+      const y = window.scrollY;
+      setIsScrolled((prev) => {
+        if (y > SCROLL_DOWN_THRESHOLD) return true;
+        if (y < SCROLL_UP_THRESHOLD) return false;
+        return prev;
+      });
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -182,6 +192,11 @@ export function Navbar() {
             <div className="flex items-center justify-end gap-4 md:w-[280px] md:flex-none">
               <Link href="/wishlist" className="relative">
                 <Heart className="h-6 w-6 text-gray-700 hover:text-orange-600" />
+                {wishlistItems.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {wishlistItems.length}
+                  </span>
+                )}
               </Link>
               <Link href="/cart" className="relative">
                 <ShoppingCart className="h-6 w-6 text-gray-700 hover:text-orange-600" />

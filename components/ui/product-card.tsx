@@ -20,8 +20,9 @@ interface ProductCardProps {
     description: string;
     price: number;
     salePrice: number | null;
+    taxStatus?: 'PAID' | 'UNPAID' | null;
     sale: number | null;
-    stock: number;
+    stock: number | null;
     images: string[];
     categoryId: string;
     category?: {
@@ -41,14 +42,10 @@ interface ProductCardProps {
       id: string;
       size: string;
       price: number;
-      stock: number;
       salePercentage?: number | null;
       saleEndDate?: string | null;
-      variants: Array<{
-        id: string;
-        color: string;
-        quantity: number;
-      }>;
+      units?: Array<{ id: string; color: string; stock: number }>;
+      variants?: Array<{ id: string; color: string; quantity: number }>;
     }>;
   };
   showDescription?: boolean;
@@ -60,14 +57,13 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
   const { addItem } = useCart();
   const { t } = useTranslation();
 
-  // Helper function to check stock status
   const checkStockStatus = () => {
-    const hasMainStock = product.stock > 0;
-    const hasStorageStock = product.storages && product.storages.some(storage => storage.stock > 0);
+    const hasMainStock = (product.stock ?? 0) > 0;
+    const hasStorageStock = product.storages?.some(s => (s.units ?? s.variants ?? []).some((u: { stock?: number; quantity?: number }) => (u.stock ?? u.quantity ?? 0) > 0));
     return {
-      hasStock: hasMainStock || hasStorageStock,
+      hasStock: hasMainStock || !!hasStorageStock,
       hasMainStock,
-      hasStorageStock
+      hasStorageStock: !!hasStorageStock
     };
   };
 
@@ -170,10 +166,13 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
         className="absolute top-2 right-2 z-10" 
       />
       
-      {/* Sale Badge */}
-      {product.sale && stockStatus.hasStock && (
+      {/* Sale Badge - when sale is active (salePrice present); product.sale for simple, computed % for storage */}
+      {product.salePrice != null && product.salePrice < product.price && stockStatus.hasStock && (
         <div className="absolute top-2 left-2 z-10 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-medium">
-          {Math.round(product.sale)}% {t('products.off')}
+          {product.sale != null
+            ? Math.round(product.sale)
+            : product.price > 0 ? Math.round(((product.price - product.salePrice) / product.price) * 100) : 0
+          }% {t('products.off')}
         </div>
       )}
 
@@ -278,28 +277,43 @@ export function ProductCard({ product, showDescription = false }: ProductCardPro
         <div className="mt-2 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {product.salePrice && product.salePrice < product.price && stockStatus.hasStock ? (
-                <>
-                  <p className="font-bold text-orange-600 truncate">
-                    {formatPrice(product.salePrice)}
-                  </p>
-                  <p className="text-sm text-gray-500 line-through truncate">
+              {stockStatus.hasStock ? (
+                product.salePrice && product.salePrice < product.price ? (
+                  <>
+                    <p className="font-bold text-orange-600 truncate">
+                      {formatPrice(product.salePrice)}
+                    </p>
+                    <p className="text-sm text-gray-500 line-through truncate">
+                      {formatPrice(product.price)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-bold truncate text-gray-900">
                     {formatPrice(product.price)}
                   </p>
-                </>
+                )
               ) : (
-                <p className={`font-bold truncate ${stockStatus.hasStock ? 'text-gray-900' : 'text-gray-500'}`}>
-                  {formatPrice(product.price)}
-                </p>
+                <div className="flex flex-col gap-2 py-1">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    {t('products.outOfStock')}
+                  </span>
+                  <Link
+                    href="/products"
+                    className="inline-flex items-center gap-1.5 w-fit px-3 py-1.5 rounded-lg text-sm font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors group/link"
+                  >
+                    {t('products.exploreMoreProducts')}
+                    <svg className="w-4 h-4 group-hover/link:translate-x-0.5 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Link>
+                </div>
               )}
             </div>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-              stockStatus.hasStock 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {stockStatus.hasStock ? t('products.inStock') : t('products.outOfStock')}
-            </span>
+            {stockStatus.hasStock && (
+              <span className="px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                {t('products.inStock')}
+              </span>
+            )}
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/auth-options";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import { getProductDisplayPrice } from "@/lib/utils";
 
 // Helper to get user identifier (either user ID if logged in or anonymous session ID)
 const getUserIdentifier = async () => {
@@ -12,7 +13,7 @@ const getUserIdentifier = async () => {
   }
   
   // For anonymous users, use a session cookie
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   let sessionId = cookieStore.get('wishlist_session_id')?.value;
   
   if (!sessionId) {
@@ -49,21 +50,17 @@ export async function GET() {
                   name: true,
                   price: true,
                   salePrice: true,
+                  sale: true,
+                  saleEndDate: true,
                   images: true,
                   slug: true,
                   description: true,
                   variants: true,
                   storages: {
-                    include: {
-                      variants: true,
-                    },
+                    include: { units: true },
                   },
                   category: {
-                    select: {
-                      id: true,
-                      name: true,
-                      slug: true
-                    }
+                    select: { id: true, name: true, slug: true }
                   }
                 }
               }
@@ -73,30 +70,47 @@ export async function GET() {
       });
       
       if (userWishlist) {
-        wishlistItems = userWishlist.items.map(item => ({
-          id: item.product.id,
-          name: item.product.name,
-          price: Number(item.product.price),
-          salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
-          images: item.product.images,
-          slug: item.product.slug,
-          description: item.product.description,
-          variants: item.product.variants,
-          storages: item.product.storages?.map(storage => ({
-            id: storage.id,
-            size: storage.size,
-            price: Number(storage.price),
-            stock: storage.stock,
-            salePercentage: storage.salePercentage,
-            saleEndDate: storage.saleEndDate?.toISOString() || null,
-            variants: storage.variants.map(variant => ({
-              id: variant.id,
-              color: variant.color,
-              quantity: variant.quantity
-            }))
-          })) || [],
-          category: item.product.category
-        }));
+        wishlistItems = userWishlist.items.map(item => {
+          const p = item.product;
+          const storagesForDisplay = p.storages?.map(storage => {
+            const s = storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> };
+            return {
+              id: storage.id,
+              size: storage.size,
+              price: Number(storage.price),
+              salePercentage: storage.salePercentage,
+              saleEndDate: storage.saleEndDate?.toISOString() || null,
+              units: s.units?.map(u => ({
+                id: u.id,
+                color: u.color,
+                stock: u.stock,
+                taxStatus: u.taxStatus,
+                taxType: u.taxType,
+                taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+                taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+              })) ?? [],
+            };
+          }) ?? [];
+          const displayPrice = getProductDisplayPrice({
+            price: p.price != null ? Number(p.price) : null,
+            salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+            sale: p.sale ?? null,
+            saleEndDate: p.saleEndDate?.toISOString() ?? null,
+            storages: storagesForDisplay,
+          });
+          return {
+            id: p.id,
+            name: p.name,
+            price: displayPrice.price,
+            salePrice: displayPrice.salePrice,
+            images: p.images,
+            slug: p.slug,
+            description: p.description,
+            variants: p.variants,
+            storages: storagesForDisplay,
+            category: p.category
+          };
+        });
       }
     } else if (sessionId) {
       // Get wishlist for anonymous user
@@ -104,28 +118,24 @@ export async function GET() {
         where: { sessionId },
         include: {
           items: {
-      include: {
+            include: {
               product: {
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            salePrice: true,
-            images: true,
+                select: {
+                  id: true,
+                  name: true,
+                  price: true,
+                  salePrice: true,
+                  sale: true,
+                  saleEndDate: true,
+                  images: true,
                   slug: true,
                   description: true,
                   variants: true,
                   storages: {
-                    include: {
-                      variants: true,
-                    },
+                    include: { units: true },
                   },
                   category: {
-                    select: {
-                      id: true,
-                      name: true,
-                      slug: true
-                    }
+                    select: { id: true, name: true, slug: true }
                   }
                 }
               }
@@ -135,30 +145,47 @@ export async function GET() {
       });
       
       if (anonWishlist) {
-        wishlistItems = anonWishlist.items.map(item => ({
-          id: item.product.id,
-          name: item.product.name,
-          price: Number(item.product.price),
-          salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
-          images: item.product.images,
-          slug: item.product.slug,
-          description: item.product.description,
-          variants: item.product.variants,
-          storages: item.product.storages?.map(storage => ({
-            id: storage.id,
-            size: storage.size,
-            price: Number(storage.price),
-            stock: storage.stock,
-            salePercentage: storage.salePercentage,
-            saleEndDate: storage.saleEndDate?.toISOString() || null,
-            variants: storage.variants.map(variant => ({
-              id: variant.id,
-              color: variant.color,
-              quantity: variant.quantity
-            }))
-          })) || [],
-          category: item.product.category
-        }));
+        wishlistItems = anonWishlist.items.map(item => {
+          const p = item.product;
+          const storagesForDisplay = p.storages?.map(storage => {
+            const s = storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> };
+            return {
+              id: storage.id,
+              size: storage.size,
+              price: Number(storage.price),
+              salePercentage: storage.salePercentage,
+              saleEndDate: storage.saleEndDate?.toISOString() || null,
+              units: s.units?.map(u => ({
+                id: u.id,
+                color: u.color,
+                stock: u.stock,
+                taxStatus: u.taxStatus,
+                taxType: u.taxType,
+                taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+                taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+              })) ?? [],
+            };
+          }) ?? [];
+          const displayPrice = getProductDisplayPrice({
+            price: p.price != null ? Number(p.price) : null,
+            salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+            sale: p.sale ?? null,
+            saleEndDate: p.saleEndDate?.toISOString() ?? null,
+            storages: storagesForDisplay,
+          });
+          return {
+            id: p.id,
+            name: p.name,
+            price: displayPrice.price,
+            salePrice: displayPrice.salePrice,
+            images: p.images,
+            slug: p.slug,
+            description: p.description,
+            variants: p.variants,
+            storages: storagesForDisplay,
+            category: p.category
+          };
+        });
       }
     }
     
@@ -315,52 +342,82 @@ async function clearWishlist(userId, sessionId, isAuthenticated) {
   return NextResponse.json({ success: true, items: [] });
 }
 
+// Helper to map product to wishlist item with correct display price
+function mapProductToWishlistItem(p, storagesForDisplay) {
+  const displayPrice = getProductDisplayPrice({
+    price: p.price != null ? Number(p.price) : null,
+    salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+    sale: p.sale ?? null,
+    saleEndDate: p.saleEndDate?.toISOString?.() ?? null,
+    storages: storagesForDisplay,
+  });
+  return {
+    id: p.id,
+    name: p.name,
+    price: displayPrice.price,
+    salePrice: displayPrice.salePrice,
+    images: p.images,
+    slug: p.slug,
+    description: p.description,
+    variants: p.variants,
+    storages: storagesForDisplay,
+    category: p.category
+  };
+}
+
 // Helper to get updated wishlist after changes
 async function getUpdatedWishlist(userId, sessionId, isAuthenticated) {
+  const productSelect = {
+    id: true,
+    name: true,
+    price: true,
+    salePrice: true,
+    sale: true,
+    saleEndDate: true,
+    images: true,
+    slug: true,
+    description: true,
+    variants: true,
+    storages: { include: { units: true } },
+    category: { select: { id: true, name: true, slug: true } }
+  };
   let wishlistItems = [];
-  
+
   if (isAuthenticated && userId) {
     const userWishlist = await prisma.wishlist.findUnique({
       where: { userId },
       include: {
         items: {
           include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                salePrice: true,
-                images: true,
-                slug: true,
-                description: true,
-                variants: true,
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                    slug: true
-                  }
-                }
-              }
-            }
+            product: { select: productSelect }
           }
         }
       }
     });
-    
     if (userWishlist) {
-      wishlistItems = userWishlist.items.map(item => ({
-        id: item.product.id,
-        name: item.product.name,
-        price: Number(item.product.price),
-        salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
-        images: item.product.images,
-        slug: item.product.slug,
-        description: item.product.description,
-        variants: item.product.variants,
-        category: item.product.category
-      }));
+      wishlistItems = userWishlist.items.map(item => {
+        const p = item.product;
+        const storagesForDisplay = p.storages?.map(storage => {
+          const s = storage;
+          return {
+            id: storage.id,
+            size: storage.size,
+            price: Number(storage.price),
+            salePercentage: storage.salePercentage,
+            saleEndDate: storage.saleEndDate?.toISOString() || null,
+            units: (s.units ?? []).map(u => ({
+              id: u.id,
+              color: u.color,
+              stock: u.stock,
+              taxStatus: u.taxStatus,
+              taxType: u.taxType,
+              taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+              taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+            })),
+          };
+        }) ?? [];
+        return mapProductToWishlistItem(p, storagesForDisplay);
+      });
     }
   } else if (sessionId) {
     const anonWishlist = await prisma.anonymousWishlist.findUnique({
@@ -368,44 +425,34 @@ async function getUpdatedWishlist(userId, sessionId, isAuthenticated) {
       include: {
         items: {
           include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                price: true,
-                salePrice: true,
-                images: true,
-                slug: true,
-                description: true,
-                variants: true,
-                category: {
-                  select: {
-                    id: true,
-                    name: true,
-                    slug: true
-                  }
-                }
-              }
-            }
+            product: { select: productSelect }
           }
         }
       }
     });
-    
     if (anonWishlist) {
-      wishlistItems = anonWishlist.items.map(item => ({
-        id: item.product.id,
-        name: item.product.name,
-        price: Number(item.product.price),
-        salePrice: item.product.salePrice ? Number(item.product.salePrice) : null,
-        images: item.product.images,
-        slug: item.product.slug,
-        description: item.product.description,
-        variants: item.product.variants,
-        category: item.product.category
-      }));
+      wishlistItems = anonWishlist.items.map(item => {
+        const p = item.product;
+        const storagesForDisplay = p.storages?.map(storage => ({
+          id: storage.id,
+          size: storage.size,
+          price: Number(storage.price),
+          salePercentage: storage.salePercentage,
+          saleEndDate: storage.saleEndDate?.toISOString() || null,
+          units: (storage.units ?? []).map(u => ({
+            id: u.id,
+            color: u.color,
+            stock: u.stock,
+            taxStatus: u.taxStatus,
+            taxType: u.taxType,
+            taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+            taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+          })),
+        })) ?? [];
+        return mapProductToWishlistItem(p, storagesForDisplay);
+      });
     }
   }
-  
+
   return NextResponse.json({ items: wishlistItems });
 } 

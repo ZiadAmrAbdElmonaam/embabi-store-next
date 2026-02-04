@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/auth-options';
 import { uploadImage, deleteImage } from '@/lib/cloudinary';
+import { MAX_UPLOAD_BYTES } from '@/lib/upload';
+import { requireCsrfOrReject } from '@/lib/csrf';
 
 export async function POST(request: NextRequest) {
   try {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
     // Check if user is authenticated and is admin
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
@@ -23,6 +27,9 @@ export async function POST(request: NextRequest) {
     const uploadPromises = files.map(async (file) => {
       if (!file.type.startsWith('image/')) {
         throw new Error(`File ${file.name} is not an image`);
+      }
+      if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error(`File ${file.name} is too large. Maximum size is ${MAX_UPLOAD_BYTES / 1024 / 1024}MB.`);
       }
 
       // Upload to specific folder based on context
@@ -49,9 +56,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error uploading images:', error);
+    const message = error instanceof Error ? error.message : 'Failed to upload images';
+    const status = message.includes('too large') ? 413 : 500;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to upload images' },
-      { status: 500 }
+      { error: process.env.NODE_ENV === 'production' && status === 500 ? 'Failed to upload images' : message },
+      { status }
     );
   }
 }
@@ -59,6 +68,8 @@ export async function POST(request: NextRequest) {
 // Optional: DELETE endpoint to remove images
 export async function DELETE(request: NextRequest) {
   try {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

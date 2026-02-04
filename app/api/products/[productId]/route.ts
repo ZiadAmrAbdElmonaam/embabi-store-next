@@ -1,11 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { isAdminRequest } from "@/lib/admin-auth";
+import { requireCsrfOrReject } from "@/lib/csrf";
 
 export async function PUT(
   req: Request,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
+    const csrfReject = requireCsrfOrReject(req);
+    if (csrfReject) return csrfReject;
+    if (!(await isAdminRequest(req))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { productId } = await params;
     const body = await req.json();
     const {
       name,
@@ -20,28 +28,33 @@ export async function PUT(
       variants,
       details,
       storages,
+      productType: bodyProductType,
     } = body;
 
-    if (!params.productId) {
+    if (!productId) {
       return new NextResponse("Product ID is required", { status: 400 });
     }
 
-    // Update the product
-    const updatedProduct = await prisma.product.update({
-      where: {
-        id: params.productId,
-      },
+    const productType = bodyProductType || (storages?.length > 0 ? 'STORAGE' : 'SIMPLE');
+    const finalPrice = productType === 'SIMPLE' && price != null ? parseFloat(price) : null;
+    const finalStock = productType === 'SIMPLE' && stock != null ? parseInt(stock) : null;
+    const saleNum = productType === 'SIMPLE' && sale ? parseFloat(sale) : null;
+    const salePrice = finalPrice != null && saleNum ? finalPrice - (finalPrice * (saleNum / 100)) : null;
+
+    await prisma.product.update({
+      where: { id: productId },
       data: {
         name,
         description,
-        price,
-        stock,
+        productType,
+        price: finalPrice,
+        stock: finalStock,
         categoryId,
-        sale: sale || null,
+        sale: saleNum,
         saleEndDate: saleEndDate ? new Date(saleEndDate) : null,
-        images,
-        thumbnails,
-        salePrice: sale ? price - (price * (sale / 100)) : null,
+        images: images ?? [],
+        thumbnails: thumbnails ?? [],
+        salePrice,
       },
     });
 
@@ -49,7 +62,7 @@ export async function PUT(
     if (variants) {
       // Delete existing variants
       await prisma.productVariant.deleteMany({
-        where: { productId: params.productId },
+        where: { productId },
       });
 
       // Create new variants
@@ -59,7 +72,7 @@ export async function PUT(
             data: {
               color: variant.color,
               quantity: variant.quantity,
-              productId: params.productId,
+              productId,
             },
           })
         )
@@ -70,7 +83,7 @@ export async function PUT(
     if (details) {
       // Delete existing details
       await prisma.productDetail.deleteMany({
-        where: { productId: params.productId },
+        where: { productId },
       });
 
       // Create new details
@@ -80,7 +93,7 @@ export async function PUT(
             data: {
               label: detail.label,
               description: detail.description,
-              productId: params.productId,
+              productId,
             },
           })
         )
@@ -89,24 +102,24 @@ export async function PUT(
 
     // Update storages
     if (storages !== undefined) {
-      // Delete existing storage variants first
+      // Delete existing storage units first (cascade will handle when we delete storages, but we delete storages after)
       const existingStorages = await prisma.productStorage.findMany({
-        where: { productId: params.productId },
+        where: { productId },
         select: { id: true },
       });
 
       for (const existingStorage of existingStorages) {
-        await prisma.productStorageVariant.deleteMany({
+        await prisma.productStorageUnit.deleteMany({
           where: { storageId: existingStorage.id },
         });
       }
 
       // Delete existing storages
       await prisma.productStorage.deleteMany({
-        where: { productId: params.productId },
+        where: { productId },
       });
 
-      // Create new storages
+      // Create new storages with units
       if (storages && storages.length > 0) {
         await Promise.all(
           storages.map(async (storage: any) => {
@@ -114,26 +127,24 @@ export async function PUT(
               data: {
                 size: storage.size,
                 price: parseFloat(storage.price),
-                stock: parseInt(storage.stock),
                 salePercentage: storage.salePercentage ? parseFloat(storage.salePercentage) : null,
                 saleEndDate: storage.saleEndDate ? new Date(storage.saleEndDate) : null,
-                productId: params.productId,
+                productId,
               },
             });
 
-            // Create storage variants
-            if (storage.variants && storage.variants.length > 0) {
-              await Promise.all(
-                storage.variants.map((variant: { color: string; quantity: number }) =>
-                  prisma.productStorageVariant.create({
-                    data: {
-                      color: variant.color,
-                      quantity: parseInt(variant.quantity),
-                      storageId: createdStorage.id,
-                    },
-                  })
-                )
-              );
+            if (storage.units && storage.units.length > 0) {
+              await prisma.productStorageUnit.createMany({
+                data: storage.units.map((u: any) => ({
+                  storageId: createdStorage.id,
+                  color: u.color,
+                  stock: parseInt(String(u.stock)) || 0,
+                  taxStatus: u.taxStatus || 'UNPAID',
+                  taxType: u.taxType || 'FIXED',
+                  taxAmount: u.taxType === 'FIXED' && u.taxAmount != null ? parseFloat(u.taxAmount) : null,
+                  taxPercentage: u.taxType === 'PERCENTAGE' && u.taxPercentage != null ? parseFloat(u.taxPercentage) : null,
+                })),
+              });
             }
           })
         );
@@ -142,14 +153,14 @@ export async function PUT(
 
     // Fetch the updated product with all relations for proper serialization
     const productWithRelations = await prisma.product.findUnique({
-      where: { id: params.productId },
+      where: { id: productId },
       include: {
         category: true,
         variants: true,
         details: true,
         storages: {
           include: {
-            variants: true,
+            units: true,
           },
         },
       },
@@ -159,10 +170,9 @@ export async function PUT(
       return new NextResponse("Product not found", { status: 404 });
     }
 
-    // Convert Decimal to number for serialization
     const serializedProduct = {
       ...productWithRelations,
-      price: Number(productWithRelations.price),
+      price: productWithRelations.price != null ? Number(productWithRelations.price) : null,
       salePrice: productWithRelations.salePrice ? Number(productWithRelations.salePrice) : null,
       discountPrice: productWithRelations.discountPrice ? Number(productWithRelations.discountPrice) : null,
       createdAt: productWithRelations.createdAt.toISOString(),
@@ -174,6 +184,11 @@ export async function PUT(
         createdAt: storage.createdAt.toISOString(),
         updatedAt: storage.updatedAt.toISOString(),
         saleEndDate: storage.saleEndDate?.toISOString() || null,
+        units: storage.units.map(u => ({
+          ...u,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })),
       })),
     };
 

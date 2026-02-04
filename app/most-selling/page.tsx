@@ -66,7 +66,7 @@ export default async function MostSellingPage() {
       },
       storages: {
         include: {
-          variants: true,
+          units: true,
         },
       },
     }
@@ -86,14 +86,23 @@ export default async function MostSellingPage() {
     const displayPrice = getProductDisplayPrice({
       price: Number(product.price),
       salePrice: product.salePrice ? Number(product.salePrice) : null,
+      sale: product.sale ?? null,
       saleEndDate: product.saleEndDate?.toISOString() || null,
       storages: product.storages?.map(storage => ({
         id: storage.id,
         size: storage.size,
         price: Number(storage.price),
-        stock: storage.stock,
         salePercentage: storage.salePercentage,
         saleEndDate: storage.saleEndDate?.toISOString() || null,
+        units: (storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> }).units?.map(u => ({
+          id: u.id,
+          color: u.color,
+          stock: u.stock,
+          taxStatus: u.taxStatus,
+          taxType: u.taxType,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })) ?? [],
       })) || []
     });
 
@@ -101,15 +110,28 @@ export default async function MostSellingPage() {
       ...product,
       price: displayPrice.price,
       salePrice: displayPrice.salePrice,
+      taxStatus: displayPrice.taxStatus ?? null,
       totalSold: quantityMap.get(product.id) || 0,
       variants: product.variants || [],
-      storages: product.storages?.map(storage => ({
-        ...storage,
-        price: Number(storage.price),
-        createdAt: storage.createdAt.toISOString(),
-        updatedAt: storage.updatedAt.toISOString(),
-        saleEndDate: storage.saleEndDate?.toISOString() || null,
-      })) || [],
+      storages: product.storages?.map(storage => {
+        const s = storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> };
+        return {
+          id: storage.id,
+          size: storage.size,
+          price: Number(storage.price),
+          salePercentage: storage.salePercentage,
+          saleEndDate: storage.saleEndDate?.toISOString() || null,
+          units: s.units?.map(u => ({
+            id: u.id,
+            color: u.color,
+            stock: u.stock,
+            taxStatus: u.taxStatus,
+            taxType: u.taxType,
+            taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+            taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+          })) ?? [],
+        };
+      }) || [],
       createdAt: product.createdAt.toISOString(),
       updatedAt: product.updatedAt.toISOString(),
       saleEndDate: product.saleEndDate?.toISOString() || null,

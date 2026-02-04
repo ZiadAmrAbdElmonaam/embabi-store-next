@@ -88,9 +88,11 @@ export function CancelItemsModal({ order, onClose, onItemsCancelled }: CancelIte
         quantityToCancel: quantity
       }));
 
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(`/api/orders/${order.id}/cancel-items`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...csrfHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           items: itemsToCancel,
           comment 

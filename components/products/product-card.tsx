@@ -19,6 +19,7 @@ interface ProductCardProps {
     description: string;
     price: number;
     salePrice?: number | null;
+    taxStatus?: 'PAID' | 'UNPAID' | null;
     saleEndDate?: string | null;
     images: string[];
     slug: string;
@@ -165,7 +166,7 @@ export function ProductCard({ product }: ProductCardProps) {
     }
     
     // For products without storages, colors or variants, add directly to cart
-    addItem({
+    addToCart({
       id: product.id,
       name: product.name,
       price: product.price,

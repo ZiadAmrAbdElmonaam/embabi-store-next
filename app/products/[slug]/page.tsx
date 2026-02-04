@@ -102,7 +102,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       details: true,
       storages: {
         include: {
-          variants: true,
+          units: true,
         },
       },
       reviews: {
@@ -123,6 +123,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
   if (!product) {
     notFound();
   }
+
+  // Compute availability: SIMPLE uses main stock, STORAGE uses sum of units
+  const hasStock = product.productType === 'SIMPLE'
+    ? (product.stock ?? 0) > 0
+    : product.storages?.some(s => s.units?.some(u => u.stock > 0)) ?? false;
 
   // Convert Decimal to number before passing to client components
   const serializedProduct = {
@@ -152,13 +157,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
       id: storage.id,
       size: storage.size,
       price: Number(storage.price),
-      stock: storage.stock,
       salePercentage: storage.salePercentage,
       saleEndDate: storage.saleEndDate?.toISOString() || null,
-      variants: storage.variants.map(variant => ({
-        id: variant.id,
-        color: variant.color,
-        quantity: variant.quantity,
+      units: storage.units.map(unit => ({
+        id: unit.id,
+        color: unit.color,
+        stock: unit.stock,
+        taxStatus: unit.taxStatus,
+        taxType: unit.taxType,
+        taxAmount: unit.taxAmount != null ? Number(unit.taxAmount) : null,
+        taxPercentage: unit.taxPercentage != null ? Number(unit.taxPercentage) : null,
       })),
     })),
     createdAt: product.createdAt.toISOString(),
@@ -192,7 +200,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         price={serializedProduct.salePrice || serializedProduct.price}
         sku={serializedProduct.id}
         brand={serializedProduct.category?.name || 'Embabi Store'}
-        availability={serializedProduct.stock > 0 ? 'InStock' : 'OutOfStock'}
+        availability={hasStock ? 'InStock' : 'OutOfStock'}
         reviews={structuredReviews}
       />
       

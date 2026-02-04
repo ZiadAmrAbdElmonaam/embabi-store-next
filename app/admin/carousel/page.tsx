@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArrowUp, ArrowDown, Trash2, ImagePlus, AlertTriangle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import { InstructionDialog } from '@/components/admin/instruction-dialog';
 
 interface CarouselImage {
   id: string;
@@ -20,6 +21,15 @@ export default function CarouselManagementPage() {
   const [newImageLink, setNewImageLink] = useState('');
   const [linkInputs, setLinkInputs] = useState<Record<string, string>>({});
   const [savingLinkId, setSavingLinkId] = useState<string | null>(null);
+
+  // Hero thumbnails (4 static images for the right side)
+  const [heroThumbnails, setHeroThumbnails] = useState<Array<{ id?: string; order: number; url: string; linkUrl?: string | null }>>([
+    { order: 1, url: '', linkUrl: null },
+    { order: 2, url: '', linkUrl: null },
+    { order: 3, url: '', linkUrl: null },
+    { order: 4, url: '', linkUrl: null },
+  ]);
+  const [savingThumbnails, setSavingThumbnails] = useState(false);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -48,6 +58,19 @@ export default function CarouselManagementPage() {
         // Extract URLs from the {url, source, originalFilename} format
         const imageUrls = availableData.map((img: any) => img.url);
         setAvailableImages(imageUrls || []);
+
+        // Fetch hero thumbnails
+        const thumbRes = await fetch('/api/admin/hero-thumbnails');
+        if (thumbRes.ok) {
+          const thumbData = await thumbRes.json();
+          const thumbs = thumbData.thumbnails || [];
+          setHeroThumbnails([
+            { order: 1, url: thumbs.find((t: any) => t.order === 1)?.url || '', linkUrl: thumbs.find((t: any) => t.order === 1)?.linkUrl || null },
+            { order: 2, url: thumbs.find((t: any) => t.order === 2)?.url || '', linkUrl: thumbs.find((t: any) => t.order === 2)?.linkUrl || null },
+            { order: 3, url: thumbs.find((t: any) => t.order === 3)?.url || '', linkUrl: thumbs.find((t: any) => t.order === 3)?.linkUrl || null },
+            { order: 4, url: thumbs.find((t: any) => t.order === 4)?.url || '', linkUrl: thumbs.find((t: any) => t.order === 4)?.linkUrl || null },
+          ]);
+        }
       } catch (error) {
         console.error('Failed to fetch carousel data:', error);
         toast.error('Failed to load carousel data');
@@ -70,9 +93,12 @@ export default function CarouselManagementPage() {
     }
 
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/admin/carousel', {
         method: 'POST',
         headers: {
+          ...csrfHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -101,8 +127,11 @@ export default function CarouselManagementPage() {
 
   const handleRemoveImage = async (id: string) => {
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const headers = await getCsrfHeaders();
       const response = await fetch(`/api/admin/carousel/${id}`, {
         method: 'DELETE',
+        headers,
       });
 
       if (!response.ok) throw new Error('Failed to remove image');
@@ -133,9 +162,12 @@ export default function CarouselManagementPage() {
 
     try {
       setSavingLinkId(id);
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(`/api/admin/carousel/${id}`, {
         method: 'PATCH',
         headers: {
+          ...csrfHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -168,9 +200,12 @@ export default function CarouselManagementPage() {
 
   const handleReorderImage = async (id: string, direction: 'up' | 'down') => {
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(`/api/admin/carousel/reorder`, {
         method: 'PUT',
         headers: {
+          ...csrfHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -196,6 +231,40 @@ export default function CarouselManagementPage() {
     } catch (error) {
       console.error('Error reordering images:', error);
       toast.error('Failed to reorder carousel images');
+    }
+  };
+
+  const setHeroThumbnailSlot = (order: number, url: string, linkUrl?: string | null) => {
+    setHeroThumbnails((prev) =>
+      prev.map((t) => (t.order === order ? { ...t, url, linkUrl: linkUrl ?? t.linkUrl } : t))
+    );
+  };
+
+  const setHeroThumbnailLink = (order: number, linkUrl: string) => {
+    setHeroThumbnails((prev) =>
+      prev.map((t) => (t.order === order ? { ...t, linkUrl: linkUrl || null } : t))
+    );
+  };
+
+  const handleSaveHeroThumbnails = async () => {
+    try {
+      setSavingThumbnails(true);
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
+      const response = await fetch('/api/admin/hero-thumbnails', {
+        method: 'PUT',
+        headers: { ...csrfHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thumbnails: heroThumbnails.map((t) => ({ order: t.order, url: t.url, linkUrl: t.linkUrl || null })),
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to save');
+      toast.success('Hero thumbnails saved');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to save hero thumbnails');
+    } finally {
+      setSavingThumbnails(false);
     }
   };
 
@@ -238,6 +307,75 @@ export default function CarouselManagementPage() {
     }
   };
 
+  const carouselInstructions = [
+    {
+      step: 1,
+      title: 'Upload Images',
+      description: 'First, upload carousel images to your image library.',
+      details: [
+        'Click "Upload New" or go to Image Management',
+        'Upload images to the "carousel" folder',
+        'Recommended size: 1920x800px for main carousel, 800x600px for thumbnails',
+        'Use .jpg or .png format',
+      ],
+    },
+    {
+      step: 2,
+      title: 'Set Hero Thumbnails (4 Static Images)',
+      description: 'Configure the 4 static images that appear beside the main carousel.',
+      details: [
+        'These appear on the right side (50% width) on desktop, below on mobile',
+        'Click on slot 1, 2, 3, or 4 in the Hero Thumbnails section',
+        'Select an image from the previews or available images grid',
+        'Optionally add a link URL (e.g., /products/iphone)',
+        'Click "Save Hero Thumbnails" when done',
+      ],
+    },
+    {
+      step: 3,
+      title: 'Add Images to Main Carousel',
+      description: 'Add sliding images to the main carousel.',
+      details: [
+        'Scroll to "Available Images" section',
+        'Click on an image to select it',
+        'Optionally add a link URL (where "Buy Now" button will navigate)',
+        'Click "Add to Carousel"',
+        'Images will auto-slide every few seconds',
+      ],
+    },
+    {
+      step: 4,
+      title: 'Reorder Carousel Images',
+      description: 'Change the order of carousel slides using arrow buttons.',
+      details: [
+        'Use ⬆️ Up arrow to move image earlier in sequence',
+        'Use ⬇️ Down arrow to move image later in sequence',
+        'First image shows first when page loads',
+      ],
+    },
+    {
+      step: 5,
+      title: 'Update or Remove Images',
+      description: 'Edit links or remove images from carousel.',
+      details: [
+        'Edit link URL and click "Save" to update where Buy Now button goes',
+        'Click trash icon 🗑️ to remove image from carousel',
+        'Use "Refresh" button to reload available images after uploads',
+      ],
+    },
+    {
+      step: 6,
+      title: 'Preview on Homepage',
+      description: 'Visit your site\'s homepage to see the carousel in action.',
+      details: [
+        'Main carousel auto-slides with fade transition',
+        'Hero thumbnails are static (clickable if linked)',
+        'Desktop: 50-50 split layout',
+        'Mobile: Carousel on top, thumbnails in 2x2 grid below',
+      ],
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full py-20">
@@ -248,7 +386,77 @@ export default function CarouselManagementPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Carousel Management</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Carousel Management</h1>
+        <InstructionDialog
+          title="How to Manage Carousel & Hero Images"
+          instructions={carouselInstructions}
+        />
+      </div>
+
+      {/* Hero Thumbnails - 4 static images for the right side (50% on desktop) */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-lg font-semibold mb-2">Hero Thumbnails (4 static images)</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          These 4 images appear on the right side of the hero carousel (50% width on desktop, below on mobile). Each can have a link.
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {[1, 2, 3, 4].map((order) => {
+            const thumb = heroThumbnails.find((t) => t.order === order)!;
+            return (
+              <div key={order} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="relative aspect-[4/3] bg-gray-100">
+                  {thumb.url ? (
+                    <Image src={thumb.url} alt={`Thumbnail ${order}`} fill className="object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Slot {order}</div>
+                  )}
+                </div>
+                <div className="p-2 space-y-2">
+                  <input
+                    type="text"
+                    value={thumb.linkUrl || ''}
+                    onChange={(e) => setHeroThumbnailLink(order, e.target.value)}
+                    placeholder="Link URL (e.g. /products/...)"
+                    className="w-full text-xs rounded border-gray-300"
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {availableImages.slice(0, 8).map((img) => (
+                      <button
+                        key={img}
+                        type="button"
+                        onClick={() => setHeroThumbnailSlot(order, img)}
+                        className={`w-8 h-8 rounded overflow-hidden border-2 ${
+                          thumb.url === img ? 'border-blue-500' : 'border-gray-200'
+                        }`}
+                      >
+                        <Image src={img} alt="" width={32} height={32} className="object-cover w-full h-full" />
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHeroThumbnailSlot(order, '', null)}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          onClick={handleSaveHeroThumbnails}
+          disabled={savingThumbnails}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+        >
+          {savingThumbnails ? 'Saving...' : 'Save Hero Thumbnails'}
+        </button>
+        <p className="text-xs text-gray-400 mt-2">
+          Tip: Select from the small previews above, or use the full Available Images grid below (click one, then click a slot).
+        </p>
+      </div>
       
       {/* Current Carousel Images */}
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -406,7 +614,7 @@ export default function CarouselManagementPage() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Use relative URLs like /products/iphone-16</p>
               </div>
-              <div>
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleAddImage}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -414,6 +622,17 @@ export default function CarouselManagementPage() {
                   <ImagePlus className="h-5 w-5 mr-2" />
                   Add to Carousel
                 </button>
+                <span className="text-gray-400 text-sm self-center">or assign to Hero Thumbnail:</span>
+                {[1, 2, 3, 4].map((order) => (
+                  <button
+                    key={order}
+                    type="button"
+                    onClick={() => setHeroThumbnailSlot(order, selectedImage, newImageLink || null)}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                  >
+                    Slot {order}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

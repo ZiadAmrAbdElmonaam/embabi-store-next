@@ -22,6 +22,7 @@ interface Coupon {
   code: string;
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
+  minimumOrderAmount?: number | null;
 }
 
 export default function CheckoutPage({ user }: CheckoutPageProps) {
@@ -114,7 +115,10 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
       
       // Calculate discount if a coupon is applied
       let discountAmount = 0;
-      if (appliedCouponState) {
+      const minOrder = appliedCouponState?.minimumOrderAmount != null ? Number(appliedCouponState.minimumOrderAmount) : null;
+      const meetsMinimumOrder = !minOrder || minOrder <= 0 || calculatedSubtotal >= minOrder;
+
+      if (appliedCouponState && meetsMinimumOrder) {
         if (appliedCouponState.type === 'PERCENTAGE') {
           discountAmount = (calculatedSubtotal * appliedCouponState.value) / 100;
         } else if (appliedCouponState.type === 'FIXED') {

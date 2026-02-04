@@ -13,6 +13,7 @@ interface CartItem {
   selectedColor: string | null;
   storageId: string | null;
   storageSize: string | null;
+  unitId?: string | null;
   availableColors: { color: string; quantity: number }[];
   uniqueId?: string;
 }
@@ -22,6 +23,7 @@ interface Coupon {
   code: string;
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
+  minimumOrderAmount?: number | null;
 }
 
 interface CartStore {
@@ -33,6 +35,7 @@ interface CartStore {
     selectedColor?: string | null;
     storageId?: string | null;
     storageSize?: string | null;
+    unitId?: string | null;
     variants?: Array<{ color: string; quantity: number }>;
   }) => void;
   removeItem: (uniqueId: string) => void;
@@ -131,6 +134,13 @@ export const useCart = create<CartStore>()((set, get) => ({
         return total + (itemPrice * item.quantity);
       }, 0);
       
+      // If coupon has minimum order and cart doesn't meet it, no discount
+      const minOrder = appliedCoupon.minimumOrderAmount != null ? Number(appliedCoupon.minimumOrderAmount) : null;
+      if (minOrder != null && minOrder > 0 && subtotal < minOrder) {
+        set({ discountAmount: 0 });
+        return;
+      }
+      
       let discountAmount = 0;
       if (appliedCoupon.type === 'PERCENTAGE') {
         discountAmount = (subtotal * appliedCoupon.value) / 100;
@@ -163,8 +173,9 @@ export const useCart = create<CartStore>()((set, get) => ({
             images: item.images,
             slug: item.slug,
             selectedColor: item.selectedColor || null,
-              storageId: item.storageId || null,
-              storageSize: item.storageSize || null,
+            storageId: item.storageId || null,
+            storageSize: item.storageSize || null,
+            unitId: item.unitId || null,
             variants: item.variants || []
           }
         })
@@ -262,11 +273,9 @@ export const useCart = create<CartStore>()((set, get) => ({
   },
 
   updateQuantity: async (uniqueId, quantity) => {
+    if (quantity < 1) return;
+    const currentItems = get().items;
     try {
-      if (quantity < 1) return;
-      
-      // Store the current state for potential rollback
-      const currentItems = get().items;
       
       // Optimistically update the UI
       set((state) => ({

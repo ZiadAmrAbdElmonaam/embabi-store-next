@@ -25,38 +25,64 @@ interface AddToCartButtonProps {
       id: string;
       size: string;
       price: number;
-      stock: number;
-      variants: Array<{
+      salePercentage?: number | null;
+      saleEndDate?: string | null;
+      units?: Array<{
         id: string;
         color: string;
-        quantity: number;
+        stock: number;
+        taxStatus?: string;
+        taxType?: string;
+        taxAmount?: number | null;
+        taxPercentage?: number | null;
       }>;
+      variants?: Array<{ id: string; color: string; quantity: number }>;
     }>;
   };
   selectedColor?: string | null;
   selectedStorage?: string | null;
+  selectedUnitId?: string | null;
 }
 
-export function AddToCartButton({ product, selectedColor: initialColor, selectedStorage }: AddToCartButtonProps) {
+function getUnitPrice(basePrice: number, salePct: number | null, saleEnd: string | null, unit: { taxStatus?: string; taxType?: string; taxAmount?: number | null; taxPercentage?: number | null }) {
+  const salePrice = salePct != null && saleEnd && new Date(saleEnd) > new Date()
+    ? basePrice - (basePrice * (salePct / 100))
+    : basePrice;
+  if (unit.taxStatus === 'UNPAID') return salePrice;
+  if (unit.taxType === 'FIXED') return salePrice + (Number(unit.taxAmount) || 0);
+  return salePrice + (salePrice * (Number(unit.taxPercentage) || 0) / 100);
+}
+
+export function AddToCartButton({ product, selectedColor: initialColor, selectedStorage, selectedUnitId }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [selectedColor, setSelectedColor] = useState<string | null>(initialColor || null);
   const { t } = useTranslation();
 
-  // Get the currently selected storage object
   const currentStorage = selectedStorage 
     ? product.storages?.find(s => s.id === selectedStorage)
     : null;
 
-  // Determine available colors based on storage selection
+  const units = currentStorage?.units ?? currentStorage?.variants?.map(v => ({ id: v.color, color: v.color, stock: v.quantity })) ?? [];
   const availableColors = currentStorage 
-    ? currentStorage.variants.filter(v => v.quantity > 0)
+    ? units.filter((u: { stock: number }) => u.stock > 0)
     : product.variants?.filter(v => v.quantity > 0) || [];
 
-  // Determine current price based on storage selection
+  const selectedUnit = selectedUnitId ? units.find((u: { id: string }) => u.id === selectedUnitId) : units[0];
+  const currentStock = currentStorage
+    ? (selectedUnit?.stock ?? units.reduce((s: number, u: { stock: number }) => s + u.stock, 0))
+    : (product.stock ?? 0);
+
   const getCurrentPrice = () => {
-    if (currentStorage) {
-      return currentStorage.price;
+    if (currentStorage && selectedUnit) {
+      const unitWithTax = selectedUnit as { taxStatus?: string; taxType?: string; taxAmount?: number | null; taxPercentage?: number | null };
+      return getUnitPrice(
+        Number(currentStorage.price),
+        currentStorage.salePercentage ?? null,
+        currentStorage.saleEndDate ?? null,
+        unitWithTax.taxStatus ? unitWithTax : { taxStatus: 'PAID', taxType: 'FIXED' }
+      );
     }
+    if (currentStorage) return Number(currentStorage.price);
     return product.price;
   };
 
@@ -110,25 +136,18 @@ export function AddToCartButton({ product, selectedColor: initialColor, selected
   }, [initialColor]);
 
   const handleAddToCart = () => {
-    const currentStock = currentStorage ? currentStorage.stock : product.stock;
-    
     if (currentStock === 0) {
       toast.error(t('cart.outOfStock'));
       return;
     }
-    
-    // Check if product has storages and requires storage selection
     if (product.storages && product.storages.length > 0 && !selectedStorage) {
       toast.error(t('cart.selectStorage'));
       return;
     }
-    
-    // Check if colors are available and require color selection
-    if (availableColors.length > 0 && !selectedColor) {
+    if (availableColors.length > 0 && !selectedColor && !selectedUnitId) {
       toast.error(t('cart.selectColor'));
       return;
     }
-    
     addItem({
       id: product.id,
       name: product.name,
@@ -138,6 +157,7 @@ export function AddToCartButton({ product, selectedColor: initialColor, selected
       slug: product.slug,
       selectedColor: selectedColor,
       storageId: selectedStorage,
+      unitId: currentStorage ? selectedUnitId : undefined,
       variants: product.variants
     });
   };
@@ -148,12 +168,12 @@ export function AddToCartButton({ product, selectedColor: initialColor, selected
       
       <button
         onClick={handleAddToCart}
-        disabled={(currentStorage ? currentStorage.stock : product.stock) === 0}
+        disabled={currentStock === 0}
         className="w-full flex items-center justify-center gap-2 bg-orange-600 text-white py-4 px-6 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-base font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
       >
         <ShoppingCart className="h-5 w-5 flex-shrink-0" />
         <span className="whitespace-nowrap">
-          {(currentStorage ? currentStorage.stock : product.stock) === 0 ? t('productDetail.outOfStock') : t('cart.addToCart')}
+          {currentStock === 0 ? t('productDetail.outOfStock') : t('cart.addToCart')}
         </span>
       </button>
     </div>

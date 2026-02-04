@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     // Check if requested quantity is available
-    if (quantity > item.product.stock) {
+    if (quantity > (item.product.stock ?? 0)) {
       return NextResponse.json({ error: 'Not enough stock available' }, { status: 400 });
     }
 

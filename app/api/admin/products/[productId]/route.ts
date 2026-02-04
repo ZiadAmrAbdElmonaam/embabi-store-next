@@ -1,15 +1,70 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/auth-options";
+import { isAdminRequest } from "@/lib/admin-auth";
+import { requireCsrfOrReject } from "@/lib/csrf";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ productId: string }> }
+) {
+  try {
+    if (!(await isAdminRequest(request))) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { productId } = await params;
+    if (!productId) {
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
+    }
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        category: true,
+        variants: true,
+        details: true,
+        storages: {
+          include: { units: true },
+        },
+      },
+    });
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+    const serialized = {
+      ...product,
+      price: product.price != null ? Number(product.price) : null,
+      salePrice: product.salePrice != null ? Number(product.salePrice) : null,
+      discountPrice: product.discountPrice != null ? Number(product.discountPrice) : null,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+      saleEndDate: product.saleEndDate?.toISOString() ?? null,
+      storages: product.storages.map(s => ({
+        ...s,
+        price: Number(s.price),
+        saleEndDate: s.saleEndDate?.toISOString() ?? null,
+        createdAt: s.createdAt.toISOString(),
+        updatedAt: s.updatedAt.toISOString(),
+        units: s.units.map(u => ({
+          ...u,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })),
+      })),
+    };
+    return NextResponse.json(serialized);
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return NextResponse.json({ error: 'Failed to fetch product' }, { status: 500 });
+  }
+}
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

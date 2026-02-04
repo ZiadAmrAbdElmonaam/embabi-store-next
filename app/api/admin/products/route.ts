@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/auth-options";
-export async function GET() {
+import { isAdminRequest } from "@/lib/admin-auth";
+import { requireCsrfOrReject } from "@/lib/csrf";
+
+export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== 'ADMIN') {
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -18,7 +18,7 @@ export async function GET() {
         },
         storages: {
           include: {
-            variants: true,
+            units: true,
           },
         },
         variants: true,
@@ -29,10 +29,9 @@ export async function GET() {
       },
     });
 
-    // Convert Decimal to number for serialization
     const serializedProducts = products.map(product => ({
       ...product,
-      price: Number(product.price),
+      price: product.price != null ? Number(product.price) : null,
       storages: product.storages.map(storage => ({
         ...storage,
         price: Number(storage.price),
@@ -51,8 +50,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'ADMIN') {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

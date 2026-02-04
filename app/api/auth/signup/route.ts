@@ -4,9 +4,19 @@ import { prisma } from "@/lib/prisma";
 import { generateVerificationCode } from "@/lib/verification";
 import { sendVerificationEmail } from "@/lib/email";
 import { validateEmail, validatePassword, validateName, sanitizeInput } from "@/lib/validation";
+import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const key = getRateLimitKey(request);
+    const limit = checkRateLimit(key, "signup");
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: "Too many signup attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": "300" } }
+      );
+    }
+
     const data = await request.json();
     
     // Sanitize inputs

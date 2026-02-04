@@ -52,8 +52,11 @@ export function ImageUpload({
       });
       formData.append('folder', folder);
 
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/upload/cloudinary', {
         method: 'POST',
+        headers: csrfHeaders,
         body: formData,
       });
 

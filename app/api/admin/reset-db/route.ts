@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/auth-options";
+import { logger, publicErrorMessage } from "@/lib/logger";
 
 export async function POST(request: Request) {
   try {
+    // Disable in production to prevent accidental or malicious database wipe
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "Database reset is not available in production." },
+        { status: 403 }
+      );
+    }
+
     // Check for admin authentication
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
@@ -74,15 +83,9 @@ export async function POST(request: Request) {
       result 
     });
   } catch (error) {
-    console.error('Error resetting database:', error);
-    
-    let errorMessage = 'Failed to reset database';
-    if (error instanceof Error) {
-      errorMessage += `: ${error.message}`;
-    }
-    
+    logger.error('Error resetting database', error);
     return NextResponse.json(
-      { error: errorMessage },
+      { error: publicErrorMessage('Failed to reset database') },
       { status: 500 }
     );
   }

@@ -19,9 +19,12 @@ export function UpdateOrderStatus({ orderId, currentStatus }: UpdateOrderStatusP
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     setIsLoading(true);
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(`/api/orders/${orderId}/status`, {
         method: 'POST',
         headers: {
+          ...csrfHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

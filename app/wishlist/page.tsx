@@ -97,31 +97,23 @@ export default function WishlistPage() {
   };
 
   const handleAddToCart = (item: typeof items[0]) => {
-    // Check if the item has storages
-    const hasStorages = item.storages && item.storages.length > 0;
-    
-    // Check if the item has colors or variants
-    const hasColors = item.colors && item.colors.length > 0;
+    const hasStorages = (item as { storages?: unknown[] }).storages && (item as { storages?: unknown[] }).storages!.length > 0;
     const hasVariants = item.variants && item.variants.length > 0;
+    const hasAvailableVariants = item.variants && item.variants.some(variant => variant.quantity > 0);
     
-    // Check if there are any variants with quantity > 0
-    const hasAvailableVariants = item.variants && 
-      item.variants.some(variant => variant.quantity > 0);
-    
-    // Show ProductSelectionModal if item has storages, colors, or variants that require selection
-    if (hasStorages || ((hasColors || hasVariants) && hasAvailableVariants)) {
+    if (hasStorages || (hasVariants && hasAvailableVariants)) {
       setSelectedItem(item);
       setShowSelectionModal(true);
       return;
     }
     
-    // For items without storages, colors or variants, add directly to cart
     addToCart({
       id: item.id,
       name: item.name,
-      price: item.price,
-      salePrice: item.salePrice,
+      price: typeof item.price === 'number' ? item.price : Number(item.price),
+      salePrice: item.salePrice != null ? (typeof item.salePrice === 'number' ? item.salePrice : Number(item.salePrice)) : null,
       images: item.images,
+      slug: (item as { slug?: string }).slug ?? item.id,
       variants: []
     });
   };
@@ -268,7 +260,22 @@ export default function WishlistPage() {
             setShowSelectionModal(false);
             setSelectedItem(null);
           }}
-          product={selectedItem}
+          product={{
+            ...selectedItem,
+            id: selectedItem.id,
+            name: selectedItem.name,
+            description: (selectedItem as { description?: string }).description ?? '',
+            price: typeof selectedItem.price === 'number' ? selectedItem.price : Number(selectedItem.price),
+            salePrice: selectedItem.salePrice != null ? (typeof selectedItem.salePrice === 'number' ? selectedItem.salePrice : Number(selectedItem.salePrice)) : null,
+            images: selectedItem.images,
+            slug: (selectedItem as { slug?: string }).slug ?? selectedItem.id,
+            variants: (selectedItem.variants ?? []).map((v: { id?: string; color: string; quantity: number }) => ({
+              id: v.id ?? v.color,
+              color: v.color,
+              quantity: v.quantity
+            })),
+            storages: ((selectedItem as { storages?: Array<{ id: string; size: string; price: number; salePercentage?: number | null; saleEndDate?: string | null; units?: Array<{ id: string; color: string; stock: number; taxStatus?: string; taxType?: string; taxAmount?: number | null; taxPercentage?: number | null }> }> }).storages ?? []) as { id: string; size: string; price: number; salePercentage?: number | null; saleEndDate?: string | null; units?: Array<{ id: string; color: string; stock: number; taxStatus?: string; taxType?: string; taxAmount?: number | null; taxPercentage?: number | null }> }[]
+          }}
         />
       )}
     </div>

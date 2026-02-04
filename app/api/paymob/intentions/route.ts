@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildHeaders, toCents, PAYMOB_BASE, PAYMOB_PUBLIC_KEY } from "@/lib/paymob";
+import { requireCsrfOrReject } from "@/lib/csrf";
+import { readJsonWithLimit } from "@/lib/body-limit";
 
 type CreateIntentionBody = {
   orderId: string;
@@ -12,13 +14,17 @@ type CreateIntentionBody = {
 export async function POST(req: NextRequest) {
   console.log("🚀 Paymob intentions route called");
   try {
+    const csrfReject = requireCsrfOrReject(req);
+    if (csrfReject) return csrfReject;
+
+    const body = await readJsonWithLimit<CreateIntentionBody>(req, 64 * 1024);
     const {
       orderId,
       amount,
       currency,
       billingData,
       payment_methods,
-    } = (await req.json()) as CreateIntentionBody;
+    } = body;
     
     console.log("📦 Received data:", { orderId, amount, currency, payment_methods });
 
@@ -153,8 +159,11 @@ export async function POST(req: NextRequest) {
       raw: data,
     });
   } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("too large")) {
+      return NextResponse.json({ error: msg }, { status: 413 });
+    }
     console.error("❌ /api/paymob/intentions error:", error);
-    console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { error: "Payment service unavailable, try again later." },
       { status: 500 }

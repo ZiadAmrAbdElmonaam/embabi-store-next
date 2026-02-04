@@ -4,6 +4,37 @@ import { authOptions } from "../auth/auth-options";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 
+type CartItemResponse = {
+  id: string;
+  name: string;
+  price: number;
+  salePrice: number | null;
+  images: string[];
+  slug: string;
+  quantity: number;
+  selectedColor: string | null;
+  storageId: string | null;
+  storageSize: string | null;
+  unitId: string | null;
+  availableColors: { color: string; quantity: number }[];
+  uniqueId: string;
+};
+
+function getUnitCalculatedPrice(
+  basePrice: number,
+  salePct: number | null,
+  saleEnd: string | Date | null,
+  unit: { taxStatus: string; taxType: string; taxAmount?: number | null; taxPercentage?: number | null }
+): number {
+  const salePrice = salePct != null && saleEnd && new Date(saleEnd) > new Date()
+    ? basePrice - (basePrice * (salePct / 100))
+    : basePrice;
+  if (unit.taxStatus === 'UNPAID') return salePrice;
+  if (unit.taxType === 'FIXED') return salePrice + (Number(unit.taxAmount) || 0);
+  const pct = Number(unit.taxPercentage) || 0;
+  return salePrice + (salePrice * pct / 100);
+}
+
 // Helper to get user identifier (either user ID if logged in or anonymous session ID)
 const getUserIdentifier = async () => {
   const session = await getServerSession(authOptions);
@@ -12,17 +43,19 @@ const getUserIdentifier = async () => {
   }
   
   // For anonymous users, use a session cookie
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   let sessionId = cookieStore.get('cart_session_id')?.value;
   
   if (!sessionId) {
-    // Generate a new session ID if none exists
-    sessionId = `anon_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    // Generate a cryptographically secure session ID for anonymous cart
+    const { randomUUID } = await import('crypto');
+    sessionId = `anon_${randomUUID()}`;
     cookieStore.set('cart_session_id', sessionId, {
       path: '/',
       maxAge: 60 * 60 * 24 * 30, // 30 days
       httpOnly: true,
-      sameSite: 'lax'
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
     });
   }
   
@@ -33,7 +66,7 @@ export async function GET() {
   try {
     const { userId, sessionId, isAuthenticated } = await getUserIdentifier();
     
-    let cartItems = [];
+    let cartItems: CartItemResponse[] = [];
     let coupon = null;
     
     // Query based on user authentication status
@@ -53,6 +86,7 @@ export async function GET() {
                   salePrice: true,
                   images: true,
                   slug: true,
+                  stock: true,
                   variants: true,
                   storages: {
                     select: {
@@ -61,7 +95,7 @@ export async function GET() {
                       price: true,
                       salePercentage: true,
                       saleEndDate: true,
-                      variants: true
+                      units: true
                     }
                   }
                 }
@@ -73,9 +107,8 @@ export async function GET() {
       });
       
       if (userCart) {
-        // Filter out and fix any items with invalid quantities
-        const validItems = [];
-        const itemsToUpdate = [];
+        const validItems: CartItemResponse[] = [];
+        const itemsToUpdate: Array<{ id: string; quantity: number }> = [];
         
         for (const item of userCart.items) {
           // Find selected storage if exists
@@ -84,21 +117,21 @@ export async function GET() {
             : null;
           
           // Determine available stock
-          let availableStock;
-          if (selectedStorage && item.selectedColor) {
-            // Storage + Color: Check storage variant stock
-            const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
-            availableStock = storageVariant ? storageVariant.quantity : 0;
-          } else if (selectedStorage) {
-            // Storage only: Use storage stock
-            availableStock = selectedStorage.stock;
+          let availableStock: number;
+          const storageUnits = selectedStorage?.units ?? [];
+          if (item.unitId && selectedStorage) {
+            const unit = storageUnits.find((u: { id: string }) => u.id === item.unitId);
+            availableStock = unit ? unit.stock : 0;
+          } else if (selectedStorage && item.selectedColor) {
+            const unit = storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+            availableStock = unit ? unit.stock : 0;
+          } else if (selectedStorage && storageUnits.length > 0) {
+            availableStock = storageUnits.reduce((s: number, u: { stock: number }) => s + u.stock, 0);
           } else if (item.selectedColor) {
-            // Color only (no storage): Check product variant stock
-            const variant = item.product.variants.find(v => v.color === item.selectedColor);
+            const variant = item.product.variants?.find((v: { color: string }) => v.color === item.selectedColor);
             availableStock = variant ? variant.quantity : 0;
           } else {
-            // No storage, no color: Use product stock
-            availableStock = item.product.stock;
+            availableStock = item.product.stock ?? 0;
           }
           
           // Fix quantity if it exceeds available stock
@@ -119,43 +152,54 @@ export async function GET() {
             }
           }
           
-          // Calculate price based on storage or product
-          let finalPrice, finalSalePrice;
+          // Calculate price based on storage+unit or product
+          let finalPrice: number;
+          let finalSalePrice: number | null = null;
           if (selectedStorage) {
-            finalPrice = Number(selectedStorage.price);
-            // Check if storage has a sale
-            if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
-                new Date(selectedStorage.saleEndDate) > new Date()) {
-              finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+            const unit = item.unitId
+              ? storageUnits.find((u: { id: string }) => u.id === item.unitId)
+              : storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+            if (unit) {
+              const basePrice = Number(selectedStorage.price);
+              const salePct = selectedStorage.salePercentage != null ? Number(selectedStorage.salePercentage) : null;
+              const calcPrice = getUnitCalculatedPrice(basePrice, salePct, selectedStorage.saleEndDate, unit);
+              const origPrice = getUnitCalculatedPrice(basePrice, null, null, unit);
+              const onSale = salePct != null && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date();
+              finalPrice = onSale ? origPrice : calcPrice;
+              finalSalePrice = onSale ? calcPrice : null;
             } else {
-              finalSalePrice = null;
+              finalPrice = Number(selectedStorage.price);
+              if (selectedStorage.salePercentage && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date()) {
+                finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+              }
             }
           } else {
-            finalPrice = Number(item.product.price);
+            finalPrice = Number(item.product.price ?? 0);
             finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
           }
           
+          const unitsOrVariants = selectedStorage?.units ?? item.product.variants ?? [];
+          const availableColors = Array.isArray(unitsOrVariants) && unitsOrVariants.length > 0
+            ? unitsOrVariants.map((v: { color: string; quantity?: number; stock?: number }) => ({
+                color: v.color,
+                quantity: v.quantity ?? v.stock ?? 0
+              }))
+            : [{ color: '_default', quantity: item.product.stock ?? 0 }];
+
           validItems.push({
-          id: item.product.id,
-          name: item.product.name,
+            id: item.product.id,
+            name: item.product.name,
             price: finalPrice,
             salePrice: finalSalePrice,
-          images: item.product.images,
+            images: item.product.images,
             slug: item.product.slug,
             quantity: finalQuantity,
-          selectedColor: item.selectedColor,
+            selectedColor: item.selectedColor,
             storageId: item.storageId,
             storageSize: selectedStorage?.size || null,
-            availableColors: selectedStorage 
-              ? selectedStorage.variants.map(v => ({
-                  color: v.color,
-                  quantity: v.quantity
-                }))
-              : item.product.variants.map(v => ({
-            color: v.color,
-            quantity: v.quantity
-          })),
-            uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+            unitId: item.unitId || null,
+            availableColors,
+            uniqueId: item.unitId || `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
           });
         }
         
@@ -187,6 +231,7 @@ export async function GET() {
                   salePrice: true,
                   images: true,
                   slug: true,
+                  stock: true,
                   variants: true,
                   storages: {
                     select: {
@@ -195,7 +240,7 @@ export async function GET() {
                       price: true,
                       salePercentage: true,
                       saleEndDate: true,
-                      variants: true
+                      units: true
                     }
                   }
                 }
@@ -207,9 +252,8 @@ export async function GET() {
       });
       
       if (anonCart) {
-        // Filter out and fix any items with invalid quantities
-        const validItems = [];
-        const itemsToUpdate = [];
+        const validItems: CartItemResponse[] = [];
+        const itemsToUpdate: Array<{ id: string; quantity: number }> = [];
         
         for (const item of anonCart.items) {
           // Find selected storage if exists
@@ -218,21 +262,21 @@ export async function GET() {
             : null;
           
           // Determine available stock
-          let availableStock;
-          if (selectedStorage && item.selectedColor) {
-            // Storage + Color: Check storage variant stock
-            const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
-            availableStock = storageVariant ? storageVariant.quantity : 0;
-          } else if (selectedStorage) {
-            // Storage only: Use storage stock
-            availableStock = selectedStorage.stock;
+          let availableStock: number;
+          const storageUnits = selectedStorage?.units ?? [];
+          if (item.unitId && selectedStorage) {
+            const unit = storageUnits.find((u: { id: string }) => u.id === item.unitId);
+            availableStock = unit ? unit.stock : 0;
+          } else if (selectedStorage && item.selectedColor) {
+            const unit = storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+            availableStock = unit ? unit.stock : 0;
+          } else if (selectedStorage && storageUnits.length > 0) {
+            availableStock = storageUnits.reduce((s: number, u: { stock: number }) => s + u.stock, 0);
           } else if (item.selectedColor) {
-            // Color only (no storage): Check product variant stock
-            const variant = item.product.variants.find(v => v.color === item.selectedColor);
+            const variant = item.product.variants?.find((v: { color: string }) => v.color === item.selectedColor);
             availableStock = variant ? variant.quantity : 0;
           } else {
-            // No storage, no color: Use product stock
-            availableStock = item.product.stock;
+            availableStock = item.product.stock ?? 0;
           }
           
           // Fix quantity if it exceeds available stock
@@ -253,43 +297,54 @@ export async function GET() {
             }
           }
           
-          // Calculate price based on storage or product
-          let finalPrice, finalSalePrice;
+          // Calculate price based on storage+unit or product
+          let finalPrice: number;
+          let finalSalePrice: number | null = null;
           if (selectedStorage) {
-            finalPrice = Number(selectedStorage.price);
-            // Check if storage has a sale
-            if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
-                new Date(selectedStorage.saleEndDate) > new Date()) {
-              finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+            const unit = item.unitId
+              ? storageUnits.find((u: { id: string }) => u.id === item.unitId)
+              : storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+            if (unit) {
+              const basePrice = Number(selectedStorage.price);
+              const salePct = selectedStorage.salePercentage != null ? Number(selectedStorage.salePercentage) : null;
+              const calcPrice = getUnitCalculatedPrice(basePrice, salePct, selectedStorage.saleEndDate, unit);
+              const origPrice = getUnitCalculatedPrice(basePrice, null, null, unit);
+              const onSale = salePct != null && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date();
+              finalPrice = onSale ? origPrice : calcPrice;
+              finalSalePrice = onSale ? calcPrice : null;
             } else {
-              finalSalePrice = null;
+              finalPrice = Number(selectedStorage.price);
+              if (selectedStorage.salePercentage && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date()) {
+                finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+              }
             }
           } else {
-            finalPrice = Number(item.product.price);
+            finalPrice = Number(item.product.price ?? 0);
             finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
           }
           
+          const unitsOrVariants = selectedStorage?.units ?? item.product.variants ?? [];
+          const availableColors = Array.isArray(unitsOrVariants) && unitsOrVariants.length > 0
+            ? unitsOrVariants.map((v: { color: string; quantity?: number; stock?: number }) => ({
+                color: v.color,
+                quantity: v.quantity ?? v.stock ?? 0
+              }))
+            : [{ color: '_default', quantity: item.product.stock ?? 0 }];
+
           validItems.push({
-          id: item.product.id,
-          name: item.product.name,
+            id: item.product.id,
+            name: item.product.name,
             price: finalPrice,
             salePrice: finalSalePrice,
-          images: item.product.images,
+            images: item.product.images,
             slug: item.product.slug,
             quantity: finalQuantity,
-          selectedColor: item.selectedColor,
+            selectedColor: item.selectedColor,
             storageId: item.storageId,
             storageSize: selectedStorage?.size || null,
-            availableColors: selectedStorage 
-              ? selectedStorage.variants.map(v => ({
-                  color: v.color,
-                  quantity: v.quantity
-                }))
-              : item.product.variants.map(v => ({
-            color: v.color,
-            quantity: v.quantity
-          })),
-            uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+            unitId: item.unitId || null,
+            availableColors,
+            uniqueId: item.unitId || `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
           });
         }
         
@@ -331,6 +386,12 @@ function calculateDiscount(items, coupon) {
     const itemPrice = item.salePrice !== null ? item.salePrice : item.price;
     return total + (itemPrice * item.quantity);
   }, 0);
+  
+  // If coupon has minimum order and cart doesn't meet it, no discount
+  const minOrder = coupon.minimumOrderAmount != null ? Number(coupon.minimumOrderAmount) : null;
+  if (minOrder != null && minOrder > 0 && subtotal < minOrder) {
+    return 0;
+  }
   
   let discountAmount = 0;
   if (coupon.type === 'PERCENTAGE') {
@@ -427,7 +488,7 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
       variants: true,
       storages: {
         include: {
-          variants: true,
+          units: true,
         },
       },
     }
@@ -447,21 +508,21 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
       return NextResponse.json({ error: "Selected storage not found" }, { status: 400 });
     }
     
-    if (selectedColor) {
-      // Storage + Color: Check storage variant stock
-      const storageVariant = selectedStorage.variants.find(v => v.color === selectedColor);
-      availableStock = storageVariant ? storageVariant.quantity : 0;
+    const units = selectedStorage.units ?? [];
+    if (item.unitId) {
+      const unit = units.find((u: { id: string }) => u.id === item.unitId);
+      availableStock = unit ? unit.stock : 0;
+    } else if (selectedColor) {
+      const unit = units.find((u: { color: string }) => u.color === selectedColor);
+      availableStock = unit ? unit.stock : 0;
     } else {
-      // Storage only: Use storage stock
-      availableStock = selectedStorage.stock;
+      availableStock = units.reduce((s: number, u: { stock: number }) => s + u.stock, 0);
     }
   } else if (selectedColor) {
-    // Color only (no storage): Check product variant stock
-    const variant = product.variants.find(v => v.color === selectedColor);
+    const variant = product.variants?.find((v: { color: string }) => v.color === selectedColor);
     availableStock = variant ? variant.quantity : 0;
   } else {
-    // No storage, no color: Use product stock
-    availableStock = product.stock;
+    availableStock = product.stock ?? 0;
   }
   
   // Check if item already exists in cart
@@ -520,6 +581,7 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
           quantity: 1,
           selectedColor,
           storageId,
+          unitId: item.unitId || null,
         }
       });
     } else if (sessionId) {
@@ -530,6 +592,7 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
           quantity: 1,
           selectedColor,
           storageId,
+          unitId: item.unitId || null,
         }
       });
     }
@@ -542,9 +605,38 @@ async function addItemToCart(userId, sessionId, isAuthenticated, item) {
 // Remove item from cart
 async function removeItemFromCart(userId, sessionId, isAuthenticated, itemData) {
   // Parse the composite ID or use individual fields
-  let productId, selectedColor, storageId;
+  let productId, selectedColor, storageId, unitId;
   
   if (typeof itemData === 'string') {
+    // Check if this looks like a unitId (cuid format - doesn't contain standard suffixes)
+    // cuid format: starts with 'c' and is alphanumeric, typically ~25 chars
+    const isLikelyUnitId = !itemData.includes('-no-storage') && 
+                           !itemData.includes('-no-color') && 
+                           /^c[a-z0-9]{20,}$/i.test(itemData);
+    
+    if (isLikelyUnitId) {
+      // This is a unitId, delete by unitId
+      unitId = itemData;
+      
+      if (isAuthenticated && userId) {
+        await prisma.cartItem.deleteMany({
+          where: {
+            cart: { userId },
+            unitId: unitId
+          }
+        });
+      } else if (sessionId) {
+        await prisma.anonymousCartItem.deleteMany({
+          where: {
+            cart: { sessionId },
+            unitId: unitId
+          }
+        });
+      }
+      
+      return await getUpdatedCart(userId, sessionId, isAuthenticated);
+    }
+    
     // Parse uniqueId format: "productId-color-storageId"
     // Handle the known suffixes first
     let remaining = itemData;
@@ -582,6 +674,7 @@ async function removeItemFromCart(userId, sessionId, isAuthenticated, itemData) 
     productId = itemData.productId || itemData.id;
     selectedColor = itemData.selectedColor || null;
     storageId = itemData.storageId || null;
+    unitId = itemData.unitId || null;
   }
 
   if (isAuthenticated && userId) {
@@ -614,9 +707,63 @@ async function updateItemQuantity(userId, sessionId, isAuthenticated, itemData, 
   }
 
   // Parse the composite ID or use individual fields
-  let productId, selectedColor, storageId;
+  let productId, selectedColor, storageId, unitId;
   
   if (typeof itemData === 'string') {
+    // Check if this looks like a unitId (cuid format - doesn't contain standard suffixes)
+    const isLikelyUnitId = !itemData.includes('-no-storage') && 
+                           !itemData.includes('-no-color') && 
+                           /^c[a-z0-9]{20,}$/i.test(itemData);
+    
+    if (isLikelyUnitId) {
+      // This is a unitId - find the cart item to get product info
+      unitId = itemData;
+      
+      // Find the cart item by unitId to get the product and storage info
+      let cartItem;
+      if (isAuthenticated && userId) {
+        cartItem = await prisma.cartItem.findFirst({
+          where: { cart: { userId }, unitId },
+          include: { product: { include: { storages: { include: { units: true } } } } }
+        });
+      } else if (sessionId) {
+        cartItem = await prisma.anonymousCartItem.findFirst({
+          where: { cart: { sessionId }, unitId },
+          include: { product: { include: { storages: { include: { units: true } } } } }
+        });
+      }
+      
+      if (!cartItem) {
+        return NextResponse.json({ error: "Cart item not found" }, { status: 404 });
+      }
+      
+      // Find the unit to check stock
+      const storage = cartItem.product.storages.find(s => s.id === cartItem.storageId);
+      const unit = storage?.units?.find((u: { id: string }) => u.id === unitId);
+      const availableStock = unit ? unit.stock : 0;
+      
+      if (quantity > availableStock) {
+        return NextResponse.json({ 
+          error: `Only ${availableStock} items available in stock.` 
+        }, { status: 400 });
+      }
+      
+      // Update by unitId
+      if (isAuthenticated && userId) {
+        await prisma.cartItem.updateMany({
+          where: { cart: { userId }, unitId },
+          data: { quantity }
+        });
+      } else if (sessionId) {
+        await prisma.anonymousCartItem.updateMany({
+          where: { cart: { sessionId }, unitId },
+          data: { quantity }
+        });
+      }
+      
+      return await getUpdatedCart(userId, sessionId, isAuthenticated);
+    }
+    
     // Parse uniqueId format: "productId-color-storageId"
     // Handle the known suffixes first
     let remaining = itemData;
@@ -650,10 +797,54 @@ async function updateItemQuantity(userId, sessionId, isAuthenticated, itemData, 
     // What's left is the product ID
     productId = remaining;
   } else {
-    // Use individual fields from itemData object
     productId = itemData.productId || itemData.id;
     selectedColor = itemData.selectedColor || null;
     storageId = itemData.storageId || null;
+    unitId = itemData.unitId || null;
+  }
+
+  // If we have unitId from object, handle it directly
+  if (unitId) {
+    let cartItem;
+    if (isAuthenticated && userId) {
+      cartItem = await prisma.cartItem.findFirst({
+        where: { cart: { userId }, unitId },
+        include: { product: { include: { storages: { include: { units: true } } } } }
+      });
+    } else if (sessionId) {
+      cartItem = await prisma.anonymousCartItem.findFirst({
+        where: { cart: { sessionId }, unitId },
+        include: { product: { include: { storages: { include: { units: true } } } } }
+      });
+    }
+    
+    if (!cartItem) {
+      return NextResponse.json({ error: "Cart item not found" }, { status: 404 });
+    }
+    
+    const storage = cartItem.product.storages.find(s => s.id === cartItem.storageId);
+    const unit = storage?.units?.find((u: { id: string }) => u.id === unitId);
+    const availableStock = unit ? unit.stock : 0;
+    
+    if (quantity > availableStock) {
+      return NextResponse.json({ 
+        error: `Only ${availableStock} items available in stock.` 
+      }, { status: 400 });
+    }
+    
+    if (isAuthenticated && userId) {
+      await prisma.cartItem.updateMany({
+        where: { cart: { userId }, unitId },
+        data: { quantity }
+      });
+    } else if (sessionId) {
+      await prisma.anonymousCartItem.updateMany({
+        where: { cart: { sessionId }, unitId },
+        data: { quantity }
+      });
+    }
+    
+    return await getUpdatedCart(userId, sessionId, isAuthenticated);
   }
 
   // Fetch product data to check stock
@@ -663,7 +854,7 @@ async function updateItemQuantity(userId, sessionId, isAuthenticated, itemData, 
       variants: true,
       storages: {
         include: {
-          variants: true,
+          units: true,
         },
       },
     }
@@ -673,31 +864,26 @@ async function updateItemQuantity(userId, sessionId, isAuthenticated, itemData, 
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
   
-  // Determine available stock based on storage and color selection
   let availableStock;
   
   if (storageId) {
-    // Product has storage selected
     const selectedStorage = product.storages.find(s => s.id === storageId);
     if (!selectedStorage) {
       return NextResponse.json({ error: "Selected storage not found" }, { status: 400 });
     }
     
+    const units = selectedStorage.units ?? [];
     if (selectedColor) {
-      // Storage + Color: Check storage variant stock
-      const storageVariant = selectedStorage.variants.find(v => v.color === selectedColor);
-      availableStock = storageVariant ? storageVariant.quantity : 0;
+      const unit = units.find((u: { color: string }) => u.color === selectedColor);
+      availableStock = unit ? unit.stock : 0;
     } else {
-      // Storage only: Use storage stock
-      availableStock = selectedStorage.stock;
+      availableStock = units.reduce((s: number, u: { stock: number }) => s + u.stock, 0);
     }
   } else if (selectedColor) {
-    // Color only (no storage): Check product variant stock
-    const variant = product.variants.find(v => v.color === selectedColor);
+    const variant = product.variants?.find((v: { color: string }) => v.color === selectedColor);
     availableStock = variant ? variant.quantity : 0;
   } else {
-    // No storage, no color: Use product stock
-    availableStock = product.stock;
+    availableStock = product.stock ?? 0;
   }
   
   // Validate stock
@@ -709,22 +895,12 @@ async function updateItemQuantity(userId, sessionId, isAuthenticated, itemData, 
 
   if (isAuthenticated && userId) {
     await prisma.cartItem.updateMany({
-      where: {
-        cart: { userId },
-        productId: productId,
-        selectedColor: selectedColor,
-        storageId: storageId
-      },
+      where: { cart: { userId }, productId, selectedColor, storageId },
       data: { quantity }
     });
   } else if (sessionId) {
     await prisma.anonymousCartItem.updateMany({
-      where: {
-        cart: { sessionId },
-        productId: productId,
-        selectedColor: selectedColor,
-        storageId: storageId
-      },
+      where: { cart: { sessionId }, productId, selectedColor, storageId },
       data: { quantity }
     });
   }
@@ -818,7 +994,7 @@ async function removeCoupon(userId, sessionId, isAuthenticated) {
 // Helper to get updated cart after changes
 async function getUpdatedCart(userId, sessionId, isAuthenticated) {
   // Just call the same logic as GET request to ensure consistency
-  let cartItems = [];
+  let cartItems: CartItemResponse[] = [];
   let coupon = null;
   
   if (isAuthenticated && userId) {
@@ -829,13 +1005,14 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
           orderBy: { createdAt: 'asc' },
           include: {
             product: {
-                  select: {
+              select: {
                 id: true,
                 name: true,
                 price: true,
                 salePrice: true,
                 images: true,
                 slug: true,
+                stock: true,
                 variants: true,
                 storages: {
                   select: {
@@ -844,7 +1021,7 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
                     price: true,
                     salePercentage: true,
                     saleEndDate: true,
-                    variants: true
+                    units: true
                   }
                 }
               }
@@ -856,92 +1033,80 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
     });
     
     if (userCart) {
-      // Filter out and fix any items with invalid quantities
-      const validItems = [];
-      const itemsToUpdate = [];
+      const validItems: CartItemResponse[] = [];
+      const itemsToUpdate: Array<{ id: string; quantity: number }> = [];
       
       for (const item of userCart.items) {
-        // Find selected storage if exists
         const selectedStorage = item.storageId 
-          ? item.product.storages.find(s => s.id === item.storageId)
+          ? item.product.storages.find((s: { id: string }) => s.id === item.storageId)
           : null;
-        
-        // Determine available stock
-        let availableStock;
-        if (selectedStorage && item.selectedColor) {
-          // Storage + Color: Check storage variant stock
-          const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
-          availableStock = storageVariant ? storageVariant.quantity : 0;
-        } else if (selectedStorage) {
-          // Storage only: Use storage stock
-          availableStock = selectedStorage.stock;
+        const storageUnits = selectedStorage?.units ?? [];
+        let availableStock: number;
+        if (item.unitId && selectedStorage) {
+          const unit = storageUnits.find((u: { id: string }) => u.id === item.unitId);
+          availableStock = unit ? unit.stock : 0;
+        } else if (selectedStorage && item.selectedColor) {
+          const unit = storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+          availableStock = unit ? unit.stock : 0;
+        } else if (selectedStorage && storageUnits.length > 0) {
+          availableStock = storageUnits.reduce((s: number, u: { stock: number }) => s + u.stock, 0);
         } else if (item.selectedColor) {
-          // Color only (no storage): Check product variant stock
-          const variant = item.product.variants.find(v => v.color === item.selectedColor);
+          const variant = item.product.variants?.find((v: { color: string }) => v.color === item.selectedColor);
           availableStock = variant ? variant.quantity : 0;
         } else {
-          // No storage, no color: Use product stock
-          availableStock = item.product.stock;
+          availableStock = item.product.stock ?? 0;
         }
-        
-        // Fix quantity if it exceeds available stock
         let finalQuantity = item.quantity;
         if (item.quantity > availableStock) {
           finalQuantity = Math.max(0, availableStock);
           if (finalQuantity > 0) {
-            itemsToUpdate.push({
-              id: item.id,
-              quantity: finalQuantity
-            });
+            itemsToUpdate.push({ id: item.id, quantity: finalQuantity });
           } else {
-            // Remove item if no stock available
-            await prisma.cartItem.delete({
-              where: { id: item.id }
-            });
+            await prisma.cartItem.delete({ where: { id: item.id } });
             continue;
           }
         }
-        
-        // Calculate price based on storage or product
-        let finalPrice, finalSalePrice;
+        let finalPrice: number;
+        let finalSalePrice: number | null = null;
         if (selectedStorage) {
-          finalPrice = Number(selectedStorage.price);
-          // Check if storage has a sale
-          if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
-              new Date(selectedStorage.saleEndDate) > new Date()) {
-            finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+          const unit = item.unitId ? storageUnits.find((u: { id: string }) => u.id === item.unitId) : storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+          if (unit) {
+            const calcPrice = getUnitCalculatedPrice(Number(selectedStorage.price), selectedStorage.salePercentage, selectedStorage.saleEndDate, unit);
+            const origPrice = getUnitCalculatedPrice(Number(selectedStorage.price), null, null, unit);
+            const onSale = selectedStorage.salePercentage && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date();
+            finalPrice = onSale ? origPrice : calcPrice;
+            finalSalePrice = onSale ? calcPrice : null;
           } else {
-            finalSalePrice = null;
+            finalPrice = Number(selectedStorage.price);
+            if (selectedStorage.salePercentage && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date()) {
+              finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+            }
           }
         } else {
-          finalPrice = Number(item.product.price);
+          finalPrice = Number(item.product.price ?? 0);
           finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
         }
-        
+        const unitsOrVariants = selectedStorage?.units ?? item.product.variants ?? [];
+        const availableColors = Array.isArray(unitsOrVariants) && unitsOrVariants.length > 0
+          ? unitsOrVariants.map((v: { color: string; quantity?: number; stock?: number }) => ({ color: v.color, quantity: v.quantity ?? v.stock ?? 0 }))
+          : [{ color: '_default', quantity: item.product.stock ?? 0 }];
         validItems.push({
-        id: item.product.id,
-        name: item.product.name,
+          id: item.product.id,
+          name: item.product.name,
           price: finalPrice,
           salePrice: finalSalePrice,
-        images: item.product.images,
+          images: item.product.images,
           slug: item.product.slug,
           quantity: finalQuantity,
-        selectedColor: item.selectedColor,
+          selectedColor: item.selectedColor,
           storageId: item.storageId,
           storageSize: selectedStorage?.size || null,
-          availableColors: selectedStorage 
-            ? selectedStorage.variants.map(v => ({
-                color: v.color,
-                quantity: v.quantity
-              }))
-            : item.product.variants.map(v => ({
-          color: v.color,
-          quantity: v.quantity
-        })),
-          uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+          unitId: item.unitId || null,
+          availableColors,
+          uniqueId: item.unitId || `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
         });
       }
-      
+
       // Update quantities in database if needed
       for (const itemUpdate of itemsToUpdate) {
         await prisma.cartItem.update({
@@ -968,6 +1133,7 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
                 salePrice: true,
                 images: true,
                 slug: true,
+                stock: true,
                 variants: true,
                 storages: {
                   select: {
@@ -976,7 +1142,7 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
                     price: true,
                     salePercentage: true,
                     saleEndDate: true,
-                    variants: true
+                    units: true
                   }
                 }
               }
@@ -988,32 +1154,28 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
     });
     
     if (anonCart) {
-      // Filter out and fix any items with invalid quantities
-      const validItems = [];
-      const itemsToUpdate = [];
+      const validItems: CartItemResponse[] = [];
+      const itemsToUpdate: Array<{ id: string; quantity: number }> = [];
       
       for (const item of anonCart.items) {
-        // Find selected storage if exists
         const selectedStorage = item.storageId 
-          ? item.product.storages.find(s => s.id === item.storageId)
+          ? item.product.storages.find((s: { id: string }) => s.id === item.storageId)
           : null;
-        
-        // Determine available stock
-        let availableStock;
-        if (selectedStorage && item.selectedColor) {
-          // Storage + Color: Check storage variant stock
-          const storageVariant = selectedStorage.variants?.find(v => v.color === item.selectedColor);
-          availableStock = storageVariant ? storageVariant.quantity : 0;
-        } else if (selectedStorage) {
-          // Storage only: Use storage stock
-          availableStock = selectedStorage.stock;
+        const storageUnits = selectedStorage?.units ?? [];
+        let availableStock: number;
+        if (item.unitId && selectedStorage) {
+          const unit = storageUnits.find((u: { id: string }) => u.id === item.unitId);
+          availableStock = unit ? unit.stock : 0;
+        } else if (selectedStorage && item.selectedColor) {
+          const unit = storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+          availableStock = unit ? unit.stock : 0;
+        } else if (selectedStorage && storageUnits.length > 0) {
+          availableStock = storageUnits.reduce((s: number, u: { stock: number }) => s + u.stock, 0);
         } else if (item.selectedColor) {
-          // Color only (no storage): Check product variant stock
-          const variant = item.product.variants.find(v => v.color === item.selectedColor);
+          const variant = item.product.variants?.find((v: { color: string }) => v.color === item.selectedColor);
           availableStock = variant ? variant.quantity : 0;
         } else {
-          // No storage, no color: Use product stock
-          availableStock = item.product.stock;
+          availableStock = item.product.stock ?? 0;
         }
         
         // Fix quantity if it exceeds available stock
@@ -1034,47 +1196,47 @@ async function getUpdatedCart(userId, sessionId, isAuthenticated) {
           }
         }
         
-        // Calculate price based on storage or product
-        let finalPrice, finalSalePrice;
+        let finalPrice: number;
+        let finalSalePrice: number | null = null;
         if (selectedStorage) {
-          finalPrice = Number(selectedStorage.price);
-          // Check if storage has a sale
-          if (selectedStorage.salePercentage && selectedStorage.saleEndDate && 
-              new Date(selectedStorage.saleEndDate) > new Date()) {
-            finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+          const unit = item.unitId ? storageUnits.find((u: { id: string }) => u.id === item.unitId) : storageUnits.find((u: { color: string }) => u.color === item.selectedColor);
+          if (unit) {
+            const calcPrice = getUnitCalculatedPrice(Number(selectedStorage.price), selectedStorage.salePercentage, selectedStorage.saleEndDate, unit);
+            const origPrice = getUnitCalculatedPrice(Number(selectedStorage.price), null, null, unit);
+            const onSale = selectedStorage.salePercentage && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date();
+            finalPrice = onSale ? origPrice : calcPrice;
+            finalSalePrice = onSale ? calcPrice : null;
           } else {
-            finalSalePrice = null;
+            finalPrice = Number(selectedStorage.price);
+            if (selectedStorage.salePercentage && selectedStorage.saleEndDate && new Date(selectedStorage.saleEndDate) > new Date()) {
+              finalSalePrice = finalPrice - (finalPrice * selectedStorage.salePercentage / 100);
+            }
           }
         } else {
-          finalPrice = Number(item.product.price);
+          finalPrice = Number(item.product.price ?? 0);
           finalSalePrice = item.product.salePrice ? Number(item.product.salePrice) : null;
         }
-        
+        const unitsOrVariants = selectedStorage?.units ?? item.product.variants ?? [];
+        const availableColors = Array.isArray(unitsOrVariants) && unitsOrVariants.length > 0
+          ? unitsOrVariants.map((v: { color: string; quantity?: number; stock?: number }) => ({ color: v.color, quantity: v.quantity ?? v.stock ?? 0 }))
+          : [{ color: '_default', quantity: item.product.stock ?? 0 }];
         validItems.push({
-        id: item.product.id,
-      name: item.product.name,
+          id: item.product.id,
+          name: item.product.name,
           price: finalPrice,
           salePrice: finalSalePrice,
-      images: item.product.images,
+          images: item.product.images,
           slug: item.product.slug,
           quantity: finalQuantity,
-        selectedColor: item.selectedColor,
+          selectedColor: item.selectedColor,
           storageId: item.storageId,
           storageSize: selectedStorage?.size || null,
-          availableColors: selectedStorage 
-            ? selectedStorage.variants.map(v => ({
-                color: v.color,
-                quantity: v.quantity
-              }))
-            : item.product.variants.map(v => ({
-          color: v.color,
-          quantity: v.quantity
-        })),
-          uniqueId: `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
+          unitId: item.unitId || null,
+          availableColors,
+          uniqueId: item.unitId || `${item.product.id}-${item.selectedColor || 'no-color'}-${item.storageId || 'no-storage'}`
         });
       }
-      
-      // Update quantities in database if needed
+
       for (const itemUpdate of itemsToUpdate) {
         await prisma.anonymousCartItem.update({
           where: { id: itemUpdate.id },

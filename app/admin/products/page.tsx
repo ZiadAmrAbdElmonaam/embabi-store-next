@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
+import { InstructionDialog } from '@/components/admin/instruction-dialog';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface Product {
   id: string;
   name: string;
-  price: number;
-  stock: number;
+  price: number | null;
+  stock: number | null;
   images: string[];
   sale: number | null;
   salePrice: number | null;
@@ -22,6 +24,7 @@ interface Product {
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchProducts();
@@ -34,7 +37,7 @@ export default function AdminProductsPage() {
       const data = await response.json();
       
       // Check sale end dates
-      data.forEach(product => {
+      data.forEach((product: Product) => {
         if (product.saleEndDate) {
           const endDate = new Date(product.saleEndDate);
           const today = new Date();
@@ -44,7 +47,7 @@ export default function AdminProductsPage() {
       
       setProducts(data);
     } catch (error) {
-      toast.error('Failed to fetch products');
+      toast.error(t('admin.failedToDelete'));
       console.error('Failed to fetch products:', error);
     } finally {
       setIsLoading(false);
@@ -52,57 +55,104 @@ export default function AdminProductsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    if (!confirm(t('admin.confirmDelete'))) return;
 
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const headers = await getCsrfHeaders();
       const response = await fetch(`/api/admin/products/${id}`, {
         method: 'DELETE',
+        headers,
       });
 
       const data = await response.json();
       
       if (!response.ok) {
         // Extract error message from the response
-        const errorMessage = data.error || 'Failed to delete product';
+        const errorMessage = data.error || t('admin.failedToDelete');
         throw new Error(errorMessage);
       }
       
-      toast.success('Product deleted successfully');
+      toast.success(t('admin.productDeleted'));
       fetchProducts(); // Refresh the list
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete product';
+      const errorMessage = error instanceof Error ? error.message : t('admin.failedToDelete');
       toast.error(errorMessage);
       console.error('Failed to delete product:', error);
     }
   };
 
   if (isLoading) {
-    return <div className="p-8 text-center">Loading products...</div>;
+    return <div className="p-8 text-center">{t('admin.loadingProducts')}</div>;
   }
+
+  const productInstructions = [
+    {
+      step: 1,
+      title: t('admin.chooseProductType'),
+      description: t('admin.chooseProductTypeDesc'),
+      details: [t('admin.simpleProductHint'), t('admin.storageProductHint')],
+    },
+    {
+      step: 2,
+      title: t('admin.fillBasicInfo'),
+      description: t('admin.fillBasicInfoDesc'),
+      details: [t('admin.nameHint'), t('admin.categoryHint'), t('admin.imagesHint')],
+    },
+    {
+      step: 3,
+      title: t('admin.setPricingStock'),
+      description: t('admin.setPricingStockDesc'),
+      details: [t('admin.simplePricingHint'), t('admin.storagePricingHint')],
+    },
+    {
+      step: 4,
+      title: t('admin.addTaxInfo'),
+      description: t('admin.addTaxInfoDesc'),
+      details: [t('admin.taxPaidHint'), t('admin.taxUnpaidHint'), t('admin.taxTypeHint')],
+    },
+    {
+      step: 5,
+      title: t('admin.configureSales'),
+      description: t('admin.configureSalesDesc'),
+      details: [t('admin.simpleSaleHint'), t('admin.storageSaleHint'), t('admin.saleAppliesHint')],
+    },
+    {
+      step: 6,
+      title: t('admin.savePreview'),
+      description: t('admin.savePreviewDesc'),
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Products</h1>
-        <Link
-          href="/admin/products/new"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Add Product
-        </Link>
+        <h1 className="text-2xl font-bold">{t('admin.products')}</h1>
+        <div className="flex items-center gap-3">
+          <InstructionDialog
+            title={t('admin.howToAddProduct')}
+            instructions={productInstructions}
+          />
+          <Link
+            href="/admin/products/new"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            {t('admin.addProduct')}
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow">
         <table className="min-w-full">
           <thead>
             <tr className="border-b">
-              <th className="px-6 py-3 text-left">Image</th>
-              <th className="px-6 py-3 text-left">Name</th>
-              <th className="px-6 py-3 text-left">Category</th>
-              <th className="px-6 py-3 text-left">Price (EGP)</th>
-              <th className="px-6 py-3 text-left">Sale</th>
-              <th className="px-6 py-3 text-left">Stock</th>
-              <th className="px-6 py-3 text-left">Actions</th>
+              <th className="px-6 py-3 text-left">{t('admin.image')}</th>
+              <th className="px-6 py-3 text-left">{t('admin.name')}</th>
+              <th className="px-6 py-3 text-left">{t('admin.category')}</th>
+              <th className="px-6 py-3 text-left">{t('admin.price')} (EGP)</th>
+              <th className="px-6 py-3 text-left">{t('admin.sale')}</th>
+              <th className="px-6 py-3 text-left">{t('admin.stock')}</th>
+              <th className="px-6 py-3 text-left">{t('admin.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -122,35 +172,35 @@ export default function AdminProductsPage() {
                 </td>
                 <td className="px-6 py-4">{product.name}</td>
                 <td className="px-6 py-4">{product.category.name}</td>
-                <td className="px-6 py-4">{product.price.toFixed(2)} EGP</td>
+                <td className="px-6 py-4">{product.price != null ? product.price.toFixed(2) : '—'} EGP</td>
                 <td className="px-6 py-4">
                   {product.sale ? (
                     <div>
                       <span className="text-green-600 font-medium">{product.sale}%</span>
                       {product.saleEndDate && (
                         <div className="text-xs text-gray-500">
-                          Until {new Date(product.saleEndDate).toLocaleDateString()}
+                          {t('admin.until')} {new Date(product.saleEndDate).toLocaleDateString()}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <span className="text-gray-400">No sale</span>
+                    <span className="text-gray-400">{t('admin.noSale')}</span>
                   )}
                 </td>
-                <td className="px-6 py-4">{product.stock}</td>
+                <td className="px-6 py-4">{product.stock ?? '—'}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-4">
                     <Link
                       href={`/admin/products/${product.id}/edit`}
                       className="text-blue-600 hover:text-blue-800"
                     >
-                      Edit
+                      {t('admin.edit')}
                     </Link>
                     <button
                       onClick={() => handleDelete(product.id)}
                       className="text-red-600 hover:text-red-800"
                     >
-                      Delete
+                      {t('admin.delete')}
                     </button>
                   </div>
                 </td>

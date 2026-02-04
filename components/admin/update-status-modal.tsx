@@ -21,9 +21,11 @@ export function UpdateStatusModal({ orderId, currentStatus, onClose, onUpdate }:
     setIsLoading(true);
 
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(`/api/orders/${orderId}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...csrfHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, comment }),
       });
 

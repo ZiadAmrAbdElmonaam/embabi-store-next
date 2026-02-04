@@ -1,62 +1,84 @@
 'use client';
 
-import { useState } from "react";
 import { ProductGrid } from "@/components/products/product-grid";
+import { ProductFilters } from "@/components/products/product-filters";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TranslatedContent } from "@/components/ui/translated-content";
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+}
 
 interface ProductsClientProps {
   initialProducts: any[];
-  categories: any[];
+  parentCategories: Category[];
   maxPrice: number;
   isAdmin: boolean;
   searchParams: {
     page?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    parentCategory?: string;
+    hasSale?: string;
   };
   totalPages: number;
 }
 
 export function ProductsClient({ 
   initialProducts, 
-  categories, 
+  parentCategories,
+  subcategories,
   maxPrice, 
   isAdmin,
   searchParams,
   totalPages
 }: ProductsClientProps) {
   const router = useRouter();
+  const searchParamsObj = useSearchParams();
   const currentPage = Number(searchParams.page) || 1;
   
   const handlePageChange = (page: number) => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams(searchParamsObj.toString());
     params.set('page', page.toString());
     router.push(`/products?${params.toString()}`);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Products Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
             <TranslatedContent translationKey="products.allProducts" />
           </h1>
         </div>
 
-        {initialProducts.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">
-              <TranslatedContent translationKey="products.noProductsFound" />
-            </p>
-          </div>
-        ) : (
-          <ProductGrid products={initialProducts} />
-        )}
+        <div className="flex flex-col lg:flex-row gap-8">
+          <aside className="lg:w-72 flex-shrink-0">
+            <div className="lg:sticky lg:top-24">
+              <ProductFilters
+                parentCategories={parentCategories}
+                maxPrice={maxPrice}
+              />
+            </div>
+          </aside>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
+          <main className="flex-1 min-w-0">
+            {initialProducts.length === 0 ? (
+              <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <p className="text-gray-500 dark:text-gray-400">
+                  <TranslatedContent translationKey="products.noProductsFound" />
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Try adjusting your filters</p>
+              </div>
+            ) : (
+              <ProductGrid products={initialProducts} />
+            )}
+
+            {totalPages > 1 && (
           <div className="mt-8 flex justify-center items-center gap-4">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
@@ -95,7 +117,9 @@ export function ProductsClient({
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-        )}
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

@@ -46,13 +46,19 @@ model Category {
   @@index([brand])
 }
 
+enum ProductType {
+  SIMPLE   // Single price, optional colors
+  STORAGE  // Multiple storage options, each with price/stock/colors
+}
+
 model Product {
   id                     String                  @id @default(cuid())
   name                   String
   slug                   String                  @unique
   description            String
-  price                  Decimal                 @db.Decimal(10, 2)
-  stock                  Int
+  productType            ProductType             @default(SIMPLE)
+  price                  Decimal?                @db.Decimal(10, 2)  // Required for SIMPLE, null for STORAGE
+  stock                  Int?                                         // Required for SIMPLE, null for STORAGE
   images                 String[]                @default([])
   categoryId             String
   createdAt              DateTime                @default(now())
@@ -112,6 +118,7 @@ model OrderItem {
   price     Decimal
   color     String?
   storageId String?
+  unitId    String?
   status    OrderItemStatus? @default(ACTIVE)
   order     Order            @relation(fields: [orderId], references: [id])
   product   Product          @relation(fields: [productId], references: [id])
@@ -189,8 +196,9 @@ model CartItem {
   cartId        String
   productId     String
   quantity      Int      @default(1)
-  selectedColor String?
-  storageId     String?
+  selectedColor String?  // For SIMPLE products
+  storageId     String?  // For display/legacy
+  unitId        String?  // For STORAGE products - references ProductStorageUnit
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -219,6 +227,7 @@ model AnonymousCartItem {
   quantity      Int           @default(1)
   selectedColor String?
   storageId     String?
+  unitId        String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   cart          AnonymousCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
@@ -253,50 +262,65 @@ model ProductVariant {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
+enum TaxStatus {
+  PAID    // Seller paid duties/taxes - no extra charge to customer
+  UNPAID  // Customer pays the tax amount
+}
+
+enum TaxType {
+  FIXED       // Fixed amount in currency
+  PERCENTAGE  // Percentage of sale price
+}
+
 model ProductStorage {
-  id             String                    @id @default(cuid())
+  id             String               @id @default(cuid())
   productId      String
-  size           String                    // "128GB", "256GB", etc.
-  price          Decimal                   @db.Decimal(10, 2)
-  stock          Int
-  salePercentage Float?                    // Optional sale percentage
-  saleEndDate    DateTime?                 // Optional sale end date
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
+  size           String               // "128GB", "256GB", etc.
+  price          Decimal              @db.Decimal(10, 2)  // Base price (sale applies to this only)
+  salePercentage Float?               // Optional sale percentage (storage level)
+  saleEndDate    DateTime?            // Optional sale end date
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
   
-  product        Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variants       ProductStorageVariant[]   // Color variants for this specific storage
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  units          ProductStorageUnit[] // Units: color + stock + tax per unit
   
   @@index([productId])
 }
 
-model ProductStorageVariant {
-  id        String         @id @default(cuid())
-  storageId String
-  color     String
-  quantity  Int
+model ProductStorageUnit {
+  id            String         @id @default(cuid())
+  storageId     String
+  color         String
+  stock         Int
+  taxStatus     TaxStatus      @default(UNPAID)
+  taxType       TaxType        @default(FIXED)
+  taxAmount     Decimal?       @db.Decimal(10, 2)  // When FIXED
+  taxPercentage Decimal?       @db.Decimal(5, 2)   // When PERCENTAGE (e.g. 15 for 15%)
   
-  storage   ProductStorage @relation(fields: [storageId], references: [id], onDelete: Cascade)
+  storage       ProductStorage @relation(fields: [storageId], references: [id], onDelete: Cascade)
   
+  @@unique([storageId, color, taxStatus])
   @@index([storageId])
 }
 
 model Coupon {
-  id             String          @id @default(cuid())
-  code           String          @unique
-  endDate        DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  isEnabled      Boolean         @default(true)
-  name           String
-  type           CouponType
-  usedBy         String[]        @default([])
-  usedCount      Int             @default(0)
-  userLimit      Int?
-  value          Float
-  anonymousCarts AnonymousCart[]
-  carts          Cart[]
-  orders         Order[]
+  id                 String          @id @default(cuid())
+  code               String          @unique
+  endDate            DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  isEnabled          Boolean         @default(true)
+  name               String
+  type               CouponType
+  usedBy             String[]        @default([])
+  usedCount          Int             @default(0)
+  userLimit          Int?
+  value              Float
+  minimumOrderAmount Float?
+  anonymousCarts     AnonymousCart[]
+  carts              Cart[]
+  orders             Order[]
 }
 
 model SiteSettings {
@@ -315,6 +339,18 @@ model CarouselImage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([order])
+}
+
+model HeroThumbnail {
+  id        String   @id @default(cuid())
+  url       String
+  order     Int      // 1-4 for the 4 positions
+  linkUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([order])
   @@index([order])
 }
 

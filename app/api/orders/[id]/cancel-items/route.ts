@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../auth/auth-options";
+import { isAdminRequest } from "@/lib/admin-auth";
+import { requireCsrfOrReject } from "@/lib/csrf";
 
 interface CancelItemData {
   itemId: string;
@@ -13,9 +13,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check if user is admin
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== 'ADMIN') {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -77,7 +77,7 @@ export async function POST(
             variants: true,
             storages: {
               include: {
-                variants: true
+                units: true
               }
             }
           }
@@ -138,65 +138,34 @@ export async function POST(
             
             const storage = orderItem.product.storages.find(s => s.id === orderItem.storageId);
             if (storage) {
-              const storageVariant = storage.variants.find(v => v.color === orderItem.color);
-              if (storageVariant) {
-                await tx.productStorageVariant.update({
-                  where: { id: storageVariant.id },
+              const units = (storage as { units?: Array<{ id: string; color: string; stock: number }> })?.units ?? [];
+              const unit = orderItem.unitId ? units.find((u: { id: string }) => u.id === orderItem.unitId) : units.find((u: { color: string }) => u.color === orderItem.color) ?? units[0];
+              if (unit) {
+                await tx.productStorageUnit.update({
+                  where: { id: unit.id },
                   data: {
-                    quantity: {
+                    stock: {
                       increment: quantityToCancel
                     }
                   }
                 });
-                console.log(`Storage variant quantity restored by ${quantityToCancel}`);
                 
                 // Also restore the storage total stock
-                await tx.productStorage.update({
-                  where: { id: orderItem.storageId },
-                  data: {
-                    stock: {
-                      increment: quantityToCancel
-                    }
-                  }
-                });
                 console.log(`Storage total stock restored by ${quantityToCancel}`);
                 
-                // Also restore the main product stock
-                await tx.product.update({
-                  where: { id: orderItem.productId },
-                  data: {
-                    stock: {
-                      increment: quantityToCancel
-                    }
-                  }
-                });
-                console.log(`Main product stock restored by ${quantityToCancel}`);
               } else {
                 console.log(`No storage variant found for color ${orderItem.color}`);
               }
             }
           } else {
-            // Storage only: Restore storage stock and product stock
-            await tx.productStorage.update({
-              where: { id: orderItem.storageId },
-              data: {
-                stock: {
-                  increment: quantityToCancel
-                }
-              }
-            });
-            console.log(`Storage stock restored by ${quantityToCancel}`);
-            
-            // Also restore the main product stock
-            await tx.product.update({
-              where: { id: orderItem.productId },
-              data: {
-                stock: {
-                  increment: quantityToCancel
-                }
-              }
-            });
-            console.log(`Main product stock restored by ${quantityToCancel}`);
+            const storage2 = orderItem.product.storages.find(s => s.id === orderItem.storageId);
+            const units2 = storage2 ? (storage2 as { units?: Array<{ id: string }> })?.units ?? [] : [];
+            if (orderItem.unitId && units2.length > 0) {
+              const u = units2.find((x: { id: string }) => x.id === orderItem.unitId);
+              if (u) await tx.productStorageUnit.update({ where: { id: u.id }, data: { stock: { increment: quantityToCancel } } });
+            } else if (units2.length > 0) {
+              await tx.productStorageUnit.update({ where: { id: units2[0].id }, data: { stock: { increment: quantityToCancel } } });
+            }
           }
         } else {
           // Non-storage product (legacy): Update product and color variants

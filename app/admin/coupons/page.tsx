@@ -43,8 +43,11 @@ export default function AdminCouponsPage() {
     if (!confirm('Are you sure you want to delete this coupon?')) return;
 
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const headers = await getCsrfHeaders();
       const response = await fetch(`/api/admin/coupons/${id}`, {
         method: 'DELETE',
+        headers,
       });
 
       const data = await response.json();
@@ -73,9 +76,11 @@ export default function AdminCouponsPage() {
       const coupon = await getResponse.json();
       
       // Update the isEnabled status
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(`/api/admin/coupons/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...csrfHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...coupon,
           isEnabled: !currentStatus,

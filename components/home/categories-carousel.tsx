@@ -22,30 +22,34 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // Check scroll buttons state
   const checkScrollButtons = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
       const maxScrollLeft = scrollWidth - clientWidth;
-      
       setCanScrollLeft(scrollLeft > 5);
       setCanScrollRight(scrollLeft < maxScrollLeft - 5);
     }
   };
 
-  // Initialize scroll state
   useEffect(() => {
-    const timer = setTimeout(() => {
-      checkScrollButtons();
-    }, 100);
+    const timer = setTimeout(checkScrollButtons, 100);
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollButtons);
+      window.addEventListener('resize', checkScrollButtons);
+      return () => {
+        clearTimeout(timer);
+        container.removeEventListener('scroll', checkScrollButtons);
+        window.removeEventListener('resize', checkScrollButtons);
+      };
+    }
     return () => clearTimeout(timer);
   }, [categories]);
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 300; // Adjust scroll amount
       scrollContainerRef.current.scrollBy({
-        left: -scrollAmount,
+        left: -300,
         behavior: 'smooth'
       });
     }
@@ -53,9 +57,8 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
 
   const scrollRight = () => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 300; // Adjust scroll amount
       scrollContainerRef.current.scrollBy({
-        left: scrollAmount,
+        left: 300,
         behavior: 'smooth'
       });
     }
@@ -94,16 +97,15 @@ export function CategoriesCarousel({ categories }: CategoriesCarouselProps) {
         </>
       )}
 
-      {/* Scrollable Categories Container */}
+      {/* Scrollable Categories Container - dir="ltr" for consistent scroll in RTL pages */}
       <div
         ref={scrollContainerRef}
+        dir="ltr"
         onScroll={checkScrollButtons}
         className="flex gap-3 sm:gap-6 overflow-x-auto scrollbar-hide pb-4 px-4 sm:px-8"
-        dir="ltr"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          flexDirection: 'row',
         }}
       >
         {categories.map((category) => (

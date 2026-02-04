@@ -9,6 +9,7 @@ import { useCart } from "@/hooks/use-cart";
 import { useTranslation } from "@/hooks/use-translation";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { getColorName } from "@/lib/colors";
+import { getCsrfHeaders } from "@/lib/csrf-client";
 
 // Egyptian governorates
 const EGYPTIAN_STATES = [
@@ -58,6 +59,7 @@ interface CheckoutFormProps {
     selectedColor: string | null;
     storageId: string | null;
     storageSize: string | null;
+    unitId?: string | null;
     uniqueId: string;
     availableColors?: { color: string; quantity: number }[];
   }[];
@@ -71,6 +73,7 @@ interface Coupon {
   code: string;
   type: 'PERCENTAGE' | 'FIXED';
   value: number;
+  minimumOrderAmount?: number | null;
 }
 
 // Add maintenance mode check function
@@ -113,6 +116,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('cash');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [couponFetchComplete, setCouponFetchComplete] = useState(false);
   const { isMaintenanceMode, maintenanceMessage } = useMaintenance();
 
   // Disable body scroll and interactions while loading
@@ -139,6 +143,8 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         }
       } catch (error) {
         console.error('Failed to fetch applied coupon:', error);
+      } finally {
+        setCouponFetchComplete(true);
       }
     };
 
@@ -148,6 +154,11 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
   // Calculate discount amount when coupon is applied
   useEffect(() => {
     if (appliedCoupon) {
+      const minOrder = appliedCoupon.minimumOrderAmount != null ? Number(appliedCoupon.minimumOrderAmount) : null;
+      if (minOrder != null && minOrder > 0 && subtotal < minOrder) {
+        setDiscountAmount(0);
+        return;
+      }
       if (appliedCoupon.type === 'PERCENTAGE') {
         const discount = (subtotal * appliedCoupon.value) / 100;
         setDiscountAmount(discount);
@@ -166,6 +177,10 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
   
   // Recalculate total with discount
   const totalWithDiscount = subtotal + calculatedShipping - discountAmount;
+
+  const minOrder = appliedCoupon?.minimumOrderAmount != null ? Number(appliedCoupon.minimumOrderAmount) : null;
+  const meetsMinimumOrder = !minOrder || minOrder <= 0 || subtotal >= minOrder;
+  const amountNeeded = minOrder != null && minOrder > 0 && subtotal < minOrder ? Math.ceil(minOrder - subtotal) : 0;
   // Paymob online payment fee (3.2%) applies when paying online (including store pickup)
   const PAYMOB_FEE_RATE = 0.032;
   const paymobFee = (selectedPaymentMethod === 'online' || selectedPaymentMethod === 'online_store_pickup')
@@ -225,7 +240,8 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         quantity: item.quantity,
         price: item.salePrice || item.price,
         selectedColor: item.selectedColor,
-        storageId: item.storageId
+        storageId: item.storageId,
+        unitId: item.unitId
       }));
       formDataToSend.append('items', JSON.stringify(itemsData));
 
@@ -259,15 +275,19 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         }));
       }
 
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/orders/create', {
         method: 'POST',
+        headers: csrfHeaders,
         body: formDataToSend
       });
 
       const responseData = await response.json();
 
       if (!response.ok) {
-        const errorMessage = responseData.error || t('checkout.failedToPlaceOrder');
+        const errorMessage = responseData.detail 
+          ? `${responseData.error}: ${responseData.detail}` 
+          : (responseData.error || t('checkout.failedToPlaceOrder'));
         console.error("API Error:", errorMessage);
         throw new Error(errorMessage);
       }
@@ -289,6 +309,7 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
           const paymobRes = await fetch('/api/paymob/intentions', {
             method: 'POST',
             headers: {
+              ...csrfHeaders,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -683,12 +704,19 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
               
               {/* Display coupon discount if applied */}
               {appliedCoupon && (
-                <div className="flex justify-between items-center text-green-600">
-                  <div className="flex items-center">
-                    <Ticket className="h-4 w-4 mr-1" />
-                    <span>{appliedCoupon.code}</span>
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center text-green-600">
+                    <div className="flex items-center">
+                      <Ticket className="h-4 w-4 mr-1" />
+                      <span>{appliedCoupon.code}</span>
+                    </div>
+                    <span>- EGP {discountAmount.toLocaleString()}</span>
                   </div>
-                  <span>- EGP {discountAmount.toLocaleString()}</span>
+                  {!meetsMinimumOrder && amountNeeded > 0 && (
+                    <p className="text-amber-600 text-sm">
+                      {t('cart.minOrderHint').replace('{amount}', amountNeeded.toLocaleString())}
+                    </p>
+                  )}
                 </div>
               )}
               
@@ -724,10 +752,18 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
             <button
               type="submit"
               form="checkout-form"
-              disabled={isLoading || isMaintenanceMode}
-              className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              disabled={!couponFetchComplete || isLoading || isMaintenanceMode || (!meetsMinimumOrder && !!appliedCoupon)}
+              className="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLoading ? (
+              {!couponFetchComplete ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span>{t('cart.loadingCheckout')}</span>
+                </>
+              ) : isLoading ? (
                 <span className="flex items-center gap-2">
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -736,9 +772,16 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
                   Processing...
                 </span>
               ) : (
-                <TranslatedContent translationKey="checkout.placeOrder" />
+                <>
+                  <TranslatedContent translationKey="checkout.placeOrder" />
+                </>
               )}
             </button>
+            {!meetsMinimumOrder && appliedCoupon && amountNeeded > 0 && (
+              <p className="text-sm text-amber-600 mt-2 text-center">
+                {t('cart.minOrderButtonHint').replace('{amount}', amountNeeded.toLocaleString())}
+              </p>
+            )}
           </div>
         </div>
       </div>

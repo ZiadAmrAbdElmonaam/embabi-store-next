@@ -5,16 +5,20 @@ import { useRouter } from "next/navigation";
 import { Category, Product, ProductVariant, ProductDetail } from "@prisma/client";
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
-import { X, Plus, Loader2 } from 'lucide-react';
+import { X, Plus, Loader2, Package, HardDrive } from 'lucide-react';
 
-interface SerializedProduct extends Omit<Product, 'price' | 'salePrice' | 'discountPrice' | 'sale' | 'createdAt' | 'updatedAt' | 'saleEndDate'> {
-  price: string;
+type ProductTypeOption = 'SIMPLE' | 'STORAGE';
+
+interface SerializedProduct extends Omit<Product, 'price' | 'salePrice' | 'discountPrice' | 'sale' | 'stock' | 'createdAt' | 'updatedAt' | 'saleEndDate' | 'productType'> {
+  price: string | null;
   salePrice: string | null;
   discountPrice: string | null;
   sale: string | null;
+  stock: string;
   createdAt: string;
   updatedAt: string;
   saleEndDate: string | null;
+  productType?: ProductTypeOption;
   variants: ProductVariant[];
   details: ProductDetail[];
   storages: ProductStorage[];
@@ -35,53 +39,87 @@ interface ProductDetailForm {
   description: string;
 }
 
+type TaxStatusOption = 'PAID' | 'UNPAID';
+type TaxTypeOption = 'FIXED' | 'PERCENTAGE';
+
+interface StorageUnit {
+  id?: string;
+  color: string;
+  stock: number;
+  taxStatus: TaxStatusOption;
+  taxType: TaxTypeOption;
+  taxAmount: string;
+  taxPercentage: string;
+}
+
 interface ProductStorage {
   id?: string;
   size: string;
   price: string;
-  stock: number;
   salePercentage?: string;
   saleEndDate?: string;
-  variants: StorageColorVariant[];
-}
-
-interface StorageColorVariant {
-  color: string;
-  quantity: number;
+  units: StorageUnit[];
 }
 
 export function ProductForm({ categories, initialData }: ProductFormProps) {
   const router = useRouter();
+  // Infer product type: STORAGE if has storages, else SIMPLE
+  const inferredType: ProductTypeOption = initialData?.productType || 
+    (initialData?.storages && initialData.storages.length > 0 ? 'STORAGE' : 'SIMPLE');
+  
+  const [productType, setProductType] = useState<ProductTypeOption>(inferredType);
   const [loading, setLoading] = useState(false);
   const [availableImages, setAvailableImages] = useState<Array<{url: string, source: string, originalFilename?: string, publicId?: string}>>([]);
   const [images, setImages] = useState<string[]>(initialData?.images || []);
   const [thumbnails, setThumbnails] = useState<string[]>(initialData?.thumbnails || []);
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>(
-    initialData?.variants.map(v => ({ color: v.color, quantity: v.quantity })) || []
+    productType === 'SIMPLE' ? (initialData?.variants?.map(v => ({ color: v.color, quantity: v.quantity })) || []) : []
   );
   const [details, setDetails] = useState<ProductDetailForm[]>(
-    initialData?.details.map(d => ({ label: d.label, description: d.description })) || []
+    initialData?.details?.map(d => ({ label: d.label, description: d.description })) || []
   );
   const [storages, setStorages] = useState<ProductStorage[]>(
-    initialData?.storages?.map(s => ({
-      id: s.id,
-      size: s.size,
-      price: s.price.toString(),
-      stock: s.stock,
-      salePercentage: s.salePercentage?.toString() || "",
-      saleEndDate: s.saleEndDate ? new Date(s.saleEndDate).toISOString().split('T')[0] : "",
-      variants: s.variants?.map(v => ({ color: v.color, quantity: v.quantity })) || []
-    })) || []
+    productType === 'STORAGE' ? (initialData?.storages?.map(s => {
+      const st = s as { id?: string; size: string; price: string | number; salePercentage?: string | number; saleEndDate?: string; units?: StorageUnit[]; variants?: { color: string; quantity: number }[] };
+      const units = st.units ?? st.variants?.map(v => ({
+        color: v.color,
+        stock: v.quantity,
+        taxStatus: 'UNPAID' as TaxStatusOption,
+        taxType: 'FIXED' as TaxTypeOption,
+        taxAmount: '0',
+        taxPercentage: ''
+      })) ?? [];
+      return {
+        id: st.id,
+        size: st.size,
+        price: typeof st.price === 'number' ? st.price.toString() : (st.price ?? ''),
+        salePercentage: st.salePercentage != null ? String(st.salePercentage) : "",
+        saleEndDate: st.saleEndDate ? (typeof st.saleEndDate === 'string' ? st.saleEndDate.split('T')[0] : new Date(st.saleEndDate).toISOString().split('T')[0]) : "",
+        units
+      };
+    }) || []) : []
   );
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     description: initialData?.description || "",
-    price: initialData?.price || "",
-    sale: initialData?.sale || "",
+    price: initialData?.price?.toString() || "",
+    sale: initialData?.sale?.toString() || "",
     saleEndDate: initialData?.saleEndDate ? new Date(initialData.saleEndDate).toISOString().split('T')[0] : "",
-    stock: initialData?.stock.toString() || "",
+    stock: initialData?.stock?.toString() || "",
     categoryId: initialData?.categoryId || "",
   });
+
+  // Handle product type switch - clear irrelevant data
+  const handleProductTypeChange = (type: ProductTypeOption) => {
+    if (type === productType) return;
+    setProductType(type);
+    if (type === 'SIMPLE') {
+      setStorages([]);
+    } else {
+      setColorVariants([]);
+      setFormData(prev => ({ ...prev, price: "", stock: "", sale: "", saleEndDate: "" }));
+    }
+  };
 
   useEffect(() => {
     // Fetch available images from the API (now includes both local and Cloudinary)
@@ -137,20 +175,18 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
     ? Number(formData.price) - (Number(formData.price) * (Number(formData.sale) / 100))
     : null;
 
-  // Validate total quantity matches stock
+  // Validate total quantity matches stock (SIMPLE only)
   const totalQuantity = colorVariants.reduce((sum, variant) => sum + variant.quantity, 0);
-  // Only check quantity mismatch when there are no storage options AND there are color variants
-  const quantityMismatch = storages.length === 0 && colorVariants.length > 0 && totalQuantity !== Number(formData.stock);
+  const quantityMismatch = productType === 'SIMPLE' && colorVariants.length > 0 && totalQuantity !== Number(formData.stock);
 
   // Storage management functions
   const addStorage = () => {
     setStorages([...storages, {
       size: '',
       price: '',
-      stock: 0,
       salePercentage: '',
       saleEndDate: '',
-      variants: []
+      units: []
     }]);
   };
 
@@ -158,41 +194,62 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
     setStorages(storages.filter((_, i) => i !== index));
   };
 
-  const updateStorage = (index: number, field: keyof ProductStorage, value: any) => {
+  const updateStorage = (index: number, field: keyof ProductStorage, value: unknown) => {
     const newStorages = [...storages];
     newStorages[index] = { ...newStorages[index], [field]: value };
     setStorages(newStorages);
   };
 
-  const addStorageVariant = (storageIndex: number) => {
+  const addStorageUnit = (storageIndex: number) => {
     const newStorages = [...storages];
-    newStorages[storageIndex].variants.push({ color: '', quantity: 0 });
+    newStorages[storageIndex].units.push({
+      color: '',
+      stock: 0,
+      taxStatus: 'UNPAID',
+      taxType: 'FIXED',
+      taxAmount: '0',
+      taxPercentage: ''
+    });
     setStorages(newStorages);
   };
 
-  const removeStorageVariant = (storageIndex: number, variantIndex: number) => {
+  const removeStorageUnit = (storageIndex: number, unitIndex: number) => {
     const newStorages = [...storages];
-    newStorages[storageIndex].variants = newStorages[storageIndex].variants.filter((_, i) => i !== variantIndex);
+    newStorages[storageIndex].units = newStorages[storageIndex].units.filter((_, i) => i !== unitIndex);
     setStorages(newStorages);
   };
 
-  const updateStorageVariant = (storageIndex: number, variantIndex: number, field: keyof StorageColorVariant, value: any) => {
+  const updateStorageUnit = (storageIndex: number, unitIndex: number, field: keyof StorageUnit, value: unknown) => {
     const newStorages = [...storages];
-    newStorages[storageIndex].variants[variantIndex] = {
-      ...newStorages[storageIndex].variants[variantIndex],
+    newStorages[storageIndex].units[unitIndex] = {
+      ...newStorages[storageIndex].units[unitIndex],
       [field]: value
     };
     setStorages(newStorages);
   };
 
-  // Calculate storage sale price
-  const getStorageSalePrice = (storage: ProductStorage) => {
+  // Sale applies to base price only, not taxes
+  const getStorageSalePrice = (storage: ProductStorage): number | null => {
     if (storage.price && storage.salePercentage) {
       const price = parseFloat(storage.price);
       const salePercentage = parseFloat(storage.salePercentage);
       return price - (price * (salePercentage / 100));
     }
     return null;
+  };
+
+  // Calculated price per unit: salePrice + tax (only for PAID - seller paid duties, reflected in price). UNPAID = no tax added.
+  const getUnitCalculatedPrice = (storage: ProductStorage, unit: StorageUnit): number | null => {
+    const basePrice = parseFloat(storage.price || '0');
+    const salePrice = getStorageSalePrice(storage) ?? basePrice;
+    if (unit.taxStatus === 'UNPAID') return salePrice;
+    // PAID: add tax/fees (duties seller paid, included in final price)
+    if (unit.taxType === 'FIXED') {
+      const tax = parseFloat(unit.taxAmount || '0');
+      return salePrice + tax;
+    }
+    const pct = parseFloat(unit.taxPercentage || '0');
+    return salePrice + (salePrice * pct / 100);
   };
 
   // Calculate new price based on sale percentage
@@ -221,22 +278,50 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (quantityMismatch) {
-      toast.error(`Total color quantities (${totalQuantity}) must match stock (${formData.stock}) when no storage options are defined`);
-      return;
+    
+    if (productType === 'SIMPLE') {
+      if (quantityMismatch) {
+        toast.error(`Total color quantities (${totalQuantity}) must match stock (${formData.stock})`);
+        return;
+      }
+      if (!formData.price || !formData.stock) {
+        toast.error("Price and stock are required for simple products");
+        return;
+      }
+    } else {
+      if (storages.length === 0) {
+        toast.error("Add at least one storage option for multi-storage products");
+        return;
+      }
+      const invalidStorage = storages.find(s => !s.size || !s.price);
+      if (invalidStorage) {
+        toast.error("Each storage option must have size and base price");
+        return;
+      }
+      const storageWithoutUnits = storages.find(s => !s.units?.length);
+      if (storageWithoutUnits) {
+        toast.error("Each storage must have at least one unit (color + stock + tax)");
+        return;
+      }
+      for (const s of storages) {
+        const badUnit = s.units.find(u => !u.color || u.stock < 0 || (u.taxStatus === 'PAID' && u.taxType === 'FIXED' && (u.taxAmount === '' || parseFloat(u.taxAmount) < 0)) || (u.taxStatus === 'PAID' && u.taxType === 'PERCENTAGE' && (u.taxPercentage === '' || parseFloat(u.taxPercentage) < 0)));
+        if (badUnit) {
+          toast.error("Each unit must have color, stock ≥ 0, and valid tax (when PAID)");
+          return;
+        }
+      }
     }
 
-    // Validate sale end date is not in the past
-    if (formData.sale && formData.saleEndDate) {
+    // Validate sale end date is not in the past (SIMPLE only)
+    if (productType === 'SIMPLE' && formData.sale && formData.saleEndDate) {
       const endDate = new Date(formData.saleEndDate);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
-      
+      today.setHours(0, 0, 0, 0);
       if (endDate < today) {
         toast.error("Sale end date cannot be in the past");
         return;
       }
-    } else if (formData.sale && !formData.saleEndDate) {
+    } else if (productType === 'SIMPLE' && formData.sale && !formData.saleEndDate) {
       toast.error("Sale end date is required when setting a sale percentage");
       return;
     }
@@ -248,32 +333,41 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         ? `/api/products/${initialData.id}`
         : '/api/products';
         
-      // Format the data before sending
       const productData = {
         ...formData,
-        price: parseFloat(formData.price),
-        stock: parseInt(formData.stock),
-        sale: formData.sale ? parseFloat(formData.sale) : null,
-        salePrice: salePrice,
-        saleEndDate: formData.saleEndDate || null,
+        productType,
+        price: productType === 'SIMPLE' ? parseFloat(formData.price) : null,
+        stock: productType === 'SIMPLE' ? parseInt(formData.stock) : null,
+        sale: productType === 'SIMPLE' && formData.sale ? parseFloat(formData.sale) : null,
+        salePrice: productType === 'SIMPLE' ? salePrice : null,
+        saleEndDate: productType === 'SIMPLE' && formData.saleEndDate ? formData.saleEndDate : null,
         images,
         thumbnails,
         details,
-        variants: colorVariants,
-        storages: storages.map(storage => ({
+        variants: productType === 'SIMPLE' ? colorVariants : [],
+        storages: productType === 'STORAGE' ? storages.map(storage => ({
           id: storage.id,
           size: storage.size,
           price: parseFloat(storage.price),
-          stock: storage.stock,
           salePercentage: storage.salePercentage ? parseFloat(storage.salePercentage) : null,
           saleEndDate: storage.saleEndDate || null,
-          variants: storage.variants
-        }))
+          units: storage.units.map(u => ({
+            id: u.id,
+            color: u.color,
+            stock: u.stock,
+            taxStatus: u.taxStatus,
+            taxType: u.taxType,
+            taxAmount: u.taxType === 'FIXED' && u.taxAmount ? parseFloat(u.taxAmount) : null,
+            taxPercentage: u.taxType === 'PERCENTAGE' && u.taxPercentage ? parseFloat(u.taxPercentage) : null
+          }))
+        })) : []
       };
 
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(url, {
         method: initialData ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...csrfHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify(productData),
       });
 
@@ -309,106 +403,113 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Name</label>
-        <input
-          type="text"
-          required
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Description
-        </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          required
-          rows={4}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Price</label>
-          <input
-            type="number"
-            required
-            min="0"
-            step="0.01"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Stock 
-            {storages.length > 0 && (
-              <span className="text-sm text-gray-500 font-normal"> (Optional when storage options are defined)</span>
-            )}
-          </label>
-          <input
-            type="number"
-            required={storages.length === 0}
-            min="0"
-            value={formData.stock}
-            onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-          />
-          {storages.length > 0 && (
-            <p className="text-xs text-gray-500 mt-1">
-              This field is optional when storage options are defined. Stock will be managed at the storage level.
-            </p>
-          )}
+      {/* Product Type Selector - First thing admin sees */}
+      <div className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Product Type</h2>
+        <p className="text-sm text-gray-600 mb-4">Choose how this product will be sold. You cannot change this after adding storage options.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => handleProductTypeChange('SIMPLE')}
+            className={`flex items-start gap-4 p-5 rounded-xl border-2 text-left transition-all ${
+              productType === 'SIMPLE' 
+                ? 'border-orange-500 bg-orange-50 shadow-md' 
+                : 'border-gray-200 bg-white hover:border-orange-200'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${productType === 'SIMPLE' ? 'bg-orange-100' : 'bg-gray-100'}`}>
+              <Package className={`h-8 w-8 ${productType === 'SIMPLE' ? 'text-orange-600' : 'text-gray-500'}`} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Simple Product</h3>
+              <p className="text-sm text-gray-600 mt-1">Single price, optional colors. Best for: accessories, cases, chargers.</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleProductTypeChange('STORAGE')}
+            className={`flex items-start gap-4 p-5 rounded-xl border-2 text-left transition-all ${
+              productType === 'STORAGE' 
+                ? 'border-orange-500 bg-orange-50 shadow-md' 
+                : 'border-gray-200 bg-white hover:border-orange-200'
+            }`}
+          >
+            <div className={`p-3 rounded-lg ${productType === 'STORAGE' ? 'bg-orange-100' : 'bg-gray-100'}`}>
+              <HardDrive className={`h-8 w-8 ${productType === 'STORAGE' ? 'text-orange-600' : 'text-gray-500'}`} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Multi-Storage Product</h3>
+              <p className="text-sm text-gray-600 mt-1">Multiple storage options with different prices. Best for: phones, tablets, laptops.</p>
+            </div>
+          </button>
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
-          Category
-        </label>
-        <select
-          value={formData.categoryId}
-          onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-          required
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-        >
-          <option value="">Select a category</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              📂 {category.name} → /categories/{category.slug}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Pricing and Stock */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Sale Settings</h2>
-          {(formData.sale || formData.saleEndDate) && (
-            <button
-              type="button"
-              onClick={() => setFormData({
-                ...formData,
-                sale: "",
-                saleEndDate: ""
-              })}
-              className="text-sm text-red-600 hover:text-red-800"
+      {/* Basic Info - Always shown */}
+      <div className="border border-gray-200 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Name</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
+              rows={4}
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Category</label>
+            <select
+              value={formData.categoryId}
+              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
             >
-              Clear Sale
-            </button>
-          )}
+              <option value="">Select a category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  📂 {category.name} → /categories/{category.slug}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        
-        <div className="grid grid-cols-2 gap-4">
+      </div>
+
+      {/* SIMPLE: Price, Stock & Sale */}
+      {productType === 'SIMPLE' && (
+      <div className="border border-gray-200 rounded-xl p-6 bg-blue-50/30">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing & Stock</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Price (EGP)</label>
+            <input type="number" required min="0" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Stock</label>
+            <input type="number" required min="0" value={formData.stock} onChange={(e) => setFormData({ ...formData, stock: e.target.value })} className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2" />
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-medium text-gray-900">Sale (Optional)</h3>
+            {(formData.sale || formData.saleEndDate) && (
+              <button type="button" onClick={() => setFormData({ ...formData, sale: "", saleEndDate: "" })} className="text-sm text-red-600 hover:text-red-800">Clear Sale</button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Sale Percentage</label>
             <input
@@ -435,38 +536,26 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           {formData.price && formData.sale && (
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700">Sale Price</label>
-              <div className="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-500">
-                ${calculateNewPrice(Number(formData.price), Number(formData.sale)).toFixed(2)}
-              </div>
+              <div className="mt-1 px-3 py-2 bg-gray-50 border rounded-md text-gray-600">EGP {calculateNewPrice(Number(formData.price), Number(formData.sale)).toFixed(2)}</div>
             </div>
           )}
+          </div>
         </div>
       </div>
+      )}
 
-      {/* Color Variants */}
+      {/* SIMPLE: Color Variants */}
+      {productType === 'SIMPLE' && (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
             Color Variants
-            {storages.length > 0 && (
-              <span className="text-sm text-gray-500 font-normal"> (Optional when storage options are defined)</span>
-            )}
           </h2>
-          {quantityMismatch && storages.length === 0 && (
-            <p className="text-sm text-red-600">
-              Total quantities ({totalQuantity}) must match stock ({formData.stock})
-            </p>
+          {quantityMismatch && (
+            <p className="text-sm text-red-600">Total quantities ({totalQuantity}) must match stock ({formData.stock})</p>
           )}
         </div>
-        
-        {storages.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-800">
-              <strong>Info:</strong> Color variants here are optional when storage options are defined. Colors will be managed at the storage level.
-            </p>
-          </div>
-        )}
-        
+        <p className="text-sm text-gray-600 mb-4">Add colors if product comes in multiple colors.</p>
         {colorVariants.map((variant, index) => (
           <div key={index} className="flex items-center gap-4">
             <input
@@ -513,8 +602,10 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           Add Color Variant
         </button>
       </div>
+      )}
 
-      {/* Storage Options */}
+      {/* STORAGE: Storage Options */}
+      {productType === 'STORAGE' && (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Storage Options (Optional)</h2>
@@ -524,10 +615,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
         {storages.length > 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> When storage options are defined, customers will select storage first, then choose from available colors for that storage option.
-            </p>
-            <p className="text-sm text-yellow-800 mt-2">
-              <strong>Stock Management:</strong> Stock is managed at the storage level. The main product stock and color variants above are optional when storage options are present.
+              <strong>Units:</strong> Each storage has units with color, stock, and tax. Total stock = sum of units. Sale applies to base price only (not taxes). PAID = seller paid duties → add tax/fees to price; UNPAID = no tax added.
             </p>
           </div>
         )}
@@ -546,7 +634,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
             </div>
 
             {/* Storage Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Storage Size</label>
                 <input
@@ -558,7 +646,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Base Price (EGP)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -569,20 +657,9 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Total Stock</label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
-                  value={storage.stock}
-                  onChange={(e) => updateStorage(storageIndex, 'stock', parseInt(e.target.value) || 0)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                />
-              </div>
             </div>
 
-            {/* Sale Information */}
+            {/* Sale Information (applies to base price only, not taxes) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Sale Percentage (Optional)</label>
@@ -611,16 +688,16 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
             {/* Price Display */}
             {storage.price && (
               <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
                   <div>
-                    <span className="text-sm text-gray-600">Original Price:</span>
-                    <span className="ml-2 font-medium">${parseFloat(storage.price || '0').toFixed(2)}</span>
+                    <span className="text-sm text-gray-600">Base Price:</span>
+                    <span className="ml-2 font-medium">EGP {parseFloat(storage.price || '0').toFixed(2)}</span>
                   </div>
                   {storage.salePercentage && (
                     <div>
-                      <span className="text-sm text-gray-600">Sale Price:</span>
+                      <span className="text-sm text-gray-600">Sale Price (before tax):</span>
                       <span className="ml-2 font-medium text-green-600">
-                        ${getStorageSalePrice(storage)?.toFixed(2)}
+                        EGP {getStorageSalePrice(storage)?.toFixed(2)}
                       </span>
                       <span className="ml-2 text-sm text-green-600">
                         ({storage.salePercentage}% off)
@@ -631,61 +708,118 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
               </div>
             )}
 
-            {/* Color Variants for this Storage */}
+            {/* Units: color + stock + tax + calculated price */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-md font-medium">Color Variants for {storage.size || 'this storage'}</h4>
+                <h4 className="text-md font-medium">Units for {storage.size || 'this storage'}</h4>
                 <div className="text-sm text-gray-600">
-                  Total: {storage.variants.reduce((sum, v) => sum + v.quantity, 0)} / {storage.stock}
+                  Total stock: {storage.units.reduce((sum, u) => sum + u.stock, 0)}
                 </div>
               </div>
 
-              {storage.variants.map((variant, variantIndex) => (
-                <div key={variantIndex} className="flex items-center gap-4 bg-white p-3 rounded border">
-                  <input
-                    type="text"
-                    placeholder="Color (e.g., Black, White, Blue)"
-                    value={variant.color}
-                    onChange={(e) => updateStorageVariant(storageIndex, variantIndex, 'color', e.target.value)}
-                    className="flex-1 rounded-md border border-gray-300 px-3 py-2"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Qty"
-                    value={variant.quantity}
-                    onChange={(e) => updateStorageVariant(storageIndex, variantIndex, 'quantity', parseInt(e.target.value) || 0)}
-                    className="w-24 rounded-md border border-gray-300 px-3 py-2"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeStorageVariant(storageIndex, variantIndex)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Color</th>
+                      <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Stock</th>
+                      <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Tax Status</th>
+                      <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Tax Type</th>
+                      <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Tax Amount / %</th>
+                      <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Calculated Price</th>
+                      <th className="px-3 py-2 w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {storage.units.map((unit, unitIndex) => (
+                      <tr key={unitIndex} className="border-t border-gray-200">
+                        <td className="px-3 py-2">
+                          <input
+                            type="text"
+                            placeholder="e.g. Black"
+                            value={unit.color}
+                            onChange={(e) => updateStorageUnit(storageIndex, unitIndex, 'color', e.target.value)}
+                            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min="0"
+                            value={unit.stock}
+                            onChange={(e) => updateStorageUnit(storageIndex, unitIndex, 'stock', parseInt(e.target.value) || 0)}
+                            className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <select
+                            value={unit.taxStatus}
+                            onChange={(e) => updateStorageUnit(storageIndex, unitIndex, 'taxStatus', e.target.value as TaxStatusOption)}
+                            className="rounded border border-gray-300 px-2 py-1 text-sm"
+                          >
+                            <option value="PAID">Paid</option>
+                            <option value="UNPAID">Unpaid</option>
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select
+                            value={unit.taxType}
+                            onChange={(e) => updateStorageUnit(storageIndex, unitIndex, 'taxType', e.target.value as TaxTypeOption)}
+                            className="rounded border border-gray-300 px-2 py-1 text-sm"
+                          >
+                            <option value="FIXED">Fixed</option>
+                            <option value="PERCENTAGE">Percentage</option>
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          {unit.taxType === 'FIXED' ? (
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="0"
+                              value={unit.taxAmount}
+                              onChange={(e) => updateStorageUnit(storageIndex, unitIndex, 'taxAmount', e.target.value)}
+                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                            />
+                          ) : (
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="0"
+                              value={unit.taxPercentage}
+                              onChange={(e) => updateStorageUnit(storageIndex, unitIndex, 'taxPercentage', e.target.value)}
+                              className="w-24 rounded border border-gray-300 px-2 py-1 text-sm"
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-sm font-medium text-gray-700">
+                          {getUnitCalculatedPrice(storage, unit) != null ? `EGP ${getUnitCalculatedPrice(storage, unit)!.toFixed(2)}` : '—'}
+                        </td>
+                        <td className="px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => removeStorageUnit(storageIndex, unitIndex)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               <button
                 type="button"
-                onClick={() => addStorageVariant(storageIndex)}
+                onClick={() => addStorageUnit(storageIndex)}
                 className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm"
               >
                 <Plus className="h-3 w-3" />
-                Add Color Variant
+                Add Unit
               </button>
-
-              {/* Validation for storage variants */}
-              {storage.variants.length > 0 && (
-                <div className="text-sm">
-                  {storage.variants.reduce((sum, v) => sum + v.quantity, 0) !== storage.stock && (
-                    <p className="text-red-600">
-                      Color quantities ({storage.variants.reduce((sum, v) => sum + v.quantity, 0)}) must match storage stock ({storage.stock})
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         ))}
@@ -699,6 +833,7 @@ export function ProductForm({ categories, initialData }: ProductFormProps) {
           Add Storage Option
         </button>
       </div>
+      )}
 
       {/* Product Details */}
       <div className="space-y-4">

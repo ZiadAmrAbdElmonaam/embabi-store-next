@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hash } from "bcryptjs";
+import { hash, compare } from "bcryptjs";
 import { createAndSendVerificationCode, verifyCode } from "@/lib/verification";
+import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit";
+import { validatePassword } from "@/lib/validation";
 
 export async function POST(req: Request) {
   try {
+    const key = getRateLimitKey(req);
+    const limit = checkRateLimit(key, "resetPassword");
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: "Too many password reset attempts. Please try again later." },
+        { status: 429, headers: { "Retry-After": "300" } }
+      );
+    }
+
     const { email, step, code, password } = await req.json();
 
     // Step 1: Request password reset (send verification code)
@@ -85,6 +96,23 @@ export async function POST(req: Request) {
       if (!user.emailVerified) {
         return NextResponse.json(
           { error: "Email must be verified before resetting password" },
+          { status: 400 }
+        );
+      }
+
+      // Reject if new password is the same as current (reuse check)
+      if (user.password && (await compare(password, user.password))) {
+        return NextResponse.json(
+          { error: "New password must be different from your current password" },
+          { status: 400 }
+        );
+      }
+
+      // Validate new password strength
+      const pwdValidation = validatePassword(password);
+      if (!pwdValidation.isValid) {
+        return NextResponse.json(
+          { error: pwdValidation.errors[0] },
           { status: 400 }
         );
       }

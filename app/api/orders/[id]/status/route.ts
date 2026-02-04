@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
+import { isAdminRequest } from "@/lib/admin-auth";
 import { sendOrderStatusEmail } from '@/lib/email';
 import { OrderStatus } from "@prisma/client";
-import { authOptions } from "../../../auth/auth-options";
+import { requireCsrfOrReject } from "@/lib/csrf";
 
 export async function POST(
   request: Request,
   context: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== 'ADMIN') {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -70,8 +71,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role !== 'ADMIN') {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
+    if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

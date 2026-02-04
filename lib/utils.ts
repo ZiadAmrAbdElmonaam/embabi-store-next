@@ -13,53 +13,108 @@ export function formatPrice(price: number | string | Decimal) {
   }).format(Number(price));
 }
 
+type StorageUnit = {
+  id?: string;
+  color?: string;
+  stock?: number;
+  taxStatus?: string;
+  taxType?: string;
+  taxAmount?: number | null;
+  taxPercentage?: number | null;
+};
+
+function getUnitCalculatedPrice(
+  basePrice: number,
+  salePercentage: number | null,
+  saleEndDate: string | null,
+  unit: StorageUnit
+): number {
+  const salePrice = salePercentage != null && saleEndDate && new Date(saleEndDate) > new Date()
+    ? basePrice - (basePrice * (salePercentage / 100))
+    : basePrice;
+  // UNPAID = base/sale price only; PAID = base + tax (or any unit with taxAmount/taxPercentage set)
+  if (unit.taxStatus === 'UNPAID') return salePrice;
+  if (unit.taxType === 'FIXED') return salePrice + (Number(unit.taxAmount) || 0);
+  if (unit.taxType === 'PERCENTAGE') return salePrice + (salePrice * (Number(unit.taxPercentage) || 0) / 100);
+  // Fallback: if unit has tax amount/percentage set, treat as PAID (avoid showing raw base when only PAID units exist)
+  if ((unit.taxAmount != null && Number(unit.taxAmount) > 0)) return salePrice + Number(unit.taxAmount);
+  if ((unit.taxPercentage != null && Number(unit.taxPercentage) > 0)) return salePrice + (salePrice * Number(unit.taxPercentage) / 100);
+  return salePrice;
+}
+
 /**
- * Get the display pricing for a product, prioritizing storage options with stock
- * For products with storage: returns price from first storage with stock > 0
+ * Get the display pricing for a product.
+ * For products with storage: returns the lowest calculated price across all units with stock > 0
  * For products without storage: returns main product price
  */
 export function getProductDisplayPrice(product: {
-  price: number;
+  price?: number | null;
   salePrice?: number | null;
+  sale?: number | null; // percentage, e.g. 15 for 15% off
   saleEndDate?: string | null;
   storages?: Array<{
     id: string;
     size: string;
     price: number;
-    stock: number;
     salePercentage?: number | null;
     saleEndDate?: string | null;
+    units?: StorageUnit[];
   }>;
 }) {
-  // If product has storage options, find first one with stock
   if (product.storages && product.storages.length > 0) {
-    const availableStorage = product.storages.find(storage => storage.stock > 0);
-    
-    if (availableStorage) {
-      // Calculate sale price if storage has a sale
-      let storagePrice = availableStorage.price;
-      let storageSalePrice = null;
-      
-      if (availableStorage.salePercentage && 
-          availableStorage.saleEndDate && 
-          new Date(availableStorage.saleEndDate) > new Date()) {
-        storageSalePrice = storagePrice - (storagePrice * (availableStorage.salePercentage / 100));
+    let bestPrice: number | null = null;
+    let bestSalePrice: number | null = null;
+    let bestOrigPrice: number | null = null;
+    let bestStorageSize: string | null = null;
+    let bestUnitTaxStatus: 'PAID' | 'UNPAID' | null = null;
+
+    for (const storage of product.storages) {
+      const units = storage.units ?? [];
+      const basePrice = Number(storage.price);
+      const salePct = storage.salePercentage != null ? Number(storage.salePercentage) : null;
+      const saleEnd = storage.saleEndDate ?? null;
+      const onSale = salePct != null && saleEnd && new Date(saleEnd) > new Date();
+
+      for (const unit of units) {
+        if ((unit.stock ?? 0) <= 0) continue;
+        const calcPrice = getUnitCalculatedPrice(basePrice, salePct, saleEnd, unit);
+        const origPrice = getUnitCalculatedPrice(basePrice, null, null, unit);
+        if (bestPrice == null || calcPrice < bestPrice) {
+          bestPrice = calcPrice;
+          bestOrigPrice = origPrice;
+          bestSalePrice = onSale ? calcPrice : null;
+          bestStorageSize = storage.size;
+          bestUnitTaxStatus = unit.taxStatus === 'PAID' ? 'PAID' : unit.taxStatus === 'UNPAID' ? 'UNPAID' : null;
+        }
       }
-      
+    }
+
+    if (bestPrice != null && bestStorageSize != null) {
       return {
-        price: storagePrice,
-        salePrice: storageSalePrice,
+        price: bestSalePrice != null ? (bestOrigPrice ?? bestPrice) : bestPrice,
+        salePrice: bestSalePrice,
         fromStorage: true,
-        storageSize: availableStorage.size
+        storageSize: bestStorageSize,
+        taxStatus: bestUnitTaxStatus
       };
     }
   }
-  
-  // Fallback to main product pricing
+
+  // Simple products: use salePrice only when sale is active; compute from sale % when salePrice is null
+  let price = product.price ?? 0;
+  let salePrice: number | null = null;
+  const salePct = product.sale != null ? Number(product.sale) : null;
+  const saleEnd = product.saleEndDate ?? null;
+  const onSale = salePct != null && saleEnd && new Date(saleEnd) > new Date();
+  if (onSale && price > 0) {
+    salePrice = product.salePrice != null ? Number(product.salePrice) : price - (price * (salePct! / 100));
+  }
+
   return {
-    price: product.price,
-    salePrice: product.salePrice,
+    price,
+    salePrice,
     fromStorage: false,
-    storageSize: null
+    storageSize: null,
+    taxStatus: null
   };
 } 

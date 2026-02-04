@@ -3,9 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/auth-options";
 import { sendOrderStatusEmail } from "@/lib/email";
+import { requireCsrfOrReject } from "@/lib/csrf";
 
 export async function POST(request: Request) {
   try {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
     const session = await getServerSession(authOptions);
     if (session?.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

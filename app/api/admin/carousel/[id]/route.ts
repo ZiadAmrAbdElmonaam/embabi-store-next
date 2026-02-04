@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/auth-options";
 import { prisma } from "@/lib/prisma";
+import { requireCsrfOrReject } from "@/lib/csrf";
 
 // DELETE endpoint to remove a carousel image
 export async function DELETE(
@@ -9,6 +10,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
     const session = await getServerSession(authOptions);
     if (session?.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -57,6 +60,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    const csrfReject = requireCsrfOrReject(request);
+    if (csrfReject) return csrfReject;
     const session = await getServerSession(authOptions);
     if (session?.user?.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

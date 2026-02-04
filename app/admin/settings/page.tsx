@@ -37,9 +37,12 @@ export default function SettingsPage() {
   const handleSaveSettings = async () => {
     try {
       setIsSaving(true);
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/admin/settings', {
         method: 'PUT',
         headers: {
+          ...csrfHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

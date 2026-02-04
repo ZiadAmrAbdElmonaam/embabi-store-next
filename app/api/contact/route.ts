@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit';
+import { readJsonWithLimit } from '@/lib/body-limit';
 
 export async function POST(req: Request) {
   try {
-    const { name, email, subject, message } = await req.json();
+    const key = getRateLimitKey(req);
+    const limit = checkRateLimit(key, "contact");
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { "Retry-After": "300" } }
+      );
+    }
+
+    const body = await readJsonWithLimit<{ name: string; email: string; subject: string; message: string }>(req, 32 * 1024);
+    const { name, email, subject, message } = body;
 
     // Validate inputs
     if (!name || !email || !subject || !message) {

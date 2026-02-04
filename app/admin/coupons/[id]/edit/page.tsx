@@ -13,6 +13,7 @@ interface Coupon {
   value: number;
   endDate: string | null;
   userLimit: number | null;
+  minimumOrderAmount: number | null;
   isEnabled: boolean;
 }
 
@@ -52,9 +53,12 @@ export default function EditCouponPage() {
     setIsSaving(true);
 
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const csrfHeaders = await getCsrfHeaders();
       const response = await fetch(`/api/admin/coupons/${params.id}`, {
         method: 'PUT',
         headers: {
+          ...csrfHeaders,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
@@ -101,6 +105,7 @@ export default function EditCouponPage() {
           value: coupon.value,
           endDate: coupon.endDate,
           userLimit: coupon.userLimit,
+          minimumOrderAmount: coupon.minimumOrderAmount ?? null,
           isEnabled: coupon.isEnabled
         }}
         onSubmit={onSubmit}

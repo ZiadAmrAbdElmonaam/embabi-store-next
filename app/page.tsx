@@ -2,10 +2,12 @@ import { prisma } from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import { HomeCarousel } from "@/components/home/carousel";
+import { CouponBanner } from "@/components/home/coupon-banner";
 import { CategoriesCarousel } from "@/components/home/categories-carousel";
 import { MainCategoriesCarousel } from "@/components/home/main-categories-carousel";
-import { BrandsCarousel } from "@/components/home/brands-carousel";
+import { ProductsHorizontalScroll } from "@/components/home/products-horizontal-scroll";
 import { ProductCard } from "@/components/products/product-card";
+import { BrandsCarousel } from "@/components/home/brands-carousel";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { getProductDisplayPrice } from "@/lib/utils";
 import { groupCategoriesByBrand } from "@/lib/brand-utils";
@@ -24,12 +26,16 @@ export default async function HomePage() {
             gt: 0
           }
         },
-        // Products with storage that has stock
+        // Products with storage that has units with stock
         {
           storages: {
             some: {
-              stock: {
-                gt: 0
+              units: {
+                some: {
+                  stock: {
+                    gt: 0
+                  }
+                }
               }
             }
           }
@@ -42,7 +48,7 @@ export default async function HomePage() {
       variants: true,
       storages: {
         include: {
-          variants: true,
+          units: true,
         },
       },
     },
@@ -57,14 +63,23 @@ export default async function HomePage() {
     const displayPrice = getProductDisplayPrice({
       price: Number(product.price),
       salePrice: product.salePrice ? Number(product.salePrice) : null,
+      sale: product.sale ?? null,
       saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
       storages: product.storages?.map(storage => ({
         id: storage.id,
         size: storage.size,
         price: Number(storage.price),
-        stock: storage.stock,
         salePercentage: storage.salePercentage,
         saleEndDate: storage.saleEndDate?.toISOString() || null,
+        units: (storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> }).units?.map(u => ({
+          id: u.id,
+          color: u.color,
+          stock: u.stock,
+          taxStatus: u.taxStatus,
+          taxType: u.taxType,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })) ?? [],
       })) || []
     });
 
@@ -74,8 +89,9 @@ export default async function HomePage() {
       description: product.description,
       price: displayPrice.price,
       salePrice: displayPrice.salePrice,
+      taxStatus: displayPrice.taxStatus ?? null,
       sale: product.sale,
-      stock: product.stock,
+      stock: product.stock ?? 0,
       images: product.images,
       slug: product.slug,
       category: product.category,
@@ -85,21 +101,200 @@ export default async function HomePage() {
         color: variant.color,
         quantity: variant.quantity
       })),
+      storages: product.storages?.map(storage => {
+        const s = storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> };
+        return {
+          id: storage.id,
+          size: storage.size,
+          price: Number(storage.price),
+          salePercentage: storage.salePercentage,
+          saleEndDate: storage.saleEndDate?.toISOString() || null,
+          units: s.units?.map(u => ({
+            id: u.id,
+            color: u.color,
+            stock: u.stock,
+            taxStatus: u.taxStatus,
+            taxType: u.taxType,
+            taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+            taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+          })) ?? [],
+        };
+      }) || []
+    };
+  });
+
+  // Stock filter for products
+  const stockFilter = {
+    OR: [
+      { stock: { gt: 0 } },
+      { storages: { some: { units: { some: { stock: { gt: 0 } } } } } }
+    ]
+  } as const;
+
+  // New Arrival: 8 products, sorted by newest
+  const newArrivalProducts = await prisma.product.findMany({
+    where: stockFilter,
+    take: 8,
+    include: {
+      category: true,
+      variants: true,
+      storages: { include: { units: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Parent categories with products (direct or in subcategories)
+  const parentCategoriesWithProducts = await prisma.category.findMany({
+    where: {
+      parentId: null,
+      OR: [
+        { products: { some: stockFilter } },
+        { children: { some: { products: { some: stockFilter } } } }
+      ]
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      products: {
+        where: stockFilter,
+        select: { id: true }
+      },
+      children: {
+        select: {
+          products: {
+            where: stockFilter,
+            select: { id: true }
+          }
+        }
+      }
+    },
+    orderBy: { name: 'asc' }
+  });
+
+  // Filter to parents with >= 4 products total (direct + from children)
+  const parentCategoriesFiltered = parentCategoriesWithProducts.filter(parent => {
+    const directCount = parent.products.length;
+    const fromChildren = parent.children.reduce((sum, c) => sum + c.products.length, 0);
+    return directCount + fromChildren >= 4;
+  });
+
+  // Fetch 8 products per parent, sorted by most selling then new arrival
+  const parentCategorySections = await Promise.all(
+    parentCategoriesFiltered.map(async (parent) => {
+      const products = await prisma.product.findMany({
+        where: {
+          AND: [
+            {
+              OR: [
+                { categoryId: parent.id },
+                { category: { parentId: parent.id } }
+              ]
+            },
+            stockFilter
+          ]
+        },
+        take: 8,
+        include: {
+          category: true,
+          variants: true,
+          storages: { include: { units: true } },
+        },
+        orderBy: [
+          { orderItems: { _count: 'desc' } },
+          { createdAt: 'desc' }
+        ]
+      });
+      return { category: parent, products };
+    })
+  );
+
+  // Helper to format product for display
+  const formatProductForDisplay = (product: {
+    id: string;
+    name: string;
+    description: string;
+    price: number | null;
+    salePrice: number | null;
+    sale: number | null;
+    saleEndDate: Date | null;
+    stock: number | null;
+    images: string[];
+    slug: string;
+    category: { id: string; name: string; slug: string };
+    variants: Array<{ id: string; color: string; quantity: number }>;
+    storages: Array<{
+      id: string;
+      size: string;
+      price: { toNumber: () => number };
+      salePercentage: number | null;
+      saleEndDate: Date | null;
+      units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }>;
+    }>;
+  }) => {
+    const displayPrice = getProductDisplayPrice({
+      price: Number(product.price ?? 0),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      sale: product.sale ?? null,
+      saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
       storages: product.storages?.map(storage => ({
         id: storage.id,
         size: storage.size,
         price: Number(storage.price),
-        stock: storage.stock,
         salePercentage: storage.salePercentage,
         saleEndDate: storage.saleEndDate?.toISOString() || null,
-        variants: storage.variants.map(variant => ({
-        id: variant.id,
-        color: variant.color,
-        quantity: variant.quantity
-      }))
+        units: (storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> }).units?.map((u) => ({
+          id: u.id,
+          color: u.color,
+          stock: u.stock,
+          taxStatus: u.taxStatus,
+          taxType: u.taxType,
+          taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+          taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+        })) ?? [],
       })) || []
+    });
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: displayPrice.price,
+      salePrice: displayPrice.salePrice,
+      taxStatus: displayPrice.taxStatus ?? null,
+      sale: product.sale,
+      stock: product.stock ?? 0,
+      images: product.images,
+      slug: product.slug,
+      category: product.category,
+      saleEndDate: product.saleEndDate ? product.saleEndDate.toISOString() : null,
+      variants: product.variants.map(v => ({ id: v.id, color: v.color, quantity: v.quantity })),
+      storages: product.storages.map(storage => {
+        const s = storage as { units?: Array<{ id: string; color: string; stock: number; taxStatus: string; taxType: string; taxAmount?: unknown; taxPercentage?: unknown }> };
+        return {
+          id: storage.id,
+          size: storage.size,
+          price: Number(storage.price),
+          salePercentage: storage.salePercentage,
+          saleEndDate: storage.saleEndDate?.toISOString() || null,
+          units: s.units?.map((u) => ({
+            id: u.id,
+            color: u.color,
+            stock: u.stock,
+            taxStatus: u.taxStatus,
+            taxType: u.taxType,
+            taxAmount: u.taxAmount != null ? Number(u.taxAmount) : null,
+            taxPercentage: u.taxPercentage != null ? Number(u.taxPercentage) : null,
+          })) ?? [],
+        };
+      })
     };
-  });
+  };
+
+  const formattedNewArrival = newArrivalProducts.map(formatProductForDisplay);
+  const formattedParentSections = parentCategorySections.map(({ category, products }) => ({
+    category: { id: category.id, name: category.name, slug: category.slug },
+    products: products.map(formatProductForDisplay)
+  }));
 
   // Fetch main categories for the new section
   const mainCategories = await prisma.category.findMany({
@@ -148,7 +343,7 @@ export default async function HomePage() {
         some: {
           OR: [
             { stock: { gt: 0 } },
-            { storages: { some: { stock: { gt: 0 } } } }
+            { storages: { some: { units: { some: { stock: { gt: 0 } } } } } }
           ]
         }
       }
@@ -162,7 +357,7 @@ export default async function HomePage() {
         where: {
           OR: [
             { stock: { gt: 0 } },
-            { storages: { some: { stock: { gt: 0 } } } }
+            { storages: { some: { units: { some: { stock: { gt: 0 } } } } } }
           ]
         },
         select: { id: true }
@@ -187,44 +382,33 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
+      {/* Coupon Promotion Banner - Before Carousel */}
+      <div className="w-full pt-2 sm:pt-3 md:pt-4 px-2 sm:px-4">
+        <CouponBanner />
+      </div>
       {/* Hero Carousel Section */}
       <div className="w-full max-w-[1440px] mx-auto px-0 sm:px-2 md:px-4 py-0 sm:py-2 md:py-4">
         <HomeCarousel />
       </div>
 
-      {/* Categories Section */}
-      <section className="py-4 sm:py-6 bg-gradient-to-r from-orange-50 to-red-50">
+      {/* Categories Section - Distinct background for contrast */}
+      <section className="py-8 sm:py-12 bg-gradient-to-b from-slate-50 to-slate-100/80 dark:from-slate-900/60 dark:to-slate-800/50 border-y border-slate-200/60 dark:border-slate-700/50">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">
-            <TranslatedContent translationKey="home.categories" />
-          </h2>
+          <div className="text-center mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              <TranslatedContent translationKey="home.categories" />
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base max-w-lg mx-auto">
+              <TranslatedContent translationKey="home.categoriesSubtitle" />
+            </p>
+          </div>
           <MainCategoriesCarousel categories={formattedMainCategories} />
         </div>
       </section>
-      {/* Brands Section - Commented out temporarily */}
-      {/* <section className="py-4 sm:py-6 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">
-            <TranslatedContent translationKey="home.brands" />
-          </h2>
-          {brandGroups.length > 0 ? (
-            <BrandsCarousel brands={brandGroups} />
-          ) : (
-            <div className="text-center py-6 sm:py-8">
-              <p className="text-gray-500 text-base sm:text-lg">
-                <TranslatedContent translationKey="home.noBrands" />
-              </p>
-              <p className="text-gray-400 text-sm mt-2">
-                <TranslatedContent translationKey="home.addBrandedCategories" />
-              </p>
-            </div>
-          )}
-        </div>
-      </section> */}
 
-      {/* Featured Products Section */}
-      <section className="py-4">
-        <div className="max-w-[1800px] mx-auto px-2 bg-white dark:bg-gray-900">
+      {/* Featured Products Section - Grid */}
+      <section className="py-8 sm:py-10 bg-white dark:bg-gray-900">
+        <div className="max-w-[1800px] mx-auto px-2">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 text-center">
             <TranslatedContent translationKey="home.featuredProducts" />
           </h2>
@@ -249,6 +433,74 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* New Arrival Section - Horizontal Scroll */}
+      {formattedNewArrival.length > 0 && (
+        <section className="py-8 sm:py-10 bg-gray-50 dark:bg-gray-800/50">
+          <div className="max-w-[1800px] mx-auto px-2">
+            <div className="text-center mb-4 sm:mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                <TranslatedContent translationKey="home.newArrival" />
+              </h2>
+              <Link
+                href="/products"
+                className="text-orange-600 dark:text-orange-400 hover:underline text-sm font-medium"
+              >
+                <TranslatedContent translationKey="home.viewAllProducts" />
+              </Link>
+            </div>
+            <div className="flex justify-center w-full">
+              <ProductsHorizontalScroll products={formattedNewArrival} maxVisible={6} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Parent Category Product Sections - Horizontal Scroll (alternating backgrounds) */}
+      {formattedParentSections.map(({ category, products }, idx) => (
+        <section
+          key={category.id}
+          className={`py-8 sm:py-10 ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'}`}
+        >
+          <div className="max-w-[1800px] mx-auto px-2">
+            <div className="text-center mb-4 sm:mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                {category.name}
+              </h2>
+              <Link
+                href={`/categories/${category.slug}`}
+                className="text-orange-600 dark:text-orange-400 hover:underline text-sm font-medium"
+              >
+                <TranslatedContent translationKey="home.viewAllProducts" />
+              </Link>
+            </div>
+            <div className="flex justify-center w-full">
+              <ProductsHorizontalScroll products={products} maxVisible={6} />
+            </div>
+          </div>
+        </section>
+      ))}
+
+      {/* Brands Section - Commented out temporarily */}
+      {/* <section className="py-4 sm:py-6 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 text-center">
+            <TranslatedContent translationKey="home.brands" />
+          </h2>
+          {brandGroups.length > 0 ? (
+            <BrandsCarousel brands={brandGroups} />
+          ) : (
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-gray-500 text-base sm:text-lg">
+                <TranslatedContent translationKey="home.noBrands" />
+              </p>
+              <p className="text-gray-400 text-sm mt-2">
+                <TranslatedContent translationKey="home.addBrandedCategories" />
+              </p>
+            </div>
+          )}
+        </div>
+      </section> */}
 
       {/* Features Section */}
       <section className="py-6 bg-gray-50 dark:bg-gray-800">

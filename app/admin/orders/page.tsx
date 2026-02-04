@@ -95,8 +95,11 @@ export default function AdminOrdersPage() {
     if (!deleteOrderId) return;
 
     try {
+      const { getCsrfHeaders } = await import('@/lib/csrf-client');
+      const headers = await getCsrfHeaders();
       const response = await fetch(`/api/admin/orders/${deleteOrderId}`, {
         method: 'DELETE',
+        headers,
       });
 
       if (!response.ok) {

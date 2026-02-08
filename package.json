@@ -27,7 +27,8 @@
     "delete-clothing": "ts-node -T scripts/delete-clothing.ts",
     "cleanup-unverified": "ts-node -T scripts/cleanup-unverified.ts",
     "fix-admin": "ts-node -T scripts/fix-admin.ts",
-    "top-selling-products": "ts-node -T scripts/top-selling-products.ts"
+    "top-selling-products": "ts-node -T scripts/top-selling-products.ts",
+    "check-analytics-pixel": "node scripts/check-analytics-pixel.js"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",

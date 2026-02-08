@@ -10,6 +10,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { TranslatedContent } from "@/components/ui/translated-content";
 import { getColorName } from "@/lib/colors";
 import { getCsrfHeaders } from "@/lib/csrf-client";
+import { trackOrderCompleted, getAttributionForOrder } from "@/lib/analytics";
 
 // Egyptian governorates
 const EGYPTIAN_STATES = [
@@ -275,6 +276,14 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
         }));
       }
 
+      // Attribution for order (first-touch UTM + click ids)
+      const attribution = getAttributionForOrder();
+      if (attribution.utm_source) formDataToSend.append('utm_source', attribution.utm_source);
+      if (attribution.utm_medium) formDataToSend.append('utm_medium', attribution.utm_medium);
+      if (attribution.utm_campaign) formDataToSend.append('utm_campaign', attribution.utm_campaign);
+      if (attribution.fbclid) formDataToSend.append('fbclid', attribution.fbclid);
+      if (attribution.gclid) formDataToSend.append('gclid', attribution.gclid);
+
       const csrfHeaders = await getCsrfHeaders();
       const response = await fetch('/api/orders/create', {
         method: 'POST',
@@ -300,6 +309,20 @@ export default function CheckoutForm({ user, items, subtotal, shipping, onOrderC
       // Store order ID in localStorage for potential failed payment redirects
       localStorage.setItem("lastOrderId", id);
       
+      // Track order completed event
+      trackOrderCompleted(id, total);
+      // Meta Pixel Purchase
+      const w = typeof window !== 'undefined' ? (window as Window & { fbq?: (...args: unknown[]) => void }) : null;
+      if (w?.fbq) {
+        w.fbq('track', 'Purchase', {
+          value: totalWithDiscount,
+          currency: 'EGP',
+          content_ids: items.map((i) => i.id),
+          content_type: 'product',
+          num_items: items.reduce((s, i) => s + i.quantity, 0),
+          order_id: id,
+        });
+      }
       // Clear the cart after successful order
       clearCart();
       

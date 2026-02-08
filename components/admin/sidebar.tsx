@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   Ticket,
   Settings,
-  Image
+  Image,
+  BarChart3
 } from "lucide-react";
 import { useTranslation } from "@/hooks/use-translation";
 
@@ -63,6 +64,14 @@ export function AdminSidebar() {
         >
           <ListOrdered className="w-5 h-5" />
           <span>{t('admin.orders')}</span>
+        </Link>
+        
+        <Link 
+          href="/admin/analytics" 
+          className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded"
+        >
+          <BarChart3 className="w-5 h-5" />
+          <span>Analytics</span>
         </Link>
         
         <Link 

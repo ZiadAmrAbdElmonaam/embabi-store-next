@@ -144,6 +144,13 @@ export async function POST(request: Request) {
       // Continue without coupon if error occurs
     }
 
+    // Attribution (optional) - first-touch UTM and click ids from client
+    const utmSource = typeof formData.get('utm_source') === 'string' ? formData.get('utm_source') as string : null;
+    const utmMedium = typeof formData.get('utm_medium') === 'string' ? formData.get('utm_medium') as string : null;
+    const utmCampaign = typeof formData.get('utm_campaign') === 'string' ? formData.get('utm_campaign') as string : null;
+    const fbclid = typeof formData.get('fbclid') === 'string' ? formData.get('fbclid') as string : null;
+    const gclid = typeof formData.get('gclid') === 'string' ? formData.get('gclid') as string : null;
+
     // Validate required fields
     console.log("Validating required fields...");
     
@@ -390,6 +397,11 @@ export async function POST(request: Request) {
             shippingCity: shippingInfo.city,
             shippingNotes: shippingInfo.notes || null,
             paymentProof: paymentProof || null,
+            utmSource: utmSource || null,
+            utmMedium: utmMedium || null,
+            utmCampaign: utmCampaign || null,
+            fbclid: fbclid || null,
+            gclid: gclid || null,
             items: {
               create: orderItems,
             },

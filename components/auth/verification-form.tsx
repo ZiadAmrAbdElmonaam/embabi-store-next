@@ -95,7 +95,7 @@ export function VerificationForm({ email, returnUrl, fromCart = false }: Verific
         throw new Error(data.error || t('auth.verificationFailed'));
       }
       
-      toast.success(t('auth.emailVerified'));
+      // Don't toast here – login page will show "Email verified successfully" once after redirect
       
       // If coming from cart, redirect straight to the checkout after verification
       if (fromCart) {

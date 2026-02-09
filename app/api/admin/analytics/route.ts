@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       topProducts,
       topProductsAllOrders,
       refundedOrders,
+      ordersForTimeSeries,
     ] = await Promise.all([
       // Total orders (all statuses)
       prisma.order.count({
@@ -216,6 +217,17 @@ export async function GET(request: NextRequest) {
           status: "CANCELLED",
         },
       }),
+
+      // Orders used for time-series and cohorts
+      prisma.order.findMany({
+        where: dateFilter ? { createdAt: dateFilter } : undefined,
+        select: {
+          createdAt: true,
+          total: true,
+          status: true,
+          userId: true,
+        },
+      }),
     ]);
 
     // Event-based metrics
@@ -274,9 +286,28 @@ export async function GET(request: NextRequest) {
     let byCountry: Record<string, { visitors: number; addToCart: number; checkout: number; orders: number; revenue: number }> = {};
     let spendBySource: Record<string, number> = {};
     let roasBySource: Record<string, number | null> = {};
+    let deviceBreakdown: { mobile: number; desktop: number; tablet: number; other: number } = {
+      mobile: 0,
+      desktop: 0,
+      tablet: 0,
+      other: 0,
+    };
+    let landingPages: { path: string; sessions: number }[] = [];
+    let cohorts: { cohortMonth: string; totalCustomers: number; repeatCustomers: number; repeatRate: number }[] = [];
+    // Reusable events list for multiple aggregations
+    let eventsInRange: {
+      event: string;
+      sessionId: string;
+      utmSource: string | null;
+      utmMedium: string | null;
+      utmCampaign: string | null;
+      country: string | null;
+      metadata: any | null;
+      createdAt: Date;
+    }[] = [];
 
     try {
-      const eventsInRange = dateFilter
+      eventsInRange = dateFilter
         ? await prisma.analyticsEvent.findMany({
             where: { createdAt: dateFilter },
             select: {
@@ -287,6 +318,7 @@ export async function GET(request: NextRequest) {
               utmCampaign: true,
               country: true,
               metadata: true,
+              createdAt: true,
             },
           })
         : await prisma.analyticsEvent.findMany({
@@ -298,6 +330,7 @@ export async function GET(request: NextRequest) {
               utmCampaign: true,
               country: true,
               metadata: true,
+              createdAt: true,
             },
           });
 
@@ -384,6 +417,66 @@ export async function GET(request: NextRequest) {
         const spend = spendBySource[key] || 0;
         roasBySource[key] = spend > 0 ? rev / spend : null;
       }
+
+      // Device breakdown & landing pages (sessions by landing page) from PAGE_VIEW events
+      const landingPageSessions: Record<string, Set<string>> = {};
+      for (const e of eventsInRange) {
+        if (e.event !== "PAGE_VIEW") continue;
+        const md = (e.metadata || {}) as { deviceType?: string; path?: string };
+        const device = (md.deviceType || "other").toLowerCase();
+        if (device === "mobile") deviceBreakdown.mobile += 1;
+        else if (device === "desktop") deviceBreakdown.desktop += 1;
+        else if (device === "tablet") deviceBreakdown.tablet += 1;
+        else deviceBreakdown.other += 1;
+
+        const path = md.path || "/";
+        if (!landingPageSessions[path]) {
+          landingPageSessions[path] = new Set<string>();
+        }
+        landingPageSessions[path].add(e.sessionId);
+      }
+
+      landingPages = Object.entries(landingPageSessions)
+        .map(([path, sessions]) => ({
+          path,
+          sessions: sessions.size,
+        }))
+        .sort((a, b) => b.sessions - a.sessions)
+        .slice(0, 20);
+
+      // Simple customer cohorts by first order month within range
+      const userOrdersMap: Record<string, Date[]> = {};
+      for (const order of ordersForTimeSeries) {
+        if (!order.userId) continue;
+        if (!userOrdersMap[order.userId]) {
+          userOrdersMap[order.userId] = [];
+        }
+        userOrdersMap[order.userId].push(order.createdAt);
+      }
+
+      const cohortMap: Record<string, { totalCustomers: number; repeatCustomers: number }> = {};
+      for (const dates of Object.values(userOrdersMap)) {
+        dates.sort((a, b) => a.getTime() - b.getTime());
+        const first = dates[0];
+        if (!first) continue;
+        const cohortMonth = `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, "0")}`;
+        if (!cohortMap[cohortMonth]) {
+          cohortMap[cohortMonth] = { totalCustomers: 0, repeatCustomers: 0 };
+        }
+        cohortMap[cohortMonth].totalCustomers += 1;
+        if (dates.length > 1) {
+          cohortMap[cohortMonth].repeatCustomers += 1;
+        }
+      }
+
+      cohorts = Object.entries(cohortMap)
+        .map(([cohortMonth, value]) => ({
+          cohortMonth,
+          totalCustomers: value.totalCustomers,
+          repeatCustomers: value.repeatCustomers,
+          repeatRate: value.totalCustomers > 0 ? (value.repeatCustomers / value.totalCustomers) * 100 : 0,
+        }))
+        .sort((a, b) => a.cohortMonth.localeCompare(b.cohortMonth));
     } catch (extrasError) {
       console.error("Analytics extras (by source, country, ad spend):", extrasError);
       // Continue with empty bySource, byCountry, etc. so main metrics still return
@@ -396,6 +489,74 @@ export async function GET(request: NextRequest) {
     const cancelledOrderRevenue = Number(cancelledAgg._sum.total) || 0;
     const cancelledOrdersCount = cancelledAgg._count.id || 0;
     const revenueDifference = deliveredRevenue - cancelledOrderRevenue;
+
+    // Time-series metrics by day (sales, sessions, conversion, AOV)
+    type TimeSeriesBucket = {
+      date: string;
+      visitorSessionIds: Set<string>;
+      orders: number;
+      deliveredRevenue: number;
+      grossSales: number;
+      orderCompletedEvents: number;
+    };
+    const buckets: Record<string, TimeSeriesBucket> = {};
+
+    const ensureBucket = (dateStr: string): TimeSeriesBucket => {
+      if (!buckets[dateStr]) {
+        buckets[dateStr] = {
+          date: dateStr,
+          visitorSessionIds: new Set<string>(),
+          orders: 0,
+          deliveredRevenue: 0,
+          grossSales: 0,
+          orderCompletedEvents: 0,
+        };
+      }
+      return buckets[dateStr];
+    };
+
+    // Orders contribute orders, sales, gross sales
+    for (const order of ordersForTimeSeries) {
+      const dateStr = order.createdAt.toISOString().slice(0, 10);
+      const bucket = ensureBucket(dateStr);
+      bucket.orders += 1;
+      const total = Number(order.total) || 0;
+      bucket.grossSales += total;
+      if (order.status === "DELIVERED") {
+        bucket.deliveredRevenue += total;
+      }
+    }
+
+    // Events contribute visitors and completed orders for conversion
+    for (const e of eventsInRange) {
+      const dateStr = e.createdAt.toISOString().slice(0, 10);
+      const bucket = ensureBucket(dateStr);
+      if (e.event === "PAGE_VIEW") {
+        bucket.visitorSessionIds.add(e.sessionId);
+      } else if (e.event === "ORDER_COMPLETED") {
+        bucket.orderCompletedEvents += 1;
+      }
+    }
+
+    const timeSeriesByDay = Object.values(buckets)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((b) => {
+        const visitors = b.visitorSessionIds.size;
+        const ordersCount = b.orders;
+        const sales = b.deliveredRevenue;
+        const gross = b.grossSales;
+        const avgOrderValue = ordersCount > 0 ? sales / ordersCount : 0;
+        const conversionRate = visitors > 0 ? (b.orderCompletedEvents / visitors) * 100 : 0;
+        return {
+          date: b.date,
+          visitors,
+          orders: ordersCount,
+          sales,
+          grossSales: gross,
+          avgOrderValue,
+          conversionRate,
+        };
+      });
 
     return NextResponse.json({
       databaseMetrics: {
@@ -427,6 +588,12 @@ export async function GET(request: NextRequest) {
       byCountry,
       spendBySource,
       roasBySource,
+      deviceBreakdown,
+      landingPages,
+      cohorts,
+      timeSeries: {
+        byDay: timeSeriesByDay,
+      },
       range,
     });
   } catch (error) {

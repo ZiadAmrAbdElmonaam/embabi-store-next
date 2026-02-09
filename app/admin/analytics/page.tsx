@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { formatPrice } from '@/lib/utils';
 import { TrendingUp, Users, ShoppingCart, Package, DollarSign, RefreshCw, ArrowDownRight, Download, Globe, Plus, Target } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -63,6 +63,33 @@ interface AnalyticsData {
   byCountry?: Record<string, SourceMetrics>;
   spendBySource?: Record<string, number>;
   roasBySource?: Record<string, number | null>;
+  deviceBreakdown?: {
+    mobile: number;
+    desktop: number;
+    tablet: number;
+    other: number;
+  };
+  landingPages?: Array<{
+    path: string;
+    sessions: number;
+  }>;
+  cohorts?: Array<{
+    cohortMonth: string;
+    totalCustomers: number;
+    repeatCustomers: number;
+    repeatRate: number;
+  }>;
+  timeSeries?: {
+    byDay: Array<{
+      date: string;
+      visitors: number;
+      orders: number;
+      sales: number;
+      grossSales: number;
+      avgOrderValue: number;
+      conversionRate: number;
+    }>;
+  };
   range: string;
 }
 
@@ -151,6 +178,8 @@ export default function AdminAnalyticsPage() {
   }
 
   const { databaseMetrics, eventMetrics, conversionRates, metricsBySource, newVsReturning, byCountry, spendBySource, roasBySource } = data;
+  const timeSeriesByDay = data.timeSeries?.byDay ?? [];
+  const deviceBreakdown = data.deviceBreakdown;
 
   // Prepare funnel data
   const funnelData = [
@@ -292,8 +321,8 @@ export default function AdminAnalyticsPage() {
         />
       </div>
 
-      {/* Secondary Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Order risk / loss metrics (second row) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -347,6 +376,42 @@ export default function AdminAnalyticsPage() {
           bgColor="bg-yellow-50"
         />
       </div>
+
+      {/* Time-series section: sales, sessions, conversion, AOV */}
+      {timeSeriesByDay.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">Sales & Sessions over time</h2>
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={timeSeriesByDay}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="sales" name="Delivered sales" stroke="#f97316" dot={false} />
+                <Line type="monotone" dataKey="grossSales" name="Gross sales (all orders)" stroke="#3b82f6" dot={false} />
+                <Line type="monotone" dataKey="orders" name="Orders" stroke="#10b981" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">Sessions & Conversion over time</h2>
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={timeSeriesByDay}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="visitors" name="Sessions" stroke="#6366f1" dot={false} />
+                <Line type="monotone" dataKey="conversionRate" name="Conversion rate (%)" stroke="#16a34a" dot={false} />
+                <Line type="monotone" dataKey="avgOrderValue" name="Avg order value" stroke="#f59e0b" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* New vs Returning */}
       {newVsReturning && (
@@ -669,6 +734,90 @@ export default function AdminAnalyticsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {product.orderCount}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Device breakdown & landing pages */}
+      {(deviceBreakdown || data.landingPages)?.length !== 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {deviceBreakdown && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold mb-4">Sessions by device type</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Mobile</p>
+                  <p className="text-2xl font-bold text-blue-600">{deviceBreakdown.mobile.toLocaleString()}</p>
+                </div>
+                <div className="bg-indigo-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Desktop</p>
+                  <p className="text-2xl font-bold text-indigo-600">{deviceBreakdown.desktop.toLocaleString()}</p>
+                </div>
+                <div className="bg-emerald-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Tablet</p>
+                  <p className="text-2xl font-bold text-emerald-600">{deviceBreakdown.tablet.toLocaleString()}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">Other</p>
+                  <p className="text-2xl font-bold text-gray-700">{deviceBreakdown.other.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {data.landingPages && data.landingPages.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold mb-4">Sessions by landing page</h2>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Path</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Sessions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {data.landingPages.map((row) => (
+                      <tr key={row.path}>
+                        <td className="px-4 py-2 text-sm text-gray-900">{row.path}</td>
+                        <td className="px-4 py-2 text-sm text-right">{row.sessions.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Simple cohort analysis */}
+      {data.cohorts && data.cohorts.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-bold mb-4">Customer cohort analysis</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cohort month</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Customers</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Repeat customers</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Repeat rate</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {data.cohorts.map((row) => (
+                  <tr key={row.cohortMonth}>
+                    <td className="px-4 py-2 text-sm text-gray-900">{row.cohortMonth}</td>
+                    <td className="px-4 py-2 text-sm text-right">{row.totalCustomers.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-sm text-right">{row.repeatCustomers.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-sm text-right">
+                      {row.repeatRate.toFixed(2)}%
                     </td>
                   </tr>
                 ))}

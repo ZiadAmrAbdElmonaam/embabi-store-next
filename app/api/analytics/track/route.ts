@@ -37,13 +37,31 @@ export async function POST(request: NextRequest) {
       request.headers.get("cf-region") ||
       null;
 
+    // Basic device type detection from User-Agent for analytics (mobile/desktop/tablet/other)
+    const userAgent = request.headers.get("user-agent") || "";
+    const ua = userAgent.toLowerCase();
+    let deviceType: "mobile" | "desktop" | "tablet" | "other" = "other";
+    if (/ipad|tablet/.test(ua)) {
+      deviceType = "tablet";
+    } else if (/mobile|iphone|ipod|android/.test(ua)) {
+      deviceType = "mobile";
+    } else if (/windows|macintosh|linux/.test(ua)) {
+      deviceType = "desktop";
+    }
+
+    // Merge deviceType into metadata so reporting can segment by device
+    const metadataWithDevice = {
+      ...(metadata || {}),
+      deviceType,
+    };
+
     // Create analytics event
     await prisma.analyticsEvent.create({
       data: {
         event: event as any,
         userId,
         sessionId,
-        metadata: metadata || {},
+        metadata: metadataWithDevice,
         utmSource: utm_source || null,
         utmMedium: utm_medium || null,
         utmCampaign: utm_campaign || null,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import CheckoutForm from './checkout-form';
 import { ArrowLeft } from 'lucide-react';
@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/use-translation';
 import { TranslatedContent } from '@/components/ui/translated-content';
+import { trackCheckoutStarted } from '@/lib/analytics';
 
 interface CheckoutPageProps {
   user: {
@@ -38,6 +39,7 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
   const [shipping, setShipping] = useState(300);
   const [total, setTotal] = useState(0);
   const [appliedCouponState, setAppliedCouponState] = useState<Coupon | null>(null);
+  const checkoutTrackedRef = useRef(false);
 
   useEffect(() => {
     // Initialize cart from localStorage if needed
@@ -101,7 +103,27 @@ export default function CheckoutPage({ user }: CheckoutPageProps) {
     
     // Use client items from localStorage
     if (items.length > 0) {
-      
+      // Track checkout started only once per visit (effect runs multiple times due to items/appliedCouponState deps)
+      if (!checkoutTrackedRef.current) {
+        checkoutTrackedRef.current = true;
+        trackCheckoutStarted();
+        // Meta Pixel InitiateCheckout
+        const w = typeof window !== 'undefined' ? (window as Window & { fbq?: (...args: unknown[]) => void }) : null;
+        if (w?.fbq) {
+          const cartValue = items.reduce(
+            (sum, item) => sum + ((item.salePrice != null ? item.salePrice : item.price) * item.quantity),
+            0
+          );
+          w.fbq('track', 'InitiateCheckout', {
+            value: cartValue,
+            currency: 'EGP',
+            content_ids: items.map((i) => i.id),
+            content_type: 'product',
+            num_items: items.reduce((s, i) => s + i.quantity, 0),
+          });
+        }
+      }
+
       // Calculate totals
       const calculatedSubtotal = items.reduce(
         (total, item) => {

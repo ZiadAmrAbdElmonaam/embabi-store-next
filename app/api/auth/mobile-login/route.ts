@@ -4,6 +4,8 @@ import { compare } from "bcryptjs";
 import { signMobileToken } from "@/lib/jwt";
 
 export async function POST(request: Request) {
+  // Log so Vercel shows this route is hit (Runtime Logs / Function Logs)
+  console.log("[mobile-login] POST received");
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -51,7 +53,8 @@ export async function POST(request: Request) {
     const token = await signMobileToken(user.id, user.role);
     return NextResponse.json({ token });
   } catch (error) {
-    console.error("[mobile-login]", error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error("[mobile-login] error:", err.message, err.stack);
     return NextResponse.json(
       { error: "Login failed" },
       { status: 500 }

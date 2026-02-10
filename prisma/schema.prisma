@@ -101,6 +101,11 @@ model Order {
   updatedAt       DateTime       @updatedAt
   couponId        String?
   discountAmount  Decimal?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  fbclid          String?
+  gclid           String?
   coupon          Coupon?        @relation(fields: [couponId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
   items           OrderItem[]
@@ -352,6 +357,51 @@ model HeroThumbnail {
 
   @@unique([order])
   @@index([order])
+}
+
+model AnalyticsEvent {
+  id         String    @id @default(cuid())
+  event      EventType
+  userId     String?   // Null for anonymous users
+  sessionId  String    // Always present - either user session or anonymous session
+  metadata   Json?     // Additional data (productId, orderId, etc.)
+  createdAt  DateTime  @default(now())
+  // UTM attribution (first-touch from client)
+  utmSource  String?
+  utmMedium  String?
+  utmCampaign String?
+  // Geography (from server headers, e.g. Vercel)
+  country    String?
+  region     String?
+
+  @@index([event])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@index([utmSource])
+  @@index([country])
+}
+
+model AdSpend {
+  id          String   @id @default(cuid())
+  utmSource   String
+  utmMedium   String?
+  utmCampaign String?
+  amount      Decimal  @db.Decimal(10, 2)
+  spendDate   DateTime // Date this spend applies to
+  createdAt   DateTime @default(now())
+
+  @@index([spendDate])
+  @@index([utmSource])
+}
+
+enum EventType {
+  PAGE_VIEW
+  ADD_TO_CART
+  CHECKOUT_STARTED
+  ORDER_COMPLETED
+  ORDER_CANCELLED
+  REFUND_REQUESTED
 }
 
 enum Role {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { toast } from 'react-hot-toast';
 import { useEffect } from 'react';
+import { trackAddToCart } from '@/lib/analytics';
 
 interface CartItem {
   id: string;
@@ -216,6 +217,23 @@ export const useCart = create<CartStore>()((set, get) => ({
         (item.storageSize ? ` (${item.storageSize})` : '') + 
         (item.selectedColor ? ` - ${item.selectedColor}` : '');
       toast.success(`Added ${displayName} to cart`);
+      
+      // Track analytics event
+      trackAddToCart(item.id, item.name, 1);
+      // Meta Pixel AddToCart
+      const w = typeof window !== 'undefined' ? (window as Window & { fbq?: (...args: unknown[]) => void }) : null;
+      if (w?.fbq) {
+        const price = item.salePrice != null ? item.salePrice : item.price;
+        const qty = 1;
+        w.fbq('track', 'AddToCart', {
+          content_ids: [item.id],
+          content_name: item.name,
+          content_type: 'product',
+          value: Number(price) * qty,
+          currency: 'EGP',
+          num_items: qty,
+        });
+      }
     } catch (error) {
       console.error('Failed to add item to cart:', error);
       

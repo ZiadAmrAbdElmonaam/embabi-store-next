@@ -17,7 +17,7 @@ export function LoginForm() {
   const verified = searchParams.get('verified') === 'true';
   const error = searchParams.get('error');
   const { t, lang } = useTranslation();
-  
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -25,18 +25,27 @@ export function LoginForm() {
     password: "",
   });
 
-  // Show success message if user just verified their email
+  // Show success message once when user lands with ?verified=true (sessionStorage survives remounts/Strict Mode)
   useEffect(() => {
-    if (verified) {
-      toast.success(t('auth.emailVerified'));
+    if (!verified) {
+      try { sessionStorage.removeItem('login-verified-toast'); } catch (_) {}
+      return;
     }
+    try {
+      if (sessionStorage.getItem('login-verified-toast') === '1') return;
+      sessionStorage.setItem('login-verified-toast', '1');
+      toast.success(t('auth.emailVerified'));
+    } catch (_) {}
   }, [verified, t]);
 
-  // Show error message if there was an auth error
+  // Show error message once when user lands with ?error=...
   useEffect(() => {
-    if (error) {
+    if (!error) return;
+    try {
+      if (sessionStorage.getItem('login-error-toast') === '1') return;
+      sessionStorage.setItem('login-error-toast', '1');
       toast.error(t('auth.authFailed'));
-    }
+    } catch (_) {}
   }, [error, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {

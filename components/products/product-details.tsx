@@ -145,6 +145,23 @@ function getUnitTaxNote(
 export function ProductDetails({ product, youMayAlsoLike = [] }: ProductDetailsProps) {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+
+  // Meta Pixel ViewContent (product page view)
+  useEffect(() => {
+    if (!product?.id || typeof window === 'undefined') return;
+    const w = window as Window & { fbq?: (...args: unknown[]) => void };
+    if (w.fbq) {
+      const price = Number(product.salePrice ?? product.price ?? 0);
+      w.fbq('track', 'ViewContent', {
+        content_name: product.name,
+        content_ids: [product.id],
+        content_type: 'product',
+        value: price,
+        currency: 'EGP',
+      });
+    }
+  }, [product?.id, product?.name, product?.price, product?.salePrice]);
+
   const hasStorageWithStock = product.storages?.some(s => (s.units ?? s.variants ?? []).some((u: { stock?: number; quantity?: number }) => (u.stock ?? u.quantity ?? 0) > 0));
   const isFullyOutOfStock = product.storages?.length
     ? !hasStorageWithStock
